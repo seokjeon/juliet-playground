@@ -1,0 +1,88 @@
+name: 에픽 (Epic)
+description: 실험 사이클 단위 에픽 템플릿
+title: "[Epic] "
+labels: ["epic"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 한줄 카드
+        **[큰 목표] 달성을 위해 [가설]을 검증한다.**
+
+        > Theme는 GitHub Project로 관리합니다 (이슈 타입 아님).
+
+        > 이슈 **제목은 아래 입력값(한줄 카드)과 동일하게** 작성하세요.
+
+  - type: input
+    id: one_liner
+    attributes:
+      label: 이슈 제목(=한줄 카드)
+      placeholder: "[큰 목표] 달성을 위해 [가설]을 검증한다."
+    validations:
+      required: true
+
+  - type: input
+    id: theme_project
+    attributes:
+      label: 상위 Theme(Project)
+      description: GitHub Project 이름/링크를 적어주세요.
+      placeholder: "예: Juliet source/sink 추출 신뢰도 확보"
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: 실험 범위 (포함/제외)
+      placeholder: |
+        포함:
+        제외:
+    validations:
+      required: true
+
+  - type: textarea
+    id: hypothesis
+    attributes:
+      label: 가설 / 검증 질문
+      placeholder: "무엇을 왜 검증하는지 적어주세요."
+    validations:
+      required: true
+
+  - type: input
+    id: verify_story_link
+    attributes:
+      label: Verify 담당 Story 링크
+      description: 생성 후 링크를 업데이트해도 됩니다.
+      placeholder: "예: #123"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: release_artifacts
+    attributes:
+      label: Release 산출물 유형 (해당 항목 체크)
+      description: 실패 시에는 `experiments/epicNNN_*/outputs/failure_report.md`에 failure report를 작성합니다.
+      options:
+        - label: manifest.xml
+        - label: source.lst
+        - label: sink.lst
+
+  - type: input
+    id: release_story_link
+    attributes:
+      label: Release 담당 Story 링크
+      description: 생성 후 링크를 업데이트해도 됩니다.
+      placeholder: "예: #124"
+    validations:
+      required: true
+
+  - type: textarea
+    id: done_criteria
+    attributes:
+      label: Epic 종료 조건
+      value: |
+        - [ ] Verify Story 완료
+        - [ ] Release Story 완료
+        - [ ] Release 산출물 경로/링크 기록
+    validations:
+      required: true

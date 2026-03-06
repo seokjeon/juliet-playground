@@ -1,0 +1,61 @@
+name: 태스크 (Task)
+description: Story 하위 구현/실행 단위
+title: "[Task] "
+labels: ["task"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        > 이슈 **제목은 아래 입력값(한줄 카드)과 동일하게** 작성하세요.
+
+  - type: input
+    id: one_liner
+    attributes:
+      label: 이슈 제목(=한줄 카드)
+      placeholder: "[대상]을/를 [작업]한다."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: task_kind
+    attributes:
+      label: Task 유형
+      options:
+        - Build
+        - Verify
+        - Release
+        - Improve
+    validations:
+      required: true
+
+  - type: textarea
+    id: done_definition
+    attributes:
+      label: 완료 기준 (DoD)
+      placeholder: "완료로 판단하는 조건을 적어주세요."
+    validations:
+      required: true
+
+  - type: input
+    id: output_path
+    attributes:
+      label: 산출물 경로
+      placeholder: "예: experiments/epic001_xxx/outputs/result.csv"
+    validations:
+      required: true
+
+  - type: textarea
+    id: verification_method
+    attributes:
+      label: 검증 방법
+      placeholder: "예: 실행 명령, 비교 기준, 검토 방법"
+    validations:
+      required: true
+
+  - type: input
+    id: parent_story
+    attributes:
+      label: 상위 Story
+      placeholder: "예: #121"
+    validations:
+      required: true

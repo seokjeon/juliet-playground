@@ -1,0 +1,50 @@
+name: 스토리 (Story)
+description: Epic 하위의 가치/단계 단위 스토리
+title: "[Story] "
+labels: ["story"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 한줄 카드
+        [사용자/실험자]로서, [목적]을 위해 [행동]을 할 수 있다.
+
+        > 이슈 **제목은 아래 입력값(한줄 카드)과 동일하게** 작성하세요.
+
+  - type: input
+    id: one_liner
+    attributes:
+      label: 이슈 제목(=한줄 카드)
+      placeholder: "[사용자/실험자]로서, [목적]을 위해 [행동]을 할 수 있다."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: lifecycle_type
+    attributes:
+      label: Story 유형
+      options:
+        - Build
+        - Verify
+        - Release
+        - Improve (Optional)
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: 수용 기준 (AC)
+      value: |
+        - [ ] Given ... When ... Then ...
+        - [ ] Given ... When ... Then ...
+    validations:
+      required: true
+
+  - type: input
+    id: parent_epic
+    attributes:
+      label: 상위 Epic
+      placeholder: "예: #120"
+    validations:
+      required: true

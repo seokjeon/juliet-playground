@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 - `juliet-test-suite-v1.3/` is the upstream Juliet C/C++ corpus. Treat it as **read-only** unless explicitly requested.
-- `experiments/expNNN_*` stores isolated trial runs. Each experiment should contain:
+- `experiments/epicNNN_*` stores isolated trial runs. Each experiment should contain:
   - `scripts/` (experiment-only logic)
   - `inputs/` (experiment config/list files)
   - `outputs/` (raw outputs from that run)
@@ -24,7 +24,7 @@ Run from `juliet-test-suite-v1.3/C` when building Juliet binaries.
 ## Coding Style & Naming Conventions
 - Preserve upstream formatting in Juliet files; keep diffs minimal.
 - Use 4-space indentation in Python/Markdown and tabs in Makefiles.
-- Experiment directories must follow `expNNN_short_name`.
+- Experiment directories must follow `epicNNN_short_name`.
 
 ## Testing Guidelines
 - No separate unit-test framework is required for this repo yet.

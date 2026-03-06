@@ -9,18 +9,20 @@ Juliet Test Suite v1.3(C/C++)를 기반으로, AI 학습용 **취약 trace / 패
 
 ## Repository Layout
 - `juliet-test-suite-v1.3/`: 원본 데이터(가급적 read-only)
-- `experiments/`: 실험 단위 작업 (`expNNN_*`)
+- `experiments/`: 실험 단위 작업 (`epicNNN_*`)
+  - 실험 결과는 각 실험의 `outputs/`에 저장
 - `tools/`: 실험에서 검증되어 재사용 가능한 공용 스크립트
-- `data/manifests/`: 처리 대상 축소/선정 기준 (subset 정의)
-- `data/interim/`: 정규화·중복제거·매칭 등 중간 산출물
-- `data/final/`: 학습/평가에 사용하는 최종 데이터셋
+- `data/artifacts/`: `tools/` 실행 부산물(로그/검증 출력/중간 산출물)
+- `data/final/`: 최신 확정본 산출물(`manifest.xml`, `source.lst`, `sink.lst`)
 - `docs/labeling_rules.md`: source/sink/patch 판정 규칙
 - `docs/decisions/`: 설계 결정 기록(ADR 스타일)
 
-## Output Format (JSONL)
-모든 추출 결과는 JSONL 1레코드/1라인 형식을 권장합니다.
+## Output Format
+출력 형식은 실험 목적에 따라 유연하게 선택합니다(JSONL/CSV/TSV/기타).
 
-필수 키:
+trace 추출에는 JSONL을 권장하며, JSONL 사용 시 권장 키는 아래와 같습니다.
+
+권장 키:
 - `file`: 원본 파일 경로
 - `cwe`: CWE 식별자 (예: `CWE476`)
 - `kind`: `source` | `sink` | `patch`
@@ -35,9 +37,12 @@ Juliet Test Suite v1.3(C/C++)를 기반으로, AI 학습용 **취약 trace / 패
 ```
 
 ## Working Rules
-1. 실험은 반드시 `experiments/expNNN_*` 아래에서 수행
+1. 실험은 반드시 `experiments/epicNNN_*` 아래에서 수행
 2. 재사용 가치가 생기면 `tools/`로 승격
-3. 최종 산출물은 `data/final/`에만 확정 저장
+3. 실험 결과는 `experiments/epicNNN_*/outputs/`에 저장
+4. `tools/` 실행 부산물은 `data/artifacts/`에 저장
+5. 최종 확정본은 `data/final/`에만 저장
+6. 버전 관리는 GitHub Release로 수행하고, Release Note에 기준 커밋 SHA를 기록
 
 ## Issue Tracking Rules
 - 이슈는 `.github/ISSUE_TEMPLATE`의 `Epic / Story / Task` 템플릿을 사용합니다.
