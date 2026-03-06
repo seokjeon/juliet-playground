@@ -1,0 +1,6 @@
+{
+  "version": "subset_v2",
+  "note": "expanded subset for larger-scale extraction",
+  "include_cwe": ["CWE476", "CWE401", "CWE415", "CWE416", "CWE787"],
+  "exclude_patterns": ["*w32*", "*wchar_t*"]
+}

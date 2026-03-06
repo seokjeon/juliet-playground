@@ -1,0 +1,6 @@
+{
+  "version": "subset_v1",
+  "note": "small pilot subset for rapid iteration",
+  "include_cwe": ["CWE476", "CWE415", "CWE416"],
+  "exclude_patterns": ["*w32*", "*wchar_t*"]
+}
