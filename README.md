@@ -38,3 +38,14 @@ Juliet Test Suite v1.3(C/C++)를 기반으로, AI 학습용 **취약 trace / 패
 1. 실험은 반드시 `experiments/expNNN_*` 아래에서 수행
 2. 재사용 가치가 생기면 `tools/`로 승격
 3. 최종 산출물은 `data/final/`에만 확정 저장
+
+## Issue Tracking Rules
+- 이슈는 `.github/ISSUE_TEMPLATE`의 `Epic / Story / Task` 템플릿을 사용합니다.
+- 라벨 운영:
+  - `epic`: 큰 목표/가치 단위 이슈
+  - `story`: 사용자 가치 단위 이슈 (반드시 상위 Epic 연결)
+  - `task`: 실행/구현 단위 이슈 (반드시 상위 Story 연결)
+- 권장 규칙:
+  - 하나의 이슈에는 `epic|story|task` 중 **하나만** 부여
+  - Story 완료 기준은 수용 기준(AC) 충족
+  - Task 완료 기준은 산출물 경로 + 검증 방법 확인

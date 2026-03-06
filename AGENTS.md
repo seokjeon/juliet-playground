@@ -39,3 +39,14 @@ Run from `juliet-test-suite-v1.3/C` when building Juliet binaries.
 ## Trace Output Contract
 Use JSONL and keep required keys: `file`, `cwe`, `kind`, `line`, `evidence`.
 Allowed `kind` values: `source`, `sink`, `patch`.
+
+## Issue Tracking Rules
+- Use `.github/ISSUE_TEMPLATE` templates for `Epic / Story / Task`.
+- Label semantics:
+  - `epic`: large goal/value item
+  - `story`: user-value item (must link to one parent Epic)
+  - `task`: implementation item (must link to one parent Story)
+- Conventions:
+  - Assign only one of `epic|story|task` per issue.
+  - Story completion is based on Acceptance Criteria (AC).
+  - Task completion requires output path + verification method.
