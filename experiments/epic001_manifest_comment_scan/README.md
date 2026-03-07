@@ -11,11 +11,16 @@
 - `<comment_fix line="N" code="..." function="..."/>`
 
 속성 의미:
-- `line`: 주석 시작 라인 번호
-- `code`: 해당 라인 코드(양끝 공백 제거)
+- `line`: 주석 아래에서 찾은 대상 코드 라인 번호
+- `code`: 대상 코드 1줄(양끝 공백 제거)
 - `function`: 해당 라인이 속한 함수명(tree-sitter 기반)
 
-함수 본문 내부가 아닌 주석(예: 필드 선언/함수 정의 직전 전역 주석)이나 tree-sitter 파싱 실패 케이스는 결과 XML에서 제거됩니다.
+규칙:
+- 인라인 주석(`코드 + /* FLAW|FIX */`)은 같은 줄 코드를 사용하고 `code`에 `[INLINE] ` 접두사를 붙입니다.
+- 일반 주석은 tree-sitter에서 comment 노드의 다음 구문(`next_named_sibling`)을 대상 코드로 사용합니다.
+- 대상 코드를 찾지 못하면 `line`은 주석 라인으로 두고 `code="WARNING_NOT_FOUND"`를 기록합니다.
+
+함수 본문 내부가 아닌 케이스나 tree-sitter 파싱 실패 케이스는 결과 XML에서 제거됩니다.
 요약 통계의 `dropped_comment_lines`로 제거 건수를 확인할 수 있습니다.
 
 ## 구조

@@ -66,6 +66,11 @@ def _match_comments_to_functions(
     return matched
 
 
+def _node_first_line_text(node, source_bytes: bytes) -> str:
+    text = source_bytes[node.start_byte : node.end_byte].decode("utf-8", errors="ignore")
+    return (text.splitlines()[0] if text else "").strip()
+
+
 def _classify_comment_tag(comment_text: str) -> str | None:
     first_line = comment_text.splitlines()[0] if comment_text else ""
     if FLAW_RE.search(first_line):
@@ -100,7 +105,33 @@ def _parse_file(content: str, suffix: str, parsers: dict[str, object]) -> tuple[
             comment_text = source_bytes[node.start_byte : node.end_byte].decode("utf-8", errors="ignore")
             tag = _classify_comment_tag(comment_text)
             if tag:
-                comments.append((node.start_point[0] + 1, tag, comment_text.splitlines()[0].strip()))
+                comment_line = node.start_point[0] + 1
+                prev_named = node.prev_named_sibling
+                next_named = node.next_named_sibling
+                is_inline = bool(prev_named and prev_named.end_point[0] == node.start_point[0])
+
+                if is_inline:
+                    comments.append(
+                        (
+                            prev_named.start_point[0] + 1,
+                            tag,
+                            f"[INLINE] {_node_first_line_text(prev_named, source_bytes)}",
+                        )
+                    )
+                else:
+                    target = next_named
+                    while target is not None and target.type == "comment":
+                        target = target.next_named_sibling
+                    if target is not None:
+                        comments.append(
+                            (
+                                target.start_point[0] + 1,
+                                tag,
+                                _node_first_line_text(target, source_bytes),
+                            )
+                        )
+                    else:
+                        comments.append((comment_line, tag, "WARNING_NOT_FOUND"))
         stack.extend(reversed(node.children))
     return function_spans, comments, False
 
@@ -133,6 +164,8 @@ def main() -> int:
         if src is None:
             inc(stats, "missing_files")
             continue
+        if src.suffix.lower() not in FILE_LANG:
+            continue
 
         inc(stats, "scanned_files")
         content = src.read_text(encoding="utf-8", errors="ignore")
@@ -145,6 +178,7 @@ def main() -> int:
             if not function_name:
                 inc(stats, "dropped_comment_lines")
                 continue
+            
             ET.SubElement(
                 file_elem,
                 tag,
