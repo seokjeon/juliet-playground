@@ -30,7 +30,6 @@
 ## 구조
 - `scripts/scan_manifest_comments.py`: 스캔/태깅 실행
 - `scripts/report.py`: 요약 통계 출력
-- `requirements-ts.txt`: tree-sitter 의존성
 - `inputs/manifest.xml`: 입력 manifest
 - `outputs/manifest_with_comments.xml`: 결과 XML
 
@@ -38,7 +37,7 @@
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install -r experiments/epic001_manifest_comment_scan/requirements-ts.txt
+pip install -r requirements.txt # tree-sitter 의존성 설치
 ```
 
 ## 실행
