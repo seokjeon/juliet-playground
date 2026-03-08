@@ -88,10 +88,11 @@ def generate_signatures(input_dir: Path,
                 'bug_trace_empty_skipped': 0
             }
 
-        stats_map[group_key]['report_alarms_total'] += len(j)
+        taint_alarms = [a for a in j if a.get('bug_type') == 'TAINT_ERROR']
+        stats_map[group_key]['report_alarms_total'] += len(taint_alarms)
         cnt = 1
 
-        for alarm in j:
+        for alarm in taint_alarms:
             if len(alarm['bug_trace']) == 0:
                 stats_map[group_key]['bug_trace_empty_skipped'] += 1
                 continue
