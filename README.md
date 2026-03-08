@@ -33,14 +33,18 @@ source .venv/bin/activate && python tools/run-infer-all-juliet.py 78 --max-cases
 
 ## 결과 위치
 
-- `artifacts/juliet-result-YYYY.MM.DD-HH:MM:SS/`
-  - `CWE.../infer-out`
-  - `no_issue_files.txt`
-  - `result.csv` (`--generate-csv` 사용 시)
-
-- `artifacts/signatures/signatures-result-YYYY.MM.DD-HH:MM:SS/`
-  - `CWE.../*.json` (alarm별 signature)
-  - `analysis/signature_counts.csv` (CWE별 통계 + TOTAL)
+```text
+artifacts/
+├── juliet-result-YYYY.MM.DD-HH:MM:SS/
+│   ├── CWE.../infer-out/
+│   ├── no_issue_files.txt
+│   └── result.csv                    # --generate-csv 사용 시
+└── signatures/
+    └── signatures-result-YYYY.MM.DD-HH:MM:SS/
+        ├── CWE.../*.json             # alarm별 signature
+        └── analysis/
+            └── signature_counts.csv  # CWE별 통계 + TOTAL
+```
 
 ## 스크립트 소개
 
