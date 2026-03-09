@@ -103,6 +103,14 @@ def main(
         Path(PULSE_TAINT_CONFIG),
         '--committed-taint-config',
         help='Committed taint config path for fallback/reference'),
+    pair_split_seed: int = typer.Option(
+        1234,
+        '--pair-split-seed',
+        help='Random seed for testcase-level paired trace train/test split'),
+    pair_train_ratio: float = typer.Option(
+        0.8,
+        '--pair-train-ratio',
+        help='Train ratio for testcase-level paired trace train/test split'),
 ):
     if not manifest.exists():
         raise typer.BadParameter(f'Manifest not found: {manifest}')
@@ -127,6 +135,7 @@ def main(
     infer_results_root = run_dir / '03_infer-results'
     signatures_root = run_dir / '03_signatures'
     trace_dir = run_dir / '04_trace_flow'
+    pair_dir = run_dir / '05_pair_trace_ds'
     logs_dir = run_dir / 'logs'
 
     manifest_with_comments_xml = manifest_dir / 'manifest_with_comments.xml'
@@ -142,6 +151,11 @@ def main(
 
     infer_summary_json = run_dir / '03_infer_summary.json'
     trace_strict_jsonl = trace_dir / 'trace_flow_match_strict.jsonl'
+    pairs_jsonl = pair_dir / 'pairs.jsonl'
+    leftover_counterparts_jsonl = pair_dir / 'leftover_counterparts.jsonl'
+    split_manifest_json = pair_dir / 'split_manifest.json'
+    paired_signatures_dir = pair_dir / 'paired_signatures'
+    paired_trace_summary_json = pair_dir / 'summary.json'
     run_summary_path = run_dir / 'run_summary.json'
 
     source_testcases_root = source_root / 'testcases'
@@ -153,6 +167,7 @@ def main(
     flow_partition_script = Path(PROJECT_HOME) / 'experiments' / 'epic001c_testcase_flow_partition' / 'scripts' / 'add_flow_tags_to_testcase.py'
     infer_script = Path(PROJECT_HOME) / 'tools' / 'run-infer-all-juliet.py'
     filter_script = Path(PROJECT_HOME) / 'experiments' / 'epic001d_trace_flow_filter' / 'scripts' / 'filter_traces_by_flow.py'
+    pair_script = Path(PROJECT_HOME) / 'tools' / 'build-paired-trace-signatures.py'
 
     started_at = now_iso_utc()
     start_perf = time.perf_counter()
@@ -302,6 +317,28 @@ def main(
         if not trace_strict_jsonl.exists():
             raise RuntimeError(f'Expected strict trace output not found: {trace_strict_jsonl}')
 
+        # Step 05: pair strict traces and export signature-style testcase dirs
+        steps['05_pair_trace_dataset'] = run_command(
+            '05_pair_trace_dataset',
+            [
+                sys.executable,
+                str(pair_script),
+                '--trace-jsonl', str(trace_strict_jsonl),
+                '--output-dir', str(pair_dir),
+                '--split-seed', str(pair_split_seed),
+                '--train-ratio', str(pair_train_ratio),
+            ],
+            cwd=Path(PROJECT_HOME),
+            logs_dir=logs_dir,
+        )
+
+        if not pairs_jsonl.exists():
+            raise RuntimeError(f'Expected pairs output not found: {pairs_jsonl}')
+        if not paired_signatures_dir.exists():
+            raise RuntimeError(f'Expected paired signatures dir not found: {paired_signatures_dir}')
+        if not paired_trace_summary_json.exists():
+            raise RuntimeError(f'Expected paired trace summary not found: {paired_trace_summary_json}')
+
     except Exception as exc:
         status = 'failed'
         error_message = str(exc)
@@ -327,6 +364,8 @@ def main(
         'mode': 'files' if files else 'cwes',
         'cwes': cwes or [],
         'files': files,
+        'pair_split_seed': pair_split_seed,
+        'pair_train_ratio': pair_train_ratio,
         'committed_taint_config_path': str(committed_taint_config),
         'generated_taint_config_path': str(generated_taint_config),
         'selected_taint_config_path': selected_taint_config_str,
@@ -344,6 +383,11 @@ def main(
             'infer_summary_json': str(infer_summary_json),
             'signature_non_empty_dir': str(signature_non_empty_dir) if signature_non_empty_dir else None,
             'trace_flow_match_strict_jsonl': str(trace_strict_jsonl),
+            'pairs_jsonl': str(pairs_jsonl),
+            'leftover_counterparts_jsonl': str(leftover_counterparts_jsonl),
+            'split_manifest_json': str(split_manifest_json),
+            'paired_signatures_dir': str(paired_signatures_dir),
+            'paired_trace_summary_json': str(paired_trace_summary_json),
         },
         'infer_summary': infer_summary,
     }

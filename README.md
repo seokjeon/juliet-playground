@@ -65,6 +65,11 @@ artifacts/
         ├── 03_infer-results/
         ├── 03_signatures/
         ├── 04_trace_flow/trace_flow_match_strict.jsonl
+        ├── 05_pair_trace_ds/
+        │   ├── pairs.jsonl
+        │   ├── leftover_counterparts.jsonl
+        │   ├── split_manifest.json
+        │   └── paired_signatures/<testcase_key>/{b2b.json,g2b.json,...}
         └── run_summary.json
 ```
 
@@ -79,8 +84,12 @@ artifacts/
   - `infer-out/report.json`에서 `bug_trace`가 있는 이슈를 `non_empty/`에 JSON으로 분리 저장
   - `non_empty/analysis/signature_counts.csv`에 CWE별 통계 저장
 - **통합 파이프라인**: `tools/run-epic001-pipeline.py`
-  - `manifest -> with_comments -> taint config -> flow xml -> infer/signature -> trace_flow_filter`
+  - `manifest -> with_comments -> taint config -> flow xml -> infer/signature -> trace_flow_filter -> paired_trace_ds`
   - 실행별 산출물을 `artifacts/pipeline-runs/...`에 분리 저장
+- **Paired trace dataset 생성**: `tools/build-paired-trace-signatures.py`
+  - `trace_flow_match_strict.jsonl`에서 testcase별 `b2b` / 대응 trace를 1:1로 선택
+  - 대응 후보가 여러 개면 `bug_trace_length`가 가장 긴 trace를 선택하고 나머지는 별도 보관
+  - `paired_signatures/<testcase_key>/b2b.json`, `g2b.json` 등의 형태로 출력
 
 ## 그 외 자주 쓰는 명령어
 
@@ -96,6 +105,15 @@ python tools/generate-signature.py --input-dir artifacts/infer-results/infer-202
 
 # 통합 파이프라인 (CWE 여러개)
 python tools/run-epic001-pipeline.py 78 89
+
+# strict trace 결과만으로 paired trace dataset 생성
+python tools/build-paired-trace-signatures.py \
+  --trace-jsonl artifacts/pipeline-runs/run-2026.03.09-22:18:32/04_trace_flow/trace_flow_match_strict.jsonl \
+  --output-dir /tmp/paired-trace-ds
+
+# 옵션 없이 실행하면 최신 pipeline run의 strict trace를 찾아
+# 같은 run 아래 05_pair_trace_ds/ 로 출력
+python tools/build-paired-trace-signatures.py
 ```
 
 ## 메모
