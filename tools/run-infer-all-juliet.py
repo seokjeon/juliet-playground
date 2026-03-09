@@ -124,14 +124,15 @@ def build_infer_command(target_files: List[str], extension: str,
     testcasesupport_dir = os.path.join(PROJECT_HOME, 'juliet-test-suite-v1.3',
                                        'C', 'testcasesupport')
     io_c = os.path.join(testcasesupport_dir, 'io.c')
+    std_thread_c = os.path.join(testcasesupport_dir, 'std_thread.c')
 
     compiler = 'clang++' if extension == 'cpp' else 'clang'
-    link_flag = ' -lm' if extension == 'cpp' else ''
+    link_flag = ' -lpthread -lm'
 
     quoted_files = ' '.join(shlex.quote(file) for file in target_files)
     compile_cmd = (
         f'{compiler} -I {shlex.quote(testcasesupport_dir)} -D INCLUDEMAIN '
-        f'{shlex.quote(io_c)} {quoted_files}{link_flag}'
+        f'{shlex.quote(io_c)} {shlex.quote(std_thread_c)} {quoted_files}{link_flag}'
     )
     return f'{INFER_BIN} run -j {cores} --pulse-taint-config {PULSE_TAINT_CONFIG} -- {compile_cmd}'
 
