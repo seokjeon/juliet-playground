@@ -1,0 +1,2442 @@
+{
+  "pulse-taint-sources": [
+    {
+      "procedure": "CloseHandle",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "CloseHandle",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "CompareFileTime",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "CompareFileTime",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "ConnectNamedPipe",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "ConnectNamedPipe",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "CreateDesktopA",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "CreateDesktopA",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "CreateDesktopW",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "CreateDesktopW",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "CreateFile",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "CreateFile",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "CreateFileA",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "CreateFileA",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "CreateFileW",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "CreateFileW",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "CreateNamedPipeA",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "CreateNamedPipeA",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "CreateNamedPipeW",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "CreateNamedPipeW",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "CreateProcessA",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "CreateProcessA",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "CreateProcessAsUserA",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "CreateProcessAsUserA",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "CreateProcessAsUserW",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "CreateProcessAsUserW",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "CreateProcessW",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "CreateProcessW",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "CreateWindowStationA",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "CreateWindowStationA",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "CreateWindowStationW",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "CreateWindowStationW",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "CryptCreateHash",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "CryptCreateHash",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "CryptDecrypt",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "CryptDecrypt",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "CryptDeriveKey",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "CryptDeriveKey",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "CryptEncrypt",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "CryptEncrypt",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "CryptGenRandom",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "CryptGenRandom",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "CryptHashData",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "CryptHashData",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "GetLastError",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "GetLastError",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "GetTempFileNameA",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "GetTempFileNameA",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "GetTempFileNameW",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "GetTempFileNameW",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "ImpersonateNamedPipeClient",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "ImpersonateNamedPipeClient",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "ImpersonateSelf",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "ImpersonateSelf",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "LoadLibraryA",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "LoadLibraryA",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "LoadLibraryW",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "LoadLibraryW",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "LogonUserA",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "LogonUserA",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "LogonUserW",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "LogonUserW",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "NetUserChangePassword",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "NetUserChangePassword",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "NetUserSetInfo",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "NetUserSetInfo",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "PathAppendA",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "PathAppendA",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "RegCreateKeyA",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "RegCreateKeyA",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "RegCreateKeyExA",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "RegCreateKeyExA",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "RegCreateKeyExW",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "RegCreateKeyExW",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "RegCreateKeyW",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "RegCreateKeyW",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "RegOpenKeyExA",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "RegOpenKeyExA",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "RegOpenKeyExW",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "RegOpenKeyExW",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "RpcImpersonateClient",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "RpcImpersonateClient",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "SHRegCreateUSKeyA",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "SHRegCreateUSKeyA",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "SHRegCreateUSKeyW",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "SHRegCreateUSKeyW",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "SHRegOpenUSKeyA",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "SHRegOpenUSKeyA",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "SHRegOpenUSKeyW",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "SHRegOpenUSKeyW",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "SecureZeroMemory",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "SecureZeroMemory",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "SetComputerNameA",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "SetComputerNameA",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "SetFileTime",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "SetFileTime",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "Sleep",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "Sleep",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "VirtualLock",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "VirtualLock",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "WideCharToMultiByte",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "WideCharToMultiByte",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "WriteFile",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "WriteFile",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_access",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "_access",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_alloca",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "_alloca",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_close",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "_close",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_execl",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "_execl",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_execlp",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "_execlp",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_execv",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "_execv",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_execvp",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "_execvp",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_open",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "_open",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_popen",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "_popen",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_putenv",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "_putenv",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_putws",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "_putws",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_snprintf",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "_snprintf",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_snwprintf",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "_snwprintf",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_spawnl",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "_spawnl",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_spawnlp",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "_spawnlp",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_spawnv",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "_spawnv",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_spawnvp",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "_spawnvp",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_stat",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "_stat",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_unlink",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "_unlink",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_vsnwprintf",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "_vsnwprintf",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_wexecl",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "_wexecl",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_wexeclp",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "_wexeclp",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_wexecv",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "_wexecv",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_wexecvp",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "_wexecvp",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_wfopen",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "_wfopen",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_wopen",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "_wopen",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_wpopen",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "_wpopen",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_wputenv",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "_wputenv",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_wremove",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "_wremove",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_wrename",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "_wrename",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_wspawnl",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "_wspawnl",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_wspawnlp",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "_wspawnlp",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_wspawnv",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "_wspawnv",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_wspawnvp",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "_wspawnvp",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_wsystem",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "_wsystem",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_wunlink",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "_wunlink",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "abs",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "abs",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "accept",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "accept",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "access",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "access",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "alloca",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "alloca",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "assert",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "assert",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "atoi",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "atoi",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "bind",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "bind",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "calloc",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "calloc",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "cin.width",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "cin.width",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "close",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "close",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "connect",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "connect",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "data.push_back",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "data.push_back",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "dataList.push_back",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "dataList.push_back",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "dataVector.end",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "dataVector.end",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "dataVector.insert",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "dataVector.insert",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "exception",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "exception",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "execl",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "execl",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "execlp",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "execlp",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "fabs",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "fabs",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "fclose",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "fclose",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "fgets",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "fgets",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "fgetws",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "fgetws",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "fopen",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "fopen",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "fprintf",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "fprintf",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "fputc",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "fputc",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "fputs",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "fputs",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "fputwc",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "fputwc",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "fputws",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "fputws",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "fread",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "fread",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "free",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "free",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "freopen",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "freopen",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "fscanf",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "fscanf",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "funcPtr",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "funcPtr",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "fwprintf",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "fwprintf",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "fwrite",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "fwrite",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "fwscanf",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "fwscanf",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "getenv",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "getenv",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "gets",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "gets",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "imaxabs",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "imaxabs",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "inet_ntoa",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "inet_ntoa",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "inputFile.open",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "inputFile.open",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "listen",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "listen",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "malloc",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "malloc",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "memcpy",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "memcpy",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "memmove",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "memmove",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "memset",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "memset",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "open",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "open",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "outputFile.open",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "outputFile.open",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "popen",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "popen",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "printDoubleLine",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "printDoubleLine",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "printFloatLine",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "printFloatLine",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "printHexCharLine",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "printHexCharLine",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "printIntLine",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "printIntLine",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "printLine",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "printLine",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "printLongLine",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "printLongLine",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "printLongLongLine",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "printLongLongLine",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "printStructLine",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "printStructLine",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "printUnsignedLine",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "printUnsignedLine",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "printWLine",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "printWLine",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "printWcharLine",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "printWcharLine",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "printf",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "printf",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "putc",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "putc",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "putchar",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "putchar",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "putenv",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "putenv",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "puts",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "puts",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "putwc",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "putwc",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "putwchar",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "putwchar",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "rand",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "rand",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "range_error",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "range_error",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "realloc",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "realloc",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "recv",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "recv",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "reinterpret_cast<TwoIntsClass *>",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "reinterpret_cast<TwoIntsClass *>",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "remove",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "remove",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "rename",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "rename",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "scanf",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "scanf",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "send",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "send",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "setsockopt",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "setsockopt",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "signal",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "signal",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "snprintf",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "snprintf",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "socket",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "socket",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "sprintf",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "sprintf",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "sqrt",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "sqrt",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "sqrtl",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "sqrtl",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "sscanf",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "sscanf",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "stat",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "stat",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "staticReturnsFalse",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "staticReturnsFalse",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "staticReturnsTrue",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "staticReturnsTrue",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "stdThreadLockAcquire",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "stdThreadLockAcquire",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "strcat",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "strcat",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "strcmp",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "strcmp",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "strcpy",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "strcpy",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "strdup",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "strdup",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "strlen",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "strlen",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "strncat",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "strncat",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "strncpy",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "strncpy",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "swprintf",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "swprintf",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "swscanf",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "swscanf",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "system",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "system",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "time",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "time",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "unlink",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "unlink",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "usleep",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "usleep",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "vfprintf",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "vfprintf",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "vfwprintf",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "vfwprintf",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "vprintf",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "vprintf",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "vsnprintf",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "vsnprintf",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "vwprintf",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "vwprintf",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "wcscat",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "wcscat",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "wcscpy",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "wcscpy",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "wcsdup",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "wcsdup",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "wcslen",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "wcslen",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "wcsncat",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "wcsncat",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "wcsncpy",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "wcsncpy",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "wmemset",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "wmemset",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "wprintf",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "wprintf",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "wscanf",
+      "taint_target": "ReturnValue"
+    },
+    {
+      "procedure": "wscanf",
+      "taint_target": "AllArguments"
+    }
+  ],
+  "pulse-taint-sinks": [
+    {
+      "procedure": "CloseHandle",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "CompareFileTime",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "ConnectNamedPipe",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "CreateDesktopA",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "CreateDesktopW",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "CreateFile",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "CreateFileA",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "CreateFileW",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "CreateNamedPipeA",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "CreateNamedPipeW",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "CreateProcessA",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "CreateProcessAsUserA",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "CreateProcessAsUserW",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "CreateProcessW",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "CreateWindowStationA",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "CreateWindowStationW",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "CryptCreateHash",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "CryptDecrypt",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "CryptDeriveKey",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "CryptEncrypt",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "CryptGenRandom",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "CryptHashData",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "GetLastError",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "GetTempFileNameA",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "GetTempFileNameW",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "ImpersonateNamedPipeClient",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "ImpersonateSelf",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "LoadLibraryA",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "LoadLibraryW",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "LogonUserA",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "LogonUserW",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "NetUserChangePassword",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "NetUserSetInfo",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "PathAppendA",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "RegCreateKeyA",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "RegCreateKeyExA",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "RegCreateKeyExW",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "RegCreateKeyW",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "RegOpenKeyExA",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "RegOpenKeyExW",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "RpcImpersonateClient",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "SHRegCreateUSKeyA",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "SHRegCreateUSKeyW",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "SHRegOpenUSKeyA",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "SHRegOpenUSKeyW",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "SecureZeroMemory",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "SetComputerNameA",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "SetFileTime",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "Sleep",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "VirtualLock",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "WideCharToMultiByte",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "WriteFile",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_access",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_alloca",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_close",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_execl",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_execlp",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_execv",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_execvp",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_open",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_popen",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_putenv",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_putws",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_snprintf",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_snwprintf",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_spawnl",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_spawnlp",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_spawnv",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_spawnvp",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_stat",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_unlink",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_vsnwprintf",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_wexecl",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_wexeclp",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_wexecv",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_wexecvp",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_wfopen",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_wopen",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_wpopen",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_wputenv",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_wremove",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_wrename",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_wspawnl",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_wspawnlp",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_wspawnv",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_wspawnvp",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_wsystem",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "_wunlink",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "abs",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "accept",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "access",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "alloca",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "assert",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "atoi",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "bind",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "calloc",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "cin.width",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "close",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "connect",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "data.push_back",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "dataList.push_back",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "dataVector.end",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "dataVector.insert",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "exception",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "execl",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "execlp",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "fabs",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "fclose",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "fgets",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "fgetws",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "fopen",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "fprintf",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "fputc",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "fputs",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "fputwc",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "fputws",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "fread",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "free",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "freopen",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "fscanf",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "funcPtr",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "fwprintf",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "fwrite",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "fwscanf",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "getenv",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "gets",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "imaxabs",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "inet_ntoa",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "inputFile.open",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "listen",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "malloc",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "memcpy",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "memmove",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "memset",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "open",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "outputFile.open",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "popen",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "printDoubleLine",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "printFloatLine",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "printHexCharLine",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "printIntLine",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "printLine",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "printLongLine",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "printLongLongLine",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "printStructLine",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "printUnsignedLine",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "printWLine",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "printWcharLine",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "printf",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "putc",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "putchar",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "putenv",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "puts",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "putwc",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "putwchar",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "rand",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "range_error",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "realloc",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "recv",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "reinterpret_cast<TwoIntsClass *>",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "remove",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "rename",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "scanf",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "send",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "setsockopt",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "signal",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "snprintf",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "socket",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "sprintf",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "sqrt",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "sqrtl",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "sscanf",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "stat",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "staticReturnsFalse",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "staticReturnsTrue",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "stdThreadLockAcquire",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "strcat",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "strcmp",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "strcpy",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "strdup",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "strlen",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "strncat",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "strncpy",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "swprintf",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "swscanf",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "system",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "time",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "unlink",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "usleep",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "vfprintf",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "vfwprintf",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "vprintf",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "vsnprintf",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "vwprintf",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "wcscat",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "wcscpy",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "wcsdup",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "wcslen",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "wcsncat",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "wcsncpy",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "wmemset",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "wprintf",
+      "taint_target": "AllArguments"
+    },
+    {
+      "procedure": "wscanf",
+      "taint_target": "AllArguments"
+    }
+  ]
+}
