@@ -1,11 +1,20 @@
 from typing import Dict, Generator, List, Optional, Set, Tuple
 
-from paths import PROJECT_HOME, JULIET_TESTCASE_DIR, INFER_BIN, RESULT_DIR, INFER_RESULTS_DIR, GLOBAL_INFER_RESULTS_DIR, PULSE_TAINT_CONFIG
+from paths import (
+    PROJECT_HOME,
+    JULIET_TESTCASE_DIR,
+    INFER_BIN,
+    RESULT_DIR,
+    INFER_RESULTS_DIR,
+    GLOBAL_INFER_RESULTS_DIR,
+    PULSE_TAINT_CONFIG,
+)
 
 import concurrent.futures
 import csv
 import datetime
 import importlib.util
+import json
 import os
 from pathlib import Path
 import re
@@ -108,6 +117,7 @@ def find_group_files(group_key: CaseGroup) -> List[str]:
 
 
 def build_infer_command(target_files: List[str], extension: str,
+                        pulse_taint_config: str,
                         cores: int = CORES_PER_JOB) -> str:
     testcasesupport_dir = os.path.join(PROJECT_HOME, 'juliet-test-suite-v1.3',
                                        'C', 'testcasesupport')
@@ -121,7 +131,10 @@ def build_infer_command(target_files: List[str], extension: str,
         f'{compiler} -I {shlex.quote(testcasesupport_dir)} -D INCLUDEMAIN '
         f'{shlex.quote(io_c)} {quoted_files}{link_flag}'
     )
-    return f'{INFER_BIN} run -j {cores} --pulse-taint-config {PULSE_TAINT_CONFIG} -- {compile_cmd}'
+    return (
+        f'{INFER_BIN} run -j {cores} '
+        f'--pulse-taint-config {shlex.quote(pulse_taint_config)} -- {compile_cmd}'
+    )
 
 
 def run_case(result_path: str, infer_cmd: str,
@@ -157,7 +170,21 @@ def _collect_results(futures: List, summary: Dict[str, object]) -> None:
             summary['no_issue_files'].append(res['file'])
 
 
-def run_infer_all(cwe_dir, result_dir):
+def _run_tasks(tasks: List[Tuple[str, str, str]], summary: Dict[str, object]) -> None:
+    """Run infer tasks in parallel with ProcessPoolExecutor."""
+    if not tasks:
+        return
+    futures = []
+    with concurrent.futures.ProcessPoolExecutor(
+            max_workers=MAX_PARALLEL_JOBS) as executor:
+        for result_path, infer_cmd, representative_file in tasks:
+            futures.append(
+                executor.submit(run_case, result_path, infer_cmd, representative_file))
+        _collect_results(futures, summary)
+
+
+def run_infer_all(cwe_dir: str, result_dir: str,
+                  pulse_taint_config: str) -> Dict[str, object]:
     processed_groups = set()
     summary: Dict[str, object] = {
         'issue': 0,
@@ -168,34 +195,32 @@ def run_infer_all(cwe_dir, result_dir):
     start_time = time.time()
     target_dir = os.path.join(JULIET_TESTCASE_DIR, cwe_dir)
 
-    futures = []
-    with concurrent.futures.ProcessPoolExecutor(
-            max_workers=MAX_PARALLEL_JOBS) as executor:
-        for file_path in iter_candidate_files(target_dir):
-            parsed = parse_case_group(file_path)
-            if parsed is None:
-                continue
+    tasks: List[Tuple[str, str, str]] = []
+    for file_path in iter_candidate_files(target_dir):
+        parsed = parse_case_group(file_path)
+        if parsed is None:
+            continue
 
-            group_key, cwe_num, filename_head, filename_num, extension = parsed
-            if group_key in processed_groups:
-                continue
+        group_key, cwe_num, filename_head, filename_num, extension = parsed
+        if group_key in processed_groups:
+            continue
 
-            processed_groups.add(group_key)
-            result_path = os.path.join(result_dir, f'{cwe_num}_{filename_num}-{filename_head}')
-            target_files = find_group_files(group_key)
-            if not target_files:
-                continue
-            infer_cmd = build_infer_command(target_files, extension)
-            futures.append(
-                executor.submit(run_case, result_path, infer_cmd, file_path))
+        processed_groups.add(group_key)
+        result_path = os.path.join(result_dir, f'{cwe_num}_{filename_num}-{filename_head}')
+        target_files = find_group_files(group_key)
+        if not target_files:
+            continue
+        infer_cmd = build_infer_command(target_files, extension, pulse_taint_config)
+        tasks.append((result_path, infer_cmd, file_path))
 
-        _collect_results(futures, summary)
+    _run_tasks(tasks, summary)
 
     summary['time'] = time.time() - start_time
     return summary
 
 
-def run_infer_for_files(files: List[str], result_dir: str):
+def run_infer_for_files(files: List[str], result_dir: str,
+                        pulse_taint_config: str) -> Dict[str, object]:
     summary: Dict[str, object] = {
         'issue': 0,
         'no_issue': 0,
@@ -205,55 +230,52 @@ def run_infer_for_files(files: List[str], result_dir: str):
     start_time = time.time()
     processed_targets: Set[Tuple[str, ...]] = set()
 
-    futures = []
-    with concurrent.futures.ProcessPoolExecutor(
-            max_workers=MAX_PARALLEL_JOBS) as executor:
-        for file_path in files:
-            abs_file = os.path.abspath(file_path)
-            if not os.path.isfile(abs_file):
-                raise typer.BadParameter(f'File not found: {file_path}')
+    tasks: List[Tuple[str, str, str]] = []
+    for file_path in files:
+        abs_file = os.path.abspath(file_path)
+        if not os.path.isfile(abs_file):
+            raise typer.BadParameter(f'File not found: {file_path}')
 
-            filename = os.path.basename(abs_file)
-            if '.' not in filename:
-                raise typer.BadParameter(f'Invalid file (no extension): {file_path}')
+        filename = os.path.basename(abs_file)
+        if '.' not in filename:
+            raise typer.BadParameter(f'Invalid file (no extension): {file_path}')
 
-            name_without_ext, extension = filename.rsplit('.', 1)
-            if extension not in VALID_EXTENSIONS:
-                raise typer.BadParameter(f'Unsupported extension for file: {file_path}')
+        name_without_ext, extension = filename.rsplit('.', 1)
+        if extension not in VALID_EXTENSIONS:
+            raise typer.BadParameter(f'Unsupported extension for file: {file_path}')
 
-            parsed = parse_case_group(abs_file)
-            if parsed is not None:
-                group_key, cwe_num, filename_head, filename_num, parsed_extension = parsed
-                if parsed_extension != extension:
-                    raise typer.BadParameter(f'Extension mismatch in parsed testcase: {file_path}')
-                target_key = ('group',) + group_key
-                if target_key in processed_targets:
-                    continue
-                processed_targets.add(target_key)
-                target_files = find_group_files(group_key)
-                if not target_files:
-                    raise typer.BadParameter(f'No grouped testcase files found for: {file_path}')
-                result_name = f'{cwe_num}_{filename_num}-{filename_head}'
-            else:
-                target_key = ('single', abs_file)
-                if target_key in processed_targets:
-                    continue
-                processed_targets.add(target_key)
-                target_files = [abs_file]
-                result_name = f'FILE-{name_without_ext}'
+        parsed = parse_case_group(abs_file)
+        if parsed is not None:
+            group_key, cwe_num, filename_head, filename_num, parsed_extension = parsed
+            if parsed_extension != extension:
+                raise typer.BadParameter(f'Extension mismatch in parsed testcase: {file_path}')
+            target_key = ('group',) + group_key
+            if target_key in processed_targets:
+                continue
+            processed_targets.add(target_key)
+            target_files = find_group_files(group_key)
+            if not target_files:
+                raise typer.BadParameter(f'No grouped testcase files found for: {file_path}')
+            result_name = f'{cwe_num}_{filename_num}-{filename_head}'
+        else:
+            target_key = ('single', abs_file)
+            if target_key in processed_targets:
+                continue
+            processed_targets.add(target_key)
+            target_files = [abs_file]
+            result_name = f'FILE-{name_without_ext}'
 
-            result_path = os.path.join(result_dir, result_name)
-            infer_cmd = build_infer_command(target_files, extension)
-            futures.append(
-                executor.submit(run_case, result_path, infer_cmd, abs_file))
+        result_path = os.path.join(result_dir, result_name)
+        infer_cmd = build_infer_command(target_files, extension, pulse_taint_config)
+        tasks.append((result_path, infer_cmd, abs_file))
 
-        _collect_results(futures, summary)
+    _run_tasks(tasks, summary)
 
     summary['time'] = time.time() - start_time
     return summary
 
 
-def generate_result_csv(result_map, result_dir):
+def generate_result_csv(result_map: Dict[object, Dict[str, object]], result_dir: str) -> Path:
     analysis_dir = os.path.join(result_dir, 'analysis')
     os.makedirs(analysis_dir, exist_ok=True)
     csv_path = os.path.join(analysis_dir, 'result.csv')
@@ -275,9 +297,10 @@ def generate_result_csv(result_map, result_dir):
             total_cases = issue + no_issue + error
 
             writer.writerow([cwe_number, total_cases, elapsed_sec, issue, no_issue, error])
+    return Path(csv_path)
 
 
-def generate_no_issue_files(result_map, result_dir):
+def generate_no_issue_files(result_map: Dict[object, Dict[str, object]], result_dir: str) -> Path:
     analysis_dir = os.path.join(result_dir, 'analysis')
     os.makedirs(analysis_dir, exist_ok=True)
     txt_path = os.path.join(analysis_dir, 'no_issue_files.txt')
@@ -288,6 +311,7 @@ def generate_no_issue_files(result_map, result_dir):
             for file in no_issue_files:
                 f.write(file)
                 f.write('\n')
+    return Path(txt_path)
 
 
 def load_signature_module():
@@ -302,24 +326,61 @@ def load_signature_module():
     return module
 
 
+def _build_summary_by_target(result_map: Dict[object, Dict[str, object]]) -> Dict[str, Dict[str, object]]:
+    compact: Dict[str, Dict[str, object]] = {}
+    for key, value in result_map.items():
+        compact[str(key)] = {
+            'issue': value['issue'],
+            'no_issue': value['no_issue'],
+            'error': value['error'],
+            'time': value['time'],
+            'total_cases': value['issue'] + value['no_issue'] + value['error'],
+        }
+    return compact
+
+
 def main(cwes: Optional[List[int]] = typer.Argument(None),
          global_result: bool = typer.Option(False),
          files: List[str] = typer.Option(
-             [], '--files', help='Run infer for specific files (repeatable)')):
+             [], '--files', help='Run infer for specific files (repeatable)'),
+         pulse_taint_config: Path = typer.Option(
+             Path(PULSE_TAINT_CONFIG),
+             '--pulse-taint-config',
+             help='Pulse taint config path to pass to infer'),
+         infer_results_root: Optional[Path] = typer.Option(
+             None,
+             '--infer-results-root',
+             help='Output root for infer-* run directories'),
+         signatures_root: Path = typer.Option(
+             Path(RESULT_DIR) / 'signatures',
+             '--signatures-root',
+             help='Output root for signature directories'),
+         summary_json: Optional[Path] = typer.Option(
+             None,
+             '--summary-json',
+             help='Optional JSON summary output path')):
 
-    if not os.path.exists(PULSE_TAINT_CONFIG):
+    pulse_taint_config = pulse_taint_config.resolve()
+    if not pulse_taint_config.exists():
         raise typer.BadParameter(
-            f'Pulse taint config not found: {PULSE_TAINT_CONFIG}')
+            f'Pulse taint config not found: {pulse_taint_config}')
 
-    infer_results_root = GLOBAL_INFER_RESULTS_DIR if global_result else INFER_RESULTS_DIR
+    if infer_results_root is None:
+        infer_results_root = Path(GLOBAL_INFER_RESULTS_DIR) if global_result else Path(INFER_RESULTS_DIR)
+
+    infer_results_root = infer_results_root.resolve()
+    signatures_root = signatures_root.resolve()
+
     os.makedirs(infer_results_root, exist_ok=True)
+    os.makedirs(signatures_root, exist_ok=True)
+
     timestamp = datetime.datetime.now().strftime('%Y.%m.%d-%H:%M:%S')
-    infer_run_dir = os.path.join(infer_results_root, f'infer-{timestamp}')
+    infer_run_dir = infer_results_root / f'infer-{timestamp}'
     os.makedirs(infer_run_dir, exist_ok=True)
 
     result_map: Dict[object, Dict[str, object]] = {}
     if files:
-        result_map['FILES'] = run_infer_for_files(files, infer_run_dir)
+        result_map['FILES'] = run_infer_for_files(files, str(infer_run_dir), str(pulse_taint_config))
     else:
         if not cwes:
             raise typer.BadParameter('Provide cwes or use --files')
@@ -327,17 +388,49 @@ def main(cwes: Optional[List[int]] = typer.Argument(None),
             cwe_dir = find_cwe_dir(cwe_number)
             if cwe_dir is None:
                 continue
-            result_map[cwe_number] = run_infer_all(cwe_dir, infer_run_dir)
+            result_map[cwe_number] = run_infer_all(cwe_dir, str(infer_run_dir), str(pulse_taint_config))
 
-    generate_result_csv(result_map, infer_run_dir)
-    generate_no_issue_files(result_map, infer_run_dir)
+    result_csv = generate_result_csv(result_map, str(infer_run_dir))
+    no_issue_txt = generate_no_issue_files(result_map, str(infer_run_dir))
 
     signature_module = load_signature_module()
     signature_output_dir = signature_module.generate_signatures(
         input_dir=Path(infer_run_dir),
-        output_root=Path(RESULT_DIR) / 'signatures',
+        output_root=Path(signatures_root),
         infer_run_name=Path(infer_run_dir).name)
+    signature_non_empty_dir = Path(signature_output_dir) / 'non_empty'
+
+    compact = _build_summary_by_target(result_map)
+    totals = {
+        'issue': sum(v['issue'] for v in compact.values()),
+        'no_issue': sum(v['no_issue'] for v in compact.values()),
+        'error': sum(v['error'] for v in compact.values()),
+        'total_cases': sum(v['total_cases'] for v in compact.values()),
+        'elapsed_seconds': sum(float(v['time']) for v in compact.values()),
+    }
+    summary_payload = {
+        'pulse_taint_config': str(pulse_taint_config),
+        'infer_results_root': str(infer_results_root),
+        'infer_run_dir': str(infer_run_dir),
+        'infer_run_name': infer_run_dir.name,
+        'signatures_root': str(signatures_root),
+        'signature_output_dir': str(signature_output_dir),
+        'signature_non_empty_dir': str(signature_non_empty_dir),
+        'analysis_result_csv': str(result_csv),
+        'analysis_no_issue_files': str(no_issue_txt),
+        'result_by_target': compact,
+        'totals': totals,
+    }
+
+    if summary_json is not None:
+        summary_json = summary_json.resolve()
+        summary_json.parent.mkdir(parents=True, exist_ok=True)
+        summary_json.write_text(
+            json.dumps(summary_payload, ensure_ascii=False, indent=2) + '\n',
+            encoding='utf-8')
+
     print(f'Signatures generated at: {signature_output_dir}')
+    print(json.dumps(summary_payload, ensure_ascii=False))
 
 
 if __name__ == '__main__':
