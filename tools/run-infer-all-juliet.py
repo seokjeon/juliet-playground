@@ -128,16 +128,23 @@ def run_case(result_path: str, infer_cmd: str,
              representative_file: str) -> Dict[str, object]:
     """Run a single infer case. Returns a result dict (thread/process safe)."""
     os.makedirs(result_path, exist_ok=True)
-    try:
-        result = subprocess.check_output(
-            infer_cmd, shell=True, cwd=result_path,
-            stderr=subprocess.DEVNULL)
-        if b'No issues found' in result:
-            return {'status': 'no_issue', 'file': representative_file}
-        else:
-            return {'status': 'issue', 'file': representative_file}
-    except subprocess.CalledProcessError:
+    result = subprocess.run(
+        infer_cmd,
+        shell=True,
+        cwd=result_path,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE)
+
+    if result.returncode != 0:
+        stderr_text = result.stderr.decode(errors='replace').strip()
+        if stderr_text:
+            print(f'[ERROR] infer failed for {representative_file}\n{stderr_text}')
         return {'status': 'error', 'file': representative_file}
+
+    if b'No issues found' in result.stdout:
+        return {'status': 'no_issue', 'file': representative_file}
+    else:
+        return {'status': 'issue', 'file': representative_file}
 
 
 def _collect_results(futures: List, summary: Dict[str, object]) -> None:
