@@ -317,7 +317,6 @@ def load_signature_module():
 
 
 def main(cwes: Optional[List[int]] = typer.Argument(None),
-         generate_csv: bool = typer.Option(False),
          generate_signature: bool = typer.Option(
              False, help='Generate signatures after infer run'),
          global_result: bool = typer.Option(False),
@@ -352,9 +351,7 @@ def main(cwes: Optional[List[int]] = typer.Argument(None),
                                                    juliet_result_dir,
                                                    max_cases=max_cases)
 
-    if generate_csv:
-        generate_result_csv(result_map, juliet_result_dir)
-
+    generate_result_csv(result_map, juliet_result_dir)
     generate_no_issue_files(result_map, juliet_result_dir)
 
     if generate_signature:

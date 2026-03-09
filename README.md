@@ -39,7 +39,7 @@ artifacts/
 │   └── juliet-YYYY.MM.DD-HH:MM:SS/
 │       ├── CWE.../infer-out/
 │       ├── no_issue_files.txt
-│       └── result.csv                    # --generate-csv 사용 시
+│       └── result.csv
 └── signatures/
     └── signatures-result-YYYY.MM.DD-HH:MM:SS/
         ├── CWE.../*.json             # alarm별 signature
@@ -51,7 +51,7 @@ artifacts/
 
 - **Infer 실행**: `tools/run-infer-all-juliet.py`
   - CWE 단위/파일 단위로 Juliet 테스트케이스를 실행
-  - `issue / no_issue / error` 집계, `result.csv`, `no_issue_files.txt` 생성 가능
+  - `issue / no_issue / error` 집계, `result.csv`, `no_issue_files.txt`를 항상 생성
 - **Signature 생성**: `tools/generate-signature.py`
   - `infer-out/report.json`에서 `bug_trace`가 있는 이슈를 JSON으로 분리 저장
   - `analysis/signature_counts.csv`에 CWE별 통계 저장
@@ -61,9 +61,6 @@ artifacts/
 ```bash
 # Infer만 빠르게 실행
 python tools/run-infer-all-juliet.py 78 --max-cases 3
-
-# Infer + CSV
-python tools/run-infer-all-juliet.py 78 --max-cases 3 --generate-csv
 
 # 특정 파일(해당 flow variant 그룹)만 실행
 python tools/run-infer-all-juliet.py --files juliet-test-suite-v1.3/C/testcases/CWE78_OS_Command_Injection/s01/CWE78_OS_Command_Injection__char_console_execlp_52a.c
