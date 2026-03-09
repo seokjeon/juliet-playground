@@ -210,3 +210,4 @@ __marimo__/
 juliet-result-*/
 signatures-result-*/
 artifacts/signatures/
+experiments/*/outputs/
