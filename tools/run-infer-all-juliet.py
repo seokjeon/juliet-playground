@@ -24,9 +24,11 @@ import time
 import typer
 
 TOTAL_CORES = os.cpu_count() or 4
-MIN_CORES_PER_JOB = 2
-MAX_PARALLEL_JOBS = max(1, TOTAL_CORES // MIN_CORES_PER_JOB)
-CORES_PER_JOB = max(1, TOTAL_CORES // MAX_PARALLEL_JOBS)
+# Conservative memory-aware parallelization to prevent OOM
+# Each infer process uses ~500MB-1GB memory
+CORES_PER_JOB = 1
+MAX_PARALLEL_JOBS = TOTAL_CORES  # Conservative: one job per core
+MAX_CWE_PARALLEL = 1  # Process CWEs sequentially to control memory usage
 VALID_EXTENSIONS = {'c', 'cpp'}
 WINDOWS_SPECIFIC_MARKERS = ('w32', 'wchar_t')
 
@@ -58,6 +60,16 @@ def find_cwe_dir(cwe_number: int) -> Optional[str]:
         if entry.startswith(prefix):
             return entry
     return None
+
+
+def find_all_cwe_dirs() -> List[str]:
+    """Find all CWE directories in the testcase directory."""
+    cwe_dirs = []
+    for entry in os.listdir(JULIET_TESTCASE_DIR):
+        if entry.startswith('CWE') and os.path.isdir(
+                os.path.join(JULIET_TESTCASE_DIR, entry)):
+            cwe_dirs.append(entry)
+    return sorted(cwe_dirs)
 
 
 def iter_candidate_files(target_dir: str) -> Generator[str, None, None]:
@@ -122,14 +134,15 @@ def build_infer_command(target_files: List[str], extension: str,
     testcasesupport_dir = os.path.join(PROJECT_HOME, 'juliet-test-suite-v1.3',
                                        'C', 'testcasesupport')
     io_c = os.path.join(testcasesupport_dir, 'io.c')
+    std_thread_c = os.path.join(testcasesupport_dir, 'std_thread.c')
 
     compiler = 'clang++' if extension == 'cpp' else 'clang'
-    link_flag = ' -lm' if extension == 'cpp' else ''
+    link_flag = ' -lpthread -lm'
 
     quoted_files = ' '.join(shlex.quote(file) for file in target_files)
     compile_cmd = (
         f'{compiler} -I {shlex.quote(testcasesupport_dir)} -D INCLUDEMAIN '
-        f'{shlex.quote(io_c)} {quoted_files}{link_flag}'
+        f'{shlex.quote(io_c)} {shlex.quote(std_thread_c)} {quoted_files}{link_flag}'
     )
     return (
         f'{INFER_BIN} run -j {cores} '
@@ -341,6 +354,8 @@ def _build_summary_by_target(result_map: Dict[object, Dict[str, object]]) -> Dic
 
 def main(cwes: Optional[List[int]] = typer.Argument(None),
          global_result: bool = typer.Option(False),
+         all_cwes: bool = typer.Option(
+             False, '--all', help='Run all CWEs in the testcase directory'),
          files: List[str] = typer.Option(
              [], '--files', help='Run infer for specific files (repeatable)'),
          pulse_taint_config: Path = typer.Option(
@@ -381,9 +396,13 @@ def main(cwes: Optional[List[int]] = typer.Argument(None),
     result_map: Dict[object, Dict[str, object]] = {}
     if files:
         result_map['FILES'] = run_infer_for_files(files, str(infer_run_dir), str(pulse_taint_config))
+    elif all_cwes:
+        cwe_dirs = find_all_cwe_dirs()
+        for cwe_dir in cwe_dirs:
+            result_map[cwe_dir] = run_infer_all(cwe_dir, str(infer_run_dir), str(pulse_taint_config))
     else:
         if not cwes:
-            raise typer.BadParameter('Provide cwes or use --files')
+            raise typer.BadParameter('Provide cwes, use --all, or use --files')
         for cwe_number in cwes:
             cwe_dir = find_cwe_dir(cwe_number)
             if cwe_dir is None:
