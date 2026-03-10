@@ -74,14 +74,16 @@ artifacts/
         ├── 05_pair_trace_ds/
         │   ├── pairs.jsonl
         │   ├── leftover_counterparts.jsonl
-        │   ├── split_manifest.json
         │   └── paired_signatures/<testcase_key>/{b2b.json,g2b.json,...}
         ├── 06_slices/
         │   ├── slice/*.c|*.cpp
         │   └── summary.json
-        ├── 07_tokenized/
-        │   ├── slice_token_counts.csv
+        ├── 07_dataset_export/
+        │   ├── normalized_slices/*.c|*.cpp
+        │   ├── Real_Vul_data.csv
+        │   ├── normalized_token_counts.csv
         │   ├── slice_token_distribution.png
+        │   ├── split_manifest.json
         │   └── summary.json
         └── run_summary.json
 ```
@@ -97,7 +99,7 @@ artifacts/
   - `infer-out/report.json`에서 `bug_trace`가 있는 이슈를 `non_empty/`에 JSON으로 분리 저장
   - `non_empty/analysis/signature_counts.csv`에 CWE별 통계 저장
 - **통합 파이프라인**: `tools/run-epic001-pipeline.py`
-  - `manifest -> with_comments -> taint config -> flow xml -> infer/signature -> trace_flow_filter -> paired_trace_ds -> slices -> tokenized`
+  - `manifest -> with_comments -> taint config -> flow xml -> infer/signature -> trace_flow_filter -> paired_trace_ds -> slices -> dataset_export`
   - 실행별 산출물을 `artifacts/pipeline-runs/...`에 분리 저장
   - 타깃 지정: `CWE 번호들` / `--all` / `--files ...`
 - **Paired trace dataset 생성**: `tools/build-paired-trace-signatures.py`
@@ -107,9 +109,10 @@ artifacts/
 - **Slice 생성**: `tools/generate_slices.py`
   - `paired_signatures`의 `bug_trace`에서 소스 라인만 모아 슬라이스 생성
   - `.c`는 `.c`, C++ trace는 `.cpp`로 저장
-- **Slice 토큰화/그래프**: `tools/tokenize_slices.py`
-  - 생성된 `.c/.cpp` 슬라이스를 CodeBERT 토크나이저로 토큰화
-  - `scienceplots` 스타일 히스토그램과 CSV 생성
+- **Dataset export (pipeline 내장)**: `tools/run-epic001-pipeline.py`
+  - 06에서 만든 slice를 기준으로 사용자 정의 함수명만 normalize
+  - normalize 후 CodeBERT 토큰 수를 재계산하고 pair 단위로 510 토큰 이하만 필터링
+  - `Real_Vul_data.csv`, `normalized_slices/`, 히스토그램/CSV를 생성
 
 ## 그 외 자주 쓰는 명령어
 
@@ -146,15 +149,6 @@ python tools/generate_slices.py \
 # 옵션 없이 실행하면 최신 pipeline run의 paired_signatures 를 찾아
 # 같은 run 아래 06_slices/ 로 출력
 python tools/generate_slices.py
-
-# slice(.c/.cpp) 토큰화 + 그래프 생성
-python tools/tokenize_slices.py \
-  --slice-dir artifacts/pipeline-runs/run-2026.03.09-22:18:32/06_slices/slice \
-  --output-dir /tmp/tokenized-slices
-
-# 옵션 없이 실행하면 최신 pipeline run의 06_slices/slice 를 찾아
-# 같은 run 아래 07_tokenized/ 로 출력
-python tools/tokenize_slices.py
 ```
 
 ## 메모
