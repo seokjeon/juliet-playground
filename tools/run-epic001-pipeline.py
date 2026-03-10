@@ -683,11 +683,12 @@ def export_dataset_from_pipeline(*,
         for idx, row in enumerate(ordered_rows, start=1):
             output_filename = f'{idx}{row["extension"]}'
             (normalized_slices_dir / output_filename).write_text(row['normalized_code'], encoding='utf-8')
+            vulnerable_line_numbers = 1 if int(row['target']) == 1 else ''
             writer.writerow([
                 idx,
                 idx,
                 row['target'],
-                1,
+                vulnerable_line_numbers,
                 'Juliet',
                 '',
                 row['dataset_type'],
