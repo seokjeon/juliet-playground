@@ -860,14 +860,38 @@ def main(
     leftover_counterparts_jsonl = pair_dir / 'leftover_counterparts.jsonl'
     paired_signatures_dir = pair_dir / 'paired_signatures'
     paired_trace_summary_json = pair_dir / 'summary.json'
+    train_patched_counterparts_pairs_jsonl = pair_dir / 'train_patched_counterparts_pairs.jsonl'
+    train_patched_counterparts_signatures_dir = pair_dir / 'train_patched_counterparts_signatures'
+    train_patched_counterparts_selection_summary_json = (
+        pair_dir / 'train_patched_counterparts_selection_summary.json'
+    )
     slice_dir = slice_stage_dir / 'slice'
     slice_summary_json = slice_stage_dir / 'summary.json'
+    train_patched_counterparts_slice_stage_dir = slice_stage_dir / 'train_patched_counterparts'
+    train_patched_counterparts_slice_dir = train_patched_counterparts_slice_stage_dir / 'slice'
+    train_patched_counterparts_slice_summary_json = (
+        train_patched_counterparts_slice_stage_dir / 'summary.json'
+    )
     normalized_slices_dir = dataset_stage_dir / 'normalized_slices'
     real_vul_data_csv = dataset_stage_dir / 'Real_Vul_data.csv'
     normalized_token_counts_csv = dataset_stage_dir / 'normalized_token_counts.csv'
     slice_token_distribution_png = dataset_stage_dir / 'slice_token_distribution.png'
     dataset_split_manifest_json = dataset_stage_dir / 'split_manifest.json'
     dataset_summary_json = dataset_stage_dir / 'summary.json'
+    train_patched_counterparts_csv = dataset_stage_dir / 'train_patched_counterparts.csv'
+    train_patched_counterparts_slices_dir = dataset_stage_dir / 'train_patched_counterparts_slices'
+    train_patched_counterparts_token_counts_csv = (
+        dataset_stage_dir / 'train_patched_counterparts_token_counts.csv'
+    )
+    train_patched_counterparts_token_distribution_png = (
+        dataset_stage_dir / 'train_patched_counterparts_token_distribution.png'
+    )
+    train_patched_counterparts_split_manifest_json = (
+        dataset_stage_dir / 'train_patched_counterparts_split_manifest.json'
+    )
+    train_patched_counterparts_summary_json = (
+        dataset_stage_dir / 'train_patched_counterparts_summary.json'
+    )
     run_summary_path = run_dir / 'run_summary.json'
 
     source_testcases_root = source_root / 'testcases'
@@ -881,6 +905,7 @@ def main(
     filter_script = Path(PROJECT_HOME) / 'experiments' / 'epic001d_trace_flow_filter' / 'scripts' / 'filter_traces_by_flow.py'
     pair_script = Path(PROJECT_HOME) / 'tools' / 'build-paired-trace-signatures.py'
     slice_script = Path(PROJECT_HOME) / 'tools' / 'generate_slices.py'
+    train_patched_counterparts_script = Path(PROJECT_HOME) / 'tools' / 'export_train_patched_counterparts.py'
 
     started_at = now_iso_utc()
     start_perf = time.perf_counter()
@@ -1097,6 +1122,74 @@ def main(
         if not dataset_summary_json.exists():
             raise RuntimeError(f'Expected dataset summary JSON not found: {dataset_summary_json}')
 
+        # Step 07b: export train-only patched counterparts for evaluation
+        steps['07b_train_patched_counterparts_export'] = run_command(
+            '07b_train_patched_counterparts_export',
+            [
+                sys.executable,
+                str(train_patched_counterparts_script),
+                '--run-dir', str(run_dir),
+            ],
+            cwd=Path(PROJECT_HOME),
+            logs_dir=logs_dir,
+        )
+
+        if not train_patched_counterparts_pairs_jsonl.exists():
+            raise RuntimeError(
+                'Expected train_patched_counterparts pairs output not found: '
+                f'{train_patched_counterparts_pairs_jsonl}'
+            )
+        if not train_patched_counterparts_signatures_dir.exists():
+            raise RuntimeError(
+                'Expected train_patched_counterparts signatures dir not found: '
+                f'{train_patched_counterparts_signatures_dir}'
+            )
+        if not train_patched_counterparts_selection_summary_json.exists():
+            raise RuntimeError(
+                'Expected train_patched_counterparts selection summary not found: '
+                f'{train_patched_counterparts_selection_summary_json}'
+            )
+        if not train_patched_counterparts_slice_dir.exists():
+            raise RuntimeError(
+                'Expected train_patched_counterparts slice dir not found: '
+                f'{train_patched_counterparts_slice_dir}'
+            )
+        if not train_patched_counterparts_slice_summary_json.exists():
+            raise RuntimeError(
+                'Expected train_patched_counterparts slice summary not found: '
+                f'{train_patched_counterparts_slice_summary_json}'
+            )
+        if not train_patched_counterparts_csv.exists():
+            raise RuntimeError(
+                'Expected train_patched_counterparts CSV not found: '
+                f'{train_patched_counterparts_csv}'
+            )
+        if not train_patched_counterparts_slices_dir.exists():
+            raise RuntimeError(
+                'Expected train_patched_counterparts slices dir not found: '
+                f'{train_patched_counterparts_slices_dir}'
+            )
+        if not train_patched_counterparts_token_counts_csv.exists():
+            raise RuntimeError(
+                'Expected train_patched_counterparts token counts CSV not found: '
+                f'{train_patched_counterparts_token_counts_csv}'
+            )
+        if not train_patched_counterparts_token_distribution_png.exists():
+            raise RuntimeError(
+                'Expected train_patched_counterparts token distribution plot not found: '
+                f'{train_patched_counterparts_token_distribution_png}'
+            )
+        if not train_patched_counterparts_split_manifest_json.exists():
+            raise RuntimeError(
+                'Expected train_patched_counterparts split manifest not found: '
+                f'{train_patched_counterparts_split_manifest_json}'
+            )
+        if not train_patched_counterparts_summary_json.exists():
+            raise RuntimeError(
+                'Expected train_patched_counterparts summary JSON not found: '
+                f'{train_patched_counterparts_summary_json}'
+            )
+
     except Exception as exc:
         status = 'failed'
         error_message = str(exc)
@@ -1146,8 +1239,13 @@ def main(
             'leftover_counterparts_jsonl': str(leftover_counterparts_jsonl),
             'paired_signatures_dir': str(paired_signatures_dir),
             'paired_trace_summary_json': str(paired_trace_summary_json),
+            'train_patched_counterparts_pairs_jsonl': str(train_patched_counterparts_pairs_jsonl),
+            'train_patched_counterparts_signatures_dir': str(train_patched_counterparts_signatures_dir),
+            'train_patched_counterparts_selection_summary_json': str(train_patched_counterparts_selection_summary_json),
             'slice_dir': str(slice_dir),
             'slice_summary_json': str(slice_summary_json),
+            'train_patched_counterparts_slice_dir': str(train_patched_counterparts_slice_dir),
+            'train_patched_counterparts_slice_summary_json': str(train_patched_counterparts_slice_summary_json),
             'dataset_export_dir': str(dataset_stage_dir),
             'normalized_slices_dir': str(normalized_slices_dir),
             'real_vul_data_csv': str(real_vul_data_csv),
@@ -1155,6 +1253,12 @@ def main(
             'slice_token_distribution_png': str(slice_token_distribution_png),
             'dataset_split_manifest_json': str(dataset_split_manifest_json),
             'dataset_summary_json': str(dataset_summary_json),
+            'train_patched_counterparts_csv': str(train_patched_counterparts_csv),
+            'train_patched_counterparts_slices_dir': str(train_patched_counterparts_slices_dir),
+            'train_patched_counterparts_token_counts_csv': str(train_patched_counterparts_token_counts_csv),
+            'train_patched_counterparts_token_distribution_png': str(train_patched_counterparts_token_distribution_png),
+            'train_patched_counterparts_split_manifest_json': str(train_patched_counterparts_split_manifest_json),
+            'train_patched_counterparts_summary_json': str(train_patched_counterparts_summary_json),
         },
         'infer_summary': infer_summary,
     }

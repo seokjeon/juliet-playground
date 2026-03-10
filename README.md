@@ -74,17 +74,22 @@ artifacts/
         ├── 05_pair_trace_ds/
         │   ├── pairs.jsonl
         │   ├── leftover_counterparts.jsonl
-        │   └── paired_signatures/<testcase_key>/{b2b.json,g2b.json,...}
+        │   ├── paired_signatures/<testcase_key>/{b2b.json,g2b.json,...}
+        │   ├── train_patched_counterparts_pairs.jsonl
+        │   └── train_patched_counterparts_signatures/<testcase_key>/{b2b.json,g2b.json,...}
         ├── 06_slices/
         │   ├── slice/*.c|*.cpp
-        │   └── summary.json
+        │   ├── summary.json
+        │   └── train_patched_counterparts/slice/*.c|*.cpp
         ├── 07_dataset_export/
         │   ├── normalized_slices/*.c|*.cpp
         │   ├── Real_Vul_data.csv
         │   ├── normalized_token_counts.csv
         │   ├── slice_token_distribution.png
         │   ├── split_manifest.json
-        │   └── summary.json
+        │   ├── summary.json
+        │   ├── train_patched_counterparts.csv
+        │   └── train_patched_counterparts_slices/*.c|*.cpp
         └── run_summary.json
 ```
 
@@ -113,6 +118,10 @@ artifacts/
   - 06에서 만든 slice를 기준으로 사용자 정의 함수명만 normalize
   - normalize 후 CodeBERT 토큰 수를 재계산하고 pair 단위로 510 토큰 이하만 필터링
   - `Real_Vul_data.csv`, `normalized_slices/`, 히스토그램/CSV를 생성
+- **Train patched counterpart export**: `tools/export_train_patched_counterparts.py`
+  - 기존 `07_dataset_export/split_manifest.json`에서 `train_val`로 사용된 pair만 대상으로 함
+  - `leftover_counterparts.jsonl`에서 testcase별 최상위 leftover counterpart 1개를 골라 평가용 데이터셋 생성
+  - `train_patched_counterparts.csv`, `train_patched_counterparts_slices/`, 관련 summary/manifest를 생성
 
 ## 그 외 자주 쓰는 명령어
 
@@ -149,6 +158,10 @@ python tools/generate_slices.py \
 # 옵션 없이 실행하면 최신 pipeline run의 paired_signatures 를 찾아
 # 같은 run 아래 06_slices/ 로 출력
 python tools/generate_slices.py
+
+# 기존 train_val 샘플들에 대응하는 patched counterpart 평가셋 생성
+python tools/export_train_patched_counterparts.py \
+  --run-dir artifacts/pipeline-runs/run-2026.03.10-00:49:21
 ```
 
 ## 메모
