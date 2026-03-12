@@ -42,14 +42,15 @@ cd /home/sojeon/Desktop/juliet-playground && python3 -m venv .venv && source .ve
 # 개발용 git hook 설치
 source .venv/bin/activate && pre-commit install
 
-# 수동 검사
-source .venv/bin/activate && ruff format .
-source .venv/bin/activate && ruff check .
-source .venv/bin/activate && pytest -q
+# 평소 개발 루틴
+source .venv/bin/activate && ruff check . && pytest -q
 
-# pre-commit 훅 전체 실행
-source .venv/bin/activate && pre-commit run --all-files
+# 코드 스타일 자동 정리가 필요하면
+source .venv/bin/activate && ruff format .
 ```
+
+커밋할 때는 `pre-commit` hook이 자동으로 실행됩니다.
+개발 확인이 끝나면 아래의 Infer / 파이프라인 실행 명령을 사용하면 됩니다.
 
 ### 2) 단일 Infer 실행
 
