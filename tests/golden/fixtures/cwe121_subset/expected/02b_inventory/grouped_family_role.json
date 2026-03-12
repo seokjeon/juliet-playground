@@ -1,0 +1,342 @@
+{
+  "flow_families": [
+    {
+      "flow_family": "b2b_family",
+      "operation_roles": {
+        "sink": {
+          "items": [
+            {
+              "count": 1,
+              "function_name": "badSink",
+              "role_variant": "direct_sink",
+              "simple_name": "badSink"
+            }
+          ],
+          "role_variants": {
+            "direct_sink": {
+              "items": [
+                {
+                  "count": 1,
+                  "function_name": "badSink",
+                  "simple_name": "badSink"
+                }
+              ],
+              "unique_count": 1,
+              "weighted_count": 1
+            }
+          },
+          "unique_count": 1,
+          "weighted_count": 1
+        },
+        "source": {
+          "items": [
+            {
+              "count": 1,
+              "function_name": "badSource",
+              "role_variant": "source",
+              "simple_name": "badSource"
+            }
+          ],
+          "role_variants": {
+            "source": {
+              "items": [
+                {
+                  "count": 1,
+                  "function_name": "badSource",
+                  "simple_name": "badSource"
+                }
+              ],
+              "unique_count": 1,
+              "weighted_count": 1
+            }
+          },
+          "unique_count": 1,
+          "weighted_count": 1
+        },
+        "source_sink": {
+          "items": [
+            {
+              "count": 2,
+              "function_name": "CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_01_bad",
+              "role_variant": "both_func_excluded",
+              "simple_name": "bad"
+            },
+            {
+              "count": 2,
+              "function_name": "CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_06_bad",
+              "role_variant": "both_func_excluded",
+              "simple_name": "bad"
+            },
+            {
+              "count": 2,
+              "function_name": "CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf_01_bad",
+              "role_variant": "both_func_excluded",
+              "simple_name": "bad"
+            },
+            {
+              "count": 2,
+              "function_name": "CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf_14_bad",
+              "role_variant": "both_func_excluded",
+              "simple_name": "bad"
+            },
+            {
+              "count": 1,
+              "function_name": "CWE121_Stack_Based_Buffer_Overflow__CWE129_fgets_21_bad",
+              "role_variant": "sink_func_only",
+              "simple_name": "bad"
+            },
+            {
+              "count": 1,
+              "function_name": "bad",
+              "role_variant": "source_func_only",
+              "simple_name": "bad"
+            }
+          ],
+          "role_variants": {
+            "both_func_excluded": {
+              "items": [
+                {
+                  "count": 2,
+                  "function_name": "CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_01_bad",
+                  "simple_name": "bad"
+                },
+                {
+                  "count": 2,
+                  "function_name": "CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_06_bad",
+                  "simple_name": "bad"
+                },
+                {
+                  "count": 2,
+                  "function_name": "CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf_01_bad",
+                  "simple_name": "bad"
+                },
+                {
+                  "count": 2,
+                  "function_name": "CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf_14_bad",
+                  "simple_name": "bad"
+                }
+              ],
+              "unique_count": 4,
+              "weighted_count": 8
+            },
+            "sink_func_only": {
+              "items": [
+                {
+                  "count": 1,
+                  "function_name": "CWE121_Stack_Based_Buffer_Overflow__CWE129_fgets_21_bad",
+                  "simple_name": "bad"
+                }
+              ],
+              "unique_count": 1,
+              "weighted_count": 1
+            },
+            "source_func_only": {
+              "items": [
+                {
+                  "count": 1,
+                  "function_name": "bad",
+                  "simple_name": "bad"
+                }
+              ],
+              "unique_count": 1,
+              "weighted_count": 1
+            }
+          },
+          "unique_count": 6,
+          "weighted_count": 10
+        }
+      },
+      "unique_count": 8,
+      "weighted_count": 12
+    },
+    {
+      "flow_family": "b2g_family",
+      "operation_roles": {
+        "sink": {
+          "items": [
+            {
+              "count": 1,
+              "function_name": "goodB2G1Sink",
+              "role_variant": "direct_sink",
+              "simple_name": "goodB2G1Sink"
+            },
+            {
+              "count": 1,
+              "function_name": "goodB2G2Sink",
+              "role_variant": "direct_sink",
+              "simple_name": "goodB2G2Sink"
+            }
+          ],
+          "role_variants": {
+            "direct_sink": {
+              "items": [
+                {
+                  "count": 1,
+                  "function_name": "goodB2G1Sink",
+                  "simple_name": "goodB2G1Sink"
+                },
+                {
+                  "count": 1,
+                  "function_name": "goodB2G2Sink",
+                  "simple_name": "goodB2G2Sink"
+                }
+              ],
+              "unique_count": 2,
+              "weighted_count": 2
+            }
+          },
+          "unique_count": 2,
+          "weighted_count": 2
+        },
+        "source_sink": {
+          "items": [
+            {
+              "count": 1,
+              "function_name": "goodB2G1",
+              "role_variant": "sink_func_only",
+              "simple_name": "goodB2G1"
+            },
+            {
+              "count": 1,
+              "function_name": "goodB2G2",
+              "role_variant": "sink_func_only",
+              "simple_name": "goodB2G2"
+            }
+          ],
+          "role_variants": {
+            "sink_func_only": {
+              "items": [
+                {
+                  "count": 1,
+                  "function_name": "goodB2G1",
+                  "simple_name": "goodB2G1"
+                },
+                {
+                  "count": 1,
+                  "function_name": "goodB2G2",
+                  "simple_name": "goodB2G2"
+                }
+              ],
+              "unique_count": 2,
+              "weighted_count": 2
+            }
+          },
+          "unique_count": 2,
+          "weighted_count": 2
+        }
+      },
+      "unique_count": 4,
+      "weighted_count": 4
+    },
+    {
+      "flow_family": "g2b_family",
+      "operation_roles": {
+        "sink": {
+          "items": [
+            {
+              "count": 1,
+              "function_name": "goodG2BSink",
+              "role_variant": "direct_sink",
+              "simple_name": "goodG2BSink"
+            }
+          ],
+          "role_variants": {
+            "direct_sink": {
+              "items": [
+                {
+                  "count": 1,
+                  "function_name": "goodG2BSink",
+                  "simple_name": "goodG2BSink"
+                }
+              ],
+              "unique_count": 1,
+              "weighted_count": 1
+            }
+          },
+          "unique_count": 1,
+          "weighted_count": 1
+        },
+        "source": {
+          "items": [
+            {
+              "count": 1,
+              "function_name": "goodG2BSource",
+              "role_variant": "source",
+              "simple_name": "goodG2BSource"
+            }
+          ],
+          "role_variants": {
+            "source": {
+              "items": [
+                {
+                  "count": 1,
+                  "function_name": "goodG2BSource",
+                  "simple_name": "goodG2BSource"
+                }
+              ],
+              "unique_count": 1,
+              "weighted_count": 1
+            }
+          },
+          "unique_count": 1,
+          "weighted_count": 1
+        },
+        "source_sink": {
+          "items": [
+            {
+              "count": 6,
+              "function_name": "goodG2B",
+              "role_variant": "both_func_included",
+              "simple_name": "goodG2B"
+            },
+            {
+              "count": 4,
+              "function_name": "goodG2B1",
+              "role_variant": "both_func_excluded",
+              "simple_name": "goodG2B1"
+            },
+            {
+              "count": 4,
+              "function_name": "goodG2B2",
+              "role_variant": "both_func_excluded",
+              "simple_name": "goodG2B2"
+            }
+          ],
+          "role_variants": {
+            "both_func_excluded": {
+              "items": [
+                {
+                  "count": 4,
+                  "function_name": "goodG2B1",
+                  "simple_name": "goodG2B1"
+                },
+                {
+                  "count": 4,
+                  "function_name": "goodG2B2",
+                  "simple_name": "goodG2B2"
+                }
+              ],
+              "unique_count": 2,
+              "weighted_count": 8
+            },
+            "both_func_included": {
+              "items": [
+                {
+                  "count": 6,
+                  "function_name": "goodG2B",
+                  "simple_name": "goodG2B"
+                }
+              ],
+              "unique_count": 1,
+              "weighted_count": 6
+            }
+          },
+          "unique_count": 3,
+          "weighted_count": 14
+        }
+      },
+      "unique_count": 5,
+      "weighted_count": 16
+    }
+  ]
+}

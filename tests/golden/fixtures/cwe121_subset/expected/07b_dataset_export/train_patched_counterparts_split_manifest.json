@@ -1,0 +1,42 @@
+{
+  "counts": {
+    "dedup_dropped_pairs": 1,
+    "dedup_dropped_rows": 2,
+    "pairs_total": 2,
+    "rows_total": 4,
+    "test": 0,
+    "train_val": 2
+  },
+  "dataset_basename": "train_patched_counterparts",
+  "dedup": {
+    "collision_hash_groups": 0,
+    "collision_row_occurrences": 0,
+    "duplicate_hash_groups": 1,
+    "duplicate_row_occurrences": 1,
+    "mode": "row",
+    "pairs_after": 2,
+    "pairs_before": 3,
+    "pairs_dropped_collision": 0,
+    "pairs_dropped_duplicate": 1,
+    "row_hash_method": "md5(compact_whitespace(normalized_code))",
+    "row_hashes_unique": 5,
+    "rows_after": 4,
+    "rows_before": 6,
+    "rows_removed": 2,
+    "selection_order": "input_pair_order"
+  },
+  "dedup_dropped_csv": "expected/07b_dataset_export/train_patched_counterparts_dedup_dropped.csv",
+  "normalized_slices_dir": "expected/07b_dataset_export/train_patched_counterparts_slices",
+  "output_dir": "expected/07b_dataset_export",
+  "pair_ids": {
+    "test": [],
+    "train_val": [
+      "9fdbc1aa84f18e77",
+      "fb989951031ec588"
+    ]
+  },
+  "paired_signatures_dir": "expected/05_pair_trace_ds/train_patched_counterparts_signatures",
+  "slice_dir": "expected/06_slices/train_patched_counterparts/slice",
+  "split_mode": "inherited_train_val_only",
+  "split_unit": "pair_id"
+}

@@ -1,0 +1,68 @@
+{
+  "%s": [],
+  "1": [],
+  "SNPRINTF(dest, strlen(data), \"%s\", data);": [
+    {
+      "argc": 4,
+      "name": "_snprintf",
+      "original_name": "SNPRINTF"
+    },
+    {
+      "argc": 4,
+      "name": "_snwprintf",
+      "original_name": "SNPRINTF"
+    },
+    {
+      "argc": 4,
+      "name": "snprintf",
+      "original_name": "SNPRINTF"
+    },
+    {
+      "argc": 4,
+      "name": "swprintf",
+      "original_name": "SNPRINTF"
+    },
+    {
+      "argc": 1,
+      "name": "strlen"
+    }
+  ],
+  "data = 7;": [],
+  "dest": [],
+  "if (data >= 0 && data < (10))": [],
+  "if (data >= 0)": [],
+  "if (fgets(inputBuffer, CHAR_ARRAY_SIZE, stdin) != NULL)": [
+    {
+      "argc": 3,
+      "name": "fgets"
+    }
+  ],
+  "memset(data, 'A', 100-1);": [
+    {
+      "argc": 3,
+      "name": "memset"
+    }
+  ],
+  "memset(data, 'A', 50-1);": [
+    {
+      "argc": 3,
+      "name": "memset"
+    }
+  ],
+  "strcat(dest, data);": [
+    {
+      "argc": 2,
+      "name": "strcat"
+    }
+  ],
+  "strncat(dest, data, strlen(data));": [
+    {
+      "argc": 3,
+      "name": "strncat"
+    },
+    {
+      "argc": 1,
+      "name": "strlen"
+    }
+  ]
+}

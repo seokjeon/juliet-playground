@@ -1,0 +1,48 @@
+{
+  "bug_trace": [
+    {
+      "column_number": 5,
+      "description": "source of the taint here: value passed as argument `#0` to `memset` with kind `Simple`",
+      "filename": "juliet-test-suite-v1.3/C/testcases/CWE121_Stack_Based_Buffer_Overflow/s06/CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_01.c",
+      "level": 0,
+      "line_number": 51
+    },
+    {
+      "column_number": 29,
+      "description": "flows to this sink: value passed as argument `#0` to `strlen` with kind `Simple`",
+      "filename": "juliet-test-suite-v1.3/C/testcases/CWE121_Stack_Based_Buffer_Overflow/s06/CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_01.c",
+      "level": 0,
+      "line_number": 56
+    }
+  ],
+  "bug_trace_length": 2,
+  "bug_trace_max_depth": 0,
+  "bug_type": "TAINT_ERROR",
+  "bug_type_hum": "Taint Error",
+  "category": "Sensitive data flow",
+  "column": 29,
+  "extras": {
+    "taint_extra": {
+      "taint_sink": "strlen",
+      "taint_source": "memset",
+      "tainted_expression": "data"
+    }
+  },
+  "file": "juliet-test-suite-v1.3/C/testcases/CWE121_Stack_Based_Buffer_Overflow/s06/CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_01.c",
+  "hash": "712fd1e60a72bd41e100d785c1f3f153",
+  "key": "CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_01.c|goodG2B|TAINT_ERROR",
+  "line": 56,
+  "pairing_meta": {
+    "best_flow_type": "g2b",
+    "bug_trace_length": 2,
+    "pair_id": "5081a705ebecdd3a",
+    "role": "counterpart",
+    "selection_reason": "longest_bug_trace",
+    "testcase_key": "CWE121_01-CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat",
+    "trace_file": "expected/03_signatures_non_empty/CWE121_01-CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat/7.json"
+  },
+  "procedure": "goodG2B",
+  "procedure_start_line": 45,
+  "qualifier": "Built-in Simple taint kind, matching any Simple source with any Simple sink except if any Simple sanitizer is in the way. `data` is tainted by value passed as argument `#0` to `memset` with kind `Simple` and flows to value passed as argument `#0` to `strlen` with kind `Simple`.",
+  "severity": "ERROR"
+}

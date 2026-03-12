@@ -1,0 +1,39 @@
+{
+  "bug_trace": [
+    {
+      "column_number": 1,
+      "description": "source of the taint here: value passed as argument `#0` to `printDoubleLine` with kind `Simple`",
+      "filename": "juliet-test-suite-v1.3/C/testcasesupport/io.c",
+      "level": 0,
+      "line_number": 82
+    },
+    {
+      "column_number": 5,
+      "description": "flows to this sink: value passed as argument `#1` to `printf` with kind `Simple`",
+      "filename": "juliet-test-suite-v1.3/C/testcasesupport/io.c",
+      "level": 0,
+      "line_number": 84
+    }
+  ],
+  "bug_trace_length": 2,
+  "bug_trace_max_depth": 0,
+  "bug_type": "TAINT_ERROR",
+  "bug_type_hum": "Taint Error",
+  "category": "Sensitive data flow",
+  "column": 5,
+  "extras": {
+    "taint_extra": {
+      "taint_sink": "printf",
+      "taint_source": "printDoubleLine",
+      "tainted_expression": "doubleNumber"
+    }
+  },
+  "file": "juliet-test-suite-v1.3/C/testcasesupport/io.c",
+  "hash": "dee6af0e178096860dc9f8dbd7d5512f",
+  "key": "io.c|printDoubleLine|TAINT_ERROR",
+  "line": 84,
+  "procedure": "printDoubleLine",
+  "procedure_start_line": 82,
+  "qualifier": "Built-in Simple taint kind, matching any Simple source with any Simple sink except if any Simple sanitizer is in the way. `doubleNumber` is tainted by value passed as argument `#0` to `printDoubleLine` with kind `Simple` and flows to value passed as argument `#1` to `printf` with kind `Simple`.",
+  "severity": "ERROR"
+}

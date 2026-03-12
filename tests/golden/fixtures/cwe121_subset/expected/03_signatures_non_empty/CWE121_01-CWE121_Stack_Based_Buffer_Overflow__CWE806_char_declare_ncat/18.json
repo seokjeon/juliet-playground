@@ -1,0 +1,39 @@
+{
+  "bug_trace": [
+    {
+      "column_number": 1,
+      "description": "source of the taint here: value passed as argument `#0` to `printFloatLine` with kind `Simple`",
+      "filename": "juliet-test-suite-v1.3/C/testcasesupport/io.c",
+      "level": 0,
+      "line_number": 37
+    },
+    {
+      "column_number": 5,
+      "description": "flows to this sink: value passed as argument `#1` to `printf` with kind `Simple`",
+      "filename": "juliet-test-suite-v1.3/C/testcasesupport/io.c",
+      "level": 0,
+      "line_number": 39
+    }
+  ],
+  "bug_trace_length": 2,
+  "bug_trace_max_depth": 0,
+  "bug_type": "TAINT_ERROR",
+  "bug_type_hum": "Taint Error",
+  "category": "Sensitive data flow",
+  "column": 5,
+  "extras": {
+    "taint_extra": {
+      "taint_sink": "printf",
+      "taint_source": "printFloatLine",
+      "tainted_expression": "floatNumber"
+    }
+  },
+  "file": "juliet-test-suite-v1.3/C/testcasesupport/io.c",
+  "hash": "9583811f90482dc0aa6aaae0266e0893",
+  "key": "io.c|printFloatLine|TAINT_ERROR",
+  "line": 39,
+  "procedure": "printFloatLine",
+  "procedure_start_line": 37,
+  "qualifier": "Built-in Simple taint kind, matching any Simple source with any Simple sink except if any Simple sanitizer is in the way. `floatNumber` is tainted by value passed as argument `#0` to `printFloatLine` with kind `Simple` and flows to value passed as argument `#1` to `printf` with kind `Simple`.",
+  "severity": "ERROR"
+}

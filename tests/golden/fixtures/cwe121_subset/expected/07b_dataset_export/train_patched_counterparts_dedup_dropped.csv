@@ -1,0 +1,9 @@
+dropped_row_id,pair_id,testcase_key,role,role_name,target,project,source_signature_path,normalized_code_hash,dedup_reason,dedup_trigger_hashes,matched_kept_pair_id,matched_kept_role,matched_kept_source_signature_path,matched_kept_unique_id,processed_func
+1,6adccdb259491855,CWE121_14-CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf,b2b,b2b,1,Juliet,expected/05_pair_trace_ds/train_patched_counterparts_signatures/CWE121_14-CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf/b2b.json,dd17826c818457ac407f5625bd6c90a0,duplicate_pair,dd17826c818457ac407f5625bd6c90a0,fb989951031ec588,b2b,expected/05_pair_trace_ds/train_patched_counterparts_signatures/CWE121_01-CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf/b2b.json,3,"        memset(data, 'A', 100-1); /* fill with 'A's */
+        SNPRINTF(dest, strlen(data), ""%s"", data);
+#define SNPRINTF snprintf
+"
+2,6adccdb259491855,CWE121_14-CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf,counterpart,g2b2,0,Juliet,expected/05_pair_trace_ds/train_patched_counterparts_signatures/CWE121_14-CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf/g2b2.json,33e6ac1dd0a35fcd6f38857bcbcc3cb6,duplicate_pair,dd17826c818457ac407f5625bd6c90a0,,,,,"        memset(data, 'A', 50-1); /* fill with 'A's */
+        SNPRINTF(dest, strlen(data), ""%s"", data);
+#define SNPRINTF snprintf
+"

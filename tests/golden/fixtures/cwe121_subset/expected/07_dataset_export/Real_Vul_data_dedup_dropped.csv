@@ -1,0 +1,15 @@
+dropped_row_id,pair_id,testcase_key,role,role_name,target,project,source_signature_path,normalized_code_hash,dedup_reason,dedup_trigger_hashes,matched_kept_pair_id,matched_kept_role,matched_kept_source_signature_path,matched_kept_unique_id,processed_func
+1,6cc089ef63c94f1c,CWE121_06-CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat,b2b,b2b,1,Juliet,expected/05_pair_trace_ds/paired_signatures/CWE121_06-CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat/b2b.json,11253d1023b887a96995fa1399287773,duplicate_pair,11253d1023b887a96995fa1399287773|bfc1540d119420afdd285d5d01a84514,5081a705ebecdd3a,b2b,expected/05_pair_trace_ds/paired_signatures/CWE121_01-CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat/b2b.json,1,"        memset(data, 'A', 100-1); /* fill with 'A's */
+        strncat(dest, data, strlen(data));
+"
+2,6cc089ef63c94f1c,CWE121_06-CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat,counterpart,g2b2,0,Juliet,expected/05_pair_trace_ds/paired_signatures/CWE121_06-CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat/g2b2.json,bfc1540d119420afdd285d5d01a84514,duplicate_pair,11253d1023b887a96995fa1399287773|bfc1540d119420afdd285d5d01a84514,5081a705ebecdd3a,counterpart,expected/05_pair_trace_ds/paired_signatures/CWE121_01-CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat/g2b.json,2,"        memset(data, 'A', 50-1); /* fill with 'A's */
+        strncat(dest, data, strlen(data));
+"
+3,ffd83d6053bf99ea,CWE121_14-CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf,b2b,b2b,1,Juliet,expected/05_pair_trace_ds/paired_signatures/CWE121_14-CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf/b2b.json,dd17826c818457ac407f5625bd6c90a0,duplicate_pair,dd17826c818457ac407f5625bd6c90a0|33e6ac1dd0a35fcd6f38857bcbcc3cb6,ef0626e75cfd7623,b2b,expected/05_pair_trace_ds/paired_signatures/CWE121_01-CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf/b2b.json,5,"        memset(data, 'A', 100-1); /* fill with 'A's */
+        SNPRINTF(dest, strlen(data), ""%s"", data);
+#define SNPRINTF snprintf
+"
+4,ffd83d6053bf99ea,CWE121_14-CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf,counterpart,g2b1,0,Juliet,expected/05_pair_trace_ds/paired_signatures/CWE121_14-CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf/g2b1.json,33e6ac1dd0a35fcd6f38857bcbcc3cb6,duplicate_pair,dd17826c818457ac407f5625bd6c90a0|33e6ac1dd0a35fcd6f38857bcbcc3cb6,ef0626e75cfd7623,counterpart,expected/05_pair_trace_ds/paired_signatures/CWE121_01-CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf/g2b.json,6,"        memset(data, 'A', 50-1); /* fill with 'A's */
+        SNPRINTF(dest, strlen(data), ""%s"", data);
+#define SNPRINTF snprintf
+"

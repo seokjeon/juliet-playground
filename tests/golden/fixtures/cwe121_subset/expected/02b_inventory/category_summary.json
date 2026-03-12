@@ -1,0 +1,103 @@
+{
+  "flow_family_distribution": {
+    "b2b_family": {
+      "unique_count": 8,
+      "weighted_count": 12
+    },
+    "b2g_family": {
+      "unique_count": 4,
+      "weighted_count": 4
+    },
+    "g2b_family": {
+      "unique_count": 5,
+      "weighted_count": 16
+    }
+  },
+  "flow_family_operation_role_distribution": {
+    "b2b_family": {
+      "sink": {
+        "unique_count": 1,
+        "weighted_count": 1
+      },
+      "source": {
+        "unique_count": 1,
+        "weighted_count": 1
+      },
+      "source_sink": {
+        "unique_count": 6,
+        "weighted_count": 10
+      }
+    },
+    "b2g_family": {
+      "sink": {
+        "unique_count": 2,
+        "weighted_count": 2
+      },
+      "source_sink": {
+        "unique_count": 2,
+        "weighted_count": 2
+      }
+    },
+    "g2b_family": {
+      "sink": {
+        "unique_count": 1,
+        "weighted_count": 1
+      },
+      "source": {
+        "unique_count": 1,
+        "weighted_count": 1
+      },
+      "source_sink": {
+        "unique_count": 3,
+        "weighted_count": 14
+      }
+    }
+  },
+  "input_csv": "expected/02b_inventory/function_names_unique.csv",
+  "manifest_xml": "expected/01_manifest/manifest_with_comments.xml",
+  "operation_role_distribution": {
+    "sink": {
+      "unique_count": 4,
+      "weighted_count": 4
+    },
+    "source": {
+      "unique_count": 2,
+      "weighted_count": 2
+    },
+    "source_sink": {
+      "unique_count": 11,
+      "weighted_count": 26
+    }
+  },
+  "output_jsonl": "expected/02b_inventory/function_names_categorized.jsonl",
+  "output_nested_json": "expected/02b_inventory/grouped_family_role.json",
+  "role_variant_distribution": {
+    "both_func_excluded": {
+      "unique_count": 6,
+      "weighted_count": 16
+    },
+    "both_func_included": {
+      "unique_count": 1,
+      "weighted_count": 6
+    },
+    "direct_sink": {
+      "unique_count": 4,
+      "weighted_count": 4
+    },
+    "sink_func_only": {
+      "unique_count": 3,
+      "weighted_count": 3
+    },
+    "source": {
+      "unique_count": 2,
+      "weighted_count": 2
+    },
+    "source_func_only": {
+      "unique_count": 1,
+      "weighted_count": 1
+    }
+  },
+  "source_root": "juliet-test-suite-v1.3/C/testcases",
+  "total_unique_function_names": 17,
+  "total_weighted_count": 32
+}

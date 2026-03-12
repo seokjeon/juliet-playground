@@ -1,0 +1,23 @@
+file_name,unique_id,target,vulnerable_line_numbers,project,source_signature_path,commit_hash,dataset_type,processed_func
+1,1,1,1,Juliet,expected/05_pair_trace_ds/paired_signatures/CWE121_01-CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat/b2b.json,,train_val,"    memset(data, 'A', 100-1); /* fill with 'A's */
+        strncat(dest, data, strlen(data));
+"
+2,2,0,,Juliet,expected/05_pair_trace_ds/paired_signatures/CWE121_01-CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat/g2b.json,,train_val,"    memset(data, 'A', 50-1); /* fill with 'A's */
+        strncat(dest, data, strlen(data));
+"
+3,3,1,1,Juliet,expected/05_pair_trace_ds/paired_signatures/CWE121_43-CWE121_Stack_Based_Buffer_Overflow__src_char_declare_cat/b2b.json,,train_val,"    FUNC_1(data);
+    memset(data, 'A', 100-1); /* fill with 'A's */
+        strcat(dest, data);
+"
+4,4,0,,Juliet,expected/05_pair_trace_ds/paired_signatures/CWE121_43-CWE121_Stack_Based_Buffer_Overflow__src_char_declare_cat/g2b.json,,train_val,"    FUNC_1(data);
+    memset(data, 'A', 50-1); /* fill with 'A's */
+        strcat(dest, data);
+"
+5,5,1,1,Juliet,expected/05_pair_trace_ds/paired_signatures/CWE121_01-CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf/b2b.json,,test,"    memset(data, 'A', 100-1); /* fill with 'A's */
+        SNPRINTF(dest, strlen(data), ""%s"", data);
+#define SNPRINTF snprintf
+"
+6,6,0,,Juliet,expected/05_pair_trace_ds/paired_signatures/CWE121_01-CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf/g2b.json,,test,"    memset(data, 'A', 50-1); /* fill with 'A's */
+        SNPRINTF(dest, strlen(data), ""%s"", data);
+#define SNPRINTF snprintf
+"

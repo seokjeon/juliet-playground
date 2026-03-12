@@ -1,0 +1,18 @@
+{
+  "candidate_map_keys": 12,
+  "duplicate_key_skipped": 26,
+  "flaw_records_processed": 6,
+  "global_macro_definition_rows": 202,
+  "global_macro_unique_names": 120,
+  "keys_with_calls": 6,
+  "macro_ambiguous_count": 1,
+  "macro_names_detected": 1,
+  "macro_resolved_count": 1,
+  "macro_unresolved_count": 0,
+  "max_frequency": 7,
+  "rand_alias_applied_count": 0,
+  "total_code_entries": 32,
+  "total_function_name_occurrences": 11,
+  "unique_code_entries": 9,
+  "unique_function_names": 9
+}

@@ -1,0 +1,19 @@
+{
+  "counts": {
+    "primary_train_val_pairs_total": 3,
+    "selected_counterpart_flow_g2b": 1,
+    "selected_counterpart_flow_g2b1": 1,
+    "selected_counterpart_flow_g2b2": 1,
+    "selected_pairs": 3,
+    "selected_pairs_with_extra_leftovers": 1
+  },
+  "dataset_basename": "train_patched_counterparts",
+  "output_pairs_jsonl": "expected/05_pair_trace_ds/train_patched_counterparts_pairs.jsonl",
+  "pair_dir": "expected/05_pair_trace_ds",
+  "selected_testcases": 3,
+  "signature_output_dir": "expected/05_pair_trace_ds/train_patched_counterparts_signatures",
+  "source_leftover_counterparts_jsonl": "expected/05_pair_trace_ds/leftover_counterparts.jsonl",
+  "source_pairs_jsonl": "expected/05_pair_trace_ds/pairs.jsonl",
+  "source_split_manifest_json": "expected/07b_dataset_export/split_manifest.json",
+  "train_val_pair_ids_total": 3
+}

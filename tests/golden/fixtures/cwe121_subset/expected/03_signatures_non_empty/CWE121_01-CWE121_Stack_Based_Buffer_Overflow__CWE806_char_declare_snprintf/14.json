@@ -1,0 +1,39 @@
+{
+  "bug_trace": [
+    {
+      "column_number": 1,
+      "description": "source of the taint here: value passed as argument `#0` to `printLine` with kind `Simple`",
+      "filename": "juliet-test-suite-v1.3/C/testcasesupport/io.c",
+      "level": 0,
+      "line_number": 11
+    },
+    {
+      "column_number": 9,
+      "description": "flows to this sink: value passed as argument `#1` to `printf` with kind `Simple`",
+      "filename": "juliet-test-suite-v1.3/C/testcasesupport/io.c",
+      "level": 0,
+      "line_number": 15
+    }
+  ],
+  "bug_trace_length": 2,
+  "bug_trace_max_depth": 0,
+  "bug_type": "TAINT_ERROR",
+  "bug_type_hum": "Taint Error",
+  "category": "Sensitive data flow",
+  "column": 9,
+  "extras": {
+    "taint_extra": {
+      "taint_sink": "printf",
+      "taint_source": "printLine",
+      "tainted_expression": "line"
+    }
+  },
+  "file": "juliet-test-suite-v1.3/C/testcasesupport/io.c",
+  "hash": "c7ca3074e121ba1b1255a07d30a43852",
+  "key": "io.c|printLine|TAINT_ERROR",
+  "line": 15,
+  "procedure": "printLine",
+  "procedure_start_line": 11,
+  "qualifier": "Built-in Simple taint kind, matching any Simple source with any Simple sink except if any Simple sanitizer is in the way. `line` is tainted by value passed as argument `#0` to `printLine` with kind `Simple` and flows to value passed as argument `#1` to `printf` with kind `Simple`.",
+  "severity": "ERROR"
+}

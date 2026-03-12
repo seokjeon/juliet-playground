@@ -1,0 +1,17 @@
+{"count": 6, "flow_family": "g2b_family", "function_name": "goodG2B", "operation_role": "source_sink", "role_variant": "both_func_included", "simple_name": "goodG2B"}
+{"count": 4, "flow_family": "g2b_family", "function_name": "goodG2B1", "operation_role": "source_sink", "role_variant": "both_func_excluded", "simple_name": "goodG2B1"}
+{"count": 4, "flow_family": "g2b_family", "function_name": "goodG2B2", "operation_role": "source_sink", "role_variant": "both_func_excluded", "simple_name": "goodG2B2"}
+{"count": 2, "flow_family": "b2b_family", "function_name": "CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_01_bad", "operation_role": "source_sink", "role_variant": "both_func_excluded", "simple_name": "bad"}
+{"count": 2, "flow_family": "b2b_family", "function_name": "CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_06_bad", "operation_role": "source_sink", "role_variant": "both_func_excluded", "simple_name": "bad"}
+{"count": 2, "flow_family": "b2b_family", "function_name": "CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf_01_bad", "operation_role": "source_sink", "role_variant": "both_func_excluded", "simple_name": "bad"}
+{"count": 2, "flow_family": "b2b_family", "function_name": "CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf_14_bad", "operation_role": "source_sink", "role_variant": "both_func_excluded", "simple_name": "bad"}
+{"count": 1, "flow_family": "b2b_family", "function_name": "CWE121_Stack_Based_Buffer_Overflow__CWE129_fgets_21_bad", "operation_role": "source_sink", "role_variant": "sink_func_only", "simple_name": "bad"}
+{"count": 1, "flow_family": "b2b_family", "function_name": "bad", "operation_role": "source_sink", "role_variant": "source_func_only", "simple_name": "bad"}
+{"count": 1, "flow_family": "b2b_family", "function_name": "badSink", "operation_role": "sink", "role_variant": "direct_sink", "simple_name": "badSink"}
+{"count": 1, "flow_family": "b2b_family", "function_name": "badSource", "operation_role": "source", "role_variant": "source", "simple_name": "badSource"}
+{"count": 1, "flow_family": "b2g_family", "function_name": "goodB2G1", "operation_role": "source_sink", "role_variant": "sink_func_only", "simple_name": "goodB2G1"}
+{"count": 1, "flow_family": "b2g_family", "function_name": "goodB2G1Sink", "operation_role": "sink", "role_variant": "direct_sink", "simple_name": "goodB2G1Sink"}
+{"count": 1, "flow_family": "b2g_family", "function_name": "goodB2G2", "operation_role": "source_sink", "role_variant": "sink_func_only", "simple_name": "goodB2G2"}
+{"count": 1, "flow_family": "b2g_family", "function_name": "goodB2G2Sink", "operation_role": "sink", "role_variant": "direct_sink", "simple_name": "goodB2G2Sink"}
+{"count": 1, "flow_family": "g2b_family", "function_name": "goodG2BSink", "operation_role": "sink", "role_variant": "direct_sink", "simple_name": "goodG2BSink"}
+{"count": 1, "flow_family": "g2b_family", "function_name": "goodG2BSource", "operation_role": "source", "role_variant": "source", "simple_name": "goodG2BSource"}

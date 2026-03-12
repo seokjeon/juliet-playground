@@ -1,0 +1,8 @@
+{
+  "dropped_comment_lines": 0,
+  "missing_files": 0,
+  "output_xml": "expected/01_manifest/manifest_with_comments.xml",
+  "parse_failed_files": 0,
+  "scanned_files": 6,
+  "total_files": 6
+}

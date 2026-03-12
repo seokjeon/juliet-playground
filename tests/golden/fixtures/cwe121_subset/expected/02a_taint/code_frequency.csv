@@ -1,0 +1,10 @@
+count,code
+7,"memset(data, 'A', 50-1);"
+5,"SNPRINTF(dest, strlen(data), ""%s"", data);"
+5,"memset(data, 'A', 100-1);"
+5,"strncat(dest, data, strlen(data));"
+3,"if (fgets(inputBuffer, CHAR_ARRAY_SIZE, stdin) != NULL)"
+2,if (data >= 0 && data < (10))
+2,if (data >= 0)
+2,"strcat(dest, data);"
+1,data = 7;

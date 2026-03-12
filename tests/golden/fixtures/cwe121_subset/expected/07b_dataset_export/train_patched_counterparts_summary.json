@@ -1,0 +1,57 @@
+{
+  "content_token_limit": 510,
+  "counts": {
+    "dedup_dropped_pairs": 1,
+    "dedup_dropped_rows": 2,
+    "ext_.c": 6,
+    "pairs_filtered_out": 1,
+    "pairs_survived": 2,
+    "pairs_total": 3,
+    "rows_written": 4,
+    "slices_total": 6,
+    "slices_unchanged": 6,
+    "source_files_parse_failed": 0,
+    "test_pairs": 0,
+    "test_rows": 0,
+    "train_val_pairs": 2,
+    "train_val_rows": 4
+  },
+  "csv_path": "expected/07b_dataset_export/train_patched_counterparts.csv",
+  "dataset_basename": "train_patched_counterparts",
+  "dedup": {
+    "collision_hash_groups": 0,
+    "collision_row_occurrences": 0,
+    "duplicate_hash_groups": 1,
+    "duplicate_row_occurrences": 1,
+    "mode": "row",
+    "pairs_after": 2,
+    "pairs_before": 3,
+    "pairs_dropped_collision": 0,
+    "pairs_dropped_duplicate": 1,
+    "row_hash_method": "md5(compact_whitespace(normalized_code))",
+    "row_hashes_unique": 5,
+    "rows_after": 4,
+    "rows_before": 6,
+    "rows_removed": 2,
+    "selection_order": "input_pair_order"
+  },
+  "dedup_dropped_csv": "expected/07b_dataset_export/train_patched_counterparts_dedup_dropped.csv",
+  "filtered_pair_reasons": {
+    "dedup_duplicate_normalized_slice": 1
+  },
+  "max_length": 512,
+  "normalized_slices_dir": "expected/07b_dataset_export/train_patched_counterparts_slices",
+  "output_dir": "expected/07b_dataset_export",
+  "paired_signatures_dir": "expected/05_pair_trace_ds/train_patched_counterparts_signatures",
+  "slice_dir": "expected/06_slices/train_patched_counterparts/slice",
+  "source_file_parse_errors": {},
+  "split_manifest_json": "expected/07b_dataset_export/train_patched_counterparts_split_manifest.json",
+  "token_counts_csv": "expected/07b_dataset_export/train_patched_counterparts_token_counts.csv",
+  "token_distribution_png": "expected/07b_dataset_export/train_patched_counterparts_token_distribution.png",
+  "token_stats": {
+    "mean": 33.25,
+    "median": 34,
+    "over_limit_count": 0,
+    "total": 4
+  }
+}

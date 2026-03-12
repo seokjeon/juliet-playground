@@ -1,0 +1,63 @@
+{
+  "content_token_limit": 510,
+  "counts": {
+    "dedup_dropped_pairs": 2,
+    "dedup_dropped_rows": 4,
+    "ext_.c": 8,
+    "ext_.cpp": 2,
+    "functions_normalized_total": 2,
+    "pairs_filtered_out": 2,
+    "pairs_survived": 3,
+    "pairs_total": 5,
+    "rows_written": 6,
+    "slices_normalized": 2,
+    "slices_total": 10,
+    "slices_unchanged": 8,
+    "source_files_parse_failed": 0,
+    "test_pairs": 1,
+    "test_rows": 2,
+    "train_val_pairs": 2,
+    "train_val_rows": 4
+  },
+  "dedup": {
+    "collision_hash_groups": 0,
+    "collision_row_occurrences": 0,
+    "duplicate_hash_groups": 4,
+    "duplicate_row_occurrences": 4,
+    "mode": "row",
+    "pairs_after": 3,
+    "pairs_before": 5,
+    "pairs_dropped_collision": 0,
+    "pairs_dropped_duplicate": 2,
+    "row_hash_method": "md5(compact_whitespace(normalized_code))",
+    "row_hashes_unique": 6,
+    "rows_after": 6,
+    "rows_before": 10,
+    "rows_removed": 4,
+    "selection_order": "input_pair_order"
+  },
+  "dedup_dropped_csv": "expected/07_dataset_export/Real_Vul_data_dedup_dropped.csv",
+  "filtered_pair_reasons": {
+    "dedup_duplicate_normalized_slice": 2
+  },
+  "max_length": 512,
+  "normalized_slices_dir": "expected/07_dataset_export/normalized_slices",
+  "normalized_token_counts_csv": "expected/07_dataset_export/normalized_token_counts.csv",
+  "output_dir": "expected/07_dataset_export",
+  "paired_signatures_dir": "expected/05_pair_trace_ds/paired_signatures",
+  "pairs_jsonl": "expected/05_pair_trace_ds/pairs.jsonl",
+  "real_vul_data_csv": "expected/07_dataset_export/Real_Vul_data.csv",
+  "seed": 1234,
+  "slice_dir": "expected/06_slices/slice",
+  "slice_token_distribution_png": "expected/07_dataset_export/slice_token_distribution.png",
+  "source_file_parse_errors": {},
+  "split_manifest_json": "expected/07_dataset_export/split_manifest.json",
+  "test_ratio": 0.2,
+  "token_stats": {
+    "mean": 33.0,
+    "median": 31,
+    "over_limit_count": 0,
+    "total": 6
+  },
+  "train_ratio": 0.8
+}

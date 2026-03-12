@@ -1,0 +1,22 @@
+{
+  "leftover_counterparts": 5,
+  "leftover_counterparts_jsonl": "expected/05_pair_trace_ds/leftover_counterparts.jsonl",
+  "output_dir": "expected/05_pair_trace_ds",
+  "paired_signatures_dir": "expected/05_pair_trace_ds/paired_signatures",
+  "paired_testcases": 5,
+  "pairs_jsonl": "expected/05_pair_trace_ds/pairs.jsonl",
+  "records_total": 23,
+  "run_dir": "expected",
+  "selected_counterpart_flow_counts": {
+    "g2b": 3,
+    "g2b1": 1,
+    "g2b2": 1
+  },
+  "summary_counts": {
+    "testcases_multi_b2b": 2,
+    "testcases_total": 6,
+    "testcases_with_b2b_and_counterpart": 5,
+    "testcases_without_b2b": 1
+  },
+  "trace_jsonl": "expected/04_trace_flow/trace_flow_match_strict.jsonl"
+}

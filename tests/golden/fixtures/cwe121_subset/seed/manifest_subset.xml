@@ -1,0 +1,33 @@
+<?xml version='1.0' encoding='utf-8'?>
+<container>
+  <testcase>
+    <file path="CWE121_Stack_Based_Buffer_Overflow__CWE129_fgets_21.c">
+      <flaw line="38" name="CWE-121: Stack-based Buffer Overflow" />
+    </file>
+  </testcase>
+  <testcase>
+    <file path="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_01.c">
+      <flaw line="34" name="CWE-121: Stack-based Buffer Overflow" />
+    </file>
+  </testcase>
+  <testcase>
+    <file path="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_06.c">
+      <flaw line="41" name="CWE-121: Stack-based Buffer Overflow" />
+    </file>
+  </testcase>
+  <testcase>
+    <file path="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf_01.c">
+      <flaw line="40" name="CWE-121: Stack-based Buffer Overflow" />
+    </file>
+  </testcase>
+  <testcase>
+    <file path="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf_14.c">
+      <flaw line="43" name="CWE-121: Stack-based Buffer Overflow" />
+    </file>
+  </testcase>
+  <testcase>
+    <file path="CWE121_Stack_Based_Buffer_Overflow__src_char_declare_cat_43.cpp">
+      <flaw line="42" name="CWE-121: Stack-based Buffer Overflow" />
+    </file>
+  </testcase>
+</container>

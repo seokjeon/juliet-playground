@@ -1,0 +1,20 @@
+{
+  "counts": {
+    "pairs_total": 3,
+    "test": 0,
+    "train_val": 3
+  },
+  "output_dir": "expected/07b_dataset_export",
+  "pair_ids": {
+    "test": [],
+    "train_val": [
+      "ef0626e75cfd7623",
+      "6cc089ef63c94f1c",
+      "ffd83d6053bf99ea"
+    ]
+  },
+  "seed": 1234,
+  "split_unit": "pair_id",
+  "test_ratio": 0.0,
+  "train_ratio": 1.0
+}

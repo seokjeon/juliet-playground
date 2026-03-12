@@ -1,0 +1,30 @@
+{
+  "flow_index": {
+    "duplicate_keys": 0,
+    "keys_indexed": 6,
+    "testcases": 6,
+    "testcases_with_flow": 6
+  },
+  "flow_xml": "expected/02c_flow/manifest_with_testcase_flows.xml",
+  "matched_best_flow_counts": {
+    "b2b": 24,
+    "b2g1": 4,
+    "b2g2": 2,
+    "g2b": 12,
+    "g2b1": 11,
+    "g2b2": 11
+  },
+  "output_dir": "expected/04_trace_flow",
+  "output_files": {
+    "all": "expected/04_trace_flow/trace_flow_match_all.jsonl",
+    "partial_or_strict": "expected/04_trace_flow/trace_flow_match_partial_or_strict.jsonl",
+    "strict": "expected/04_trace_flow/trace_flow_match_strict.jsonl"
+  },
+  "signatures_dir": "expected/03_signatures_non_empty",
+  "trace_stats": {
+    "traces_no_flow_hit": 141,
+    "traces_partial_match": 41,
+    "traces_strict_match": 23,
+    "traces_total": 205
+  }
+}

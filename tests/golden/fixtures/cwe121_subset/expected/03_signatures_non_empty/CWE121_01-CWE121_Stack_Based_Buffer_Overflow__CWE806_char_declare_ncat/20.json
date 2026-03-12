@@ -1,0 +1,39 @@
+{
+  "bug_trace": [
+    {
+      "column_number": 1,
+      "description": "source of the taint here: value passed as argument `#0` to `printLongLongLine` with kind `Simple`",
+      "filename": "juliet-test-suite-v1.3/C/testcasesupport/io.c",
+      "level": 0,
+      "line_number": 47
+    },
+    {
+      "column_number": 5,
+      "description": "flows to this sink: value passed as argument `#1` to `printf` with kind `Simple`",
+      "filename": "juliet-test-suite-v1.3/C/testcasesupport/io.c",
+      "level": 0,
+      "line_number": 49
+    }
+  ],
+  "bug_trace_length": 2,
+  "bug_trace_max_depth": 0,
+  "bug_type": "TAINT_ERROR",
+  "bug_type_hum": "Taint Error",
+  "category": "Sensitive data flow",
+  "column": 5,
+  "extras": {
+    "taint_extra": {
+      "taint_sink": "printf",
+      "taint_source": "printLongLongLine",
+      "tainted_expression": "longLongIntNumber"
+    }
+  },
+  "file": "juliet-test-suite-v1.3/C/testcasesupport/io.c",
+  "hash": "b2bfd1aeb68de90a2181a47d89db0296",
+  "key": "io.c|printLongLongLine|TAINT_ERROR",
+  "line": 49,
+  "procedure": "printLongLongLine",
+  "procedure_start_line": 47,
+  "qualifier": "Built-in Simple taint kind, matching any Simple source with any Simple sink except if any Simple sanitizer is in the way. `longLongIntNumber` is tainted by value passed as argument `#0` to `printLongLongLine` with kind `Simple` and flows to value passed as argument `#1` to `printf` with kind `Simple`.",
+  "severity": "ERROR"
+}

@@ -1,0 +1,39 @@
+{
+  "bug_trace": [
+    {
+      "column_number": 5,
+      "description": "source of the taint here: value passed as argument `#2` to `memset` with kind `Simple`",
+      "filename": "juliet-test-suite-v1.3/C/testcases/CWE121_Stack_Based_Buffer_Overflow/s08/CWE121_Stack_Based_Buffer_Overflow__src_char_declare_cat_43.cpp",
+      "level": 0,
+      "line_number": 55
+    },
+    {
+      "column_number": 5,
+      "description": "flows to this sink: value passed as argument `#2` to `memset` with kind `Simple`",
+      "filename": "juliet-test-suite-v1.3/C/testcases/CWE121_Stack_Based_Buffer_Overflow/s08/CWE121_Stack_Based_Buffer_Overflow__src_char_declare_cat_43.cpp",
+      "level": 0,
+      "line_number": 55
+    }
+  ],
+  "bug_trace_length": 2,
+  "bug_trace_max_depth": 0,
+  "bug_type": "TAINT_ERROR",
+  "bug_type_hum": "Taint Error",
+  "category": "Sensitive data flow",
+  "column": 5,
+  "extras": {
+    "taint_extra": {
+      "taint_sink": "memset",
+      "taint_source": "memset",
+      "tainted_expression": "UNKNOWN"
+    }
+  },
+  "file": "juliet-test-suite-v1.3/C/testcases/CWE121_Stack_Based_Buffer_Overflow/s08/CWE121_Stack_Based_Buffer_Overflow__src_char_declare_cat_43.cpp",
+  "hash": "0d257ce46193629bb927dfb452d345ff",
+  "key": "CWE121_Stack_Based_Buffer_Overflow__src_char_declare_cat_43.cpp|CWE121_Stack_Based_Buffer_Overflow__src_char_declare_cat_43::goodG2BSource|TAINT_ERROR",
+  "line": 55,
+  "procedure": "CWE121_Stack_Based_Buffer_Overflow__src_char_declare_cat_43::goodG2BSource",
+  "procedure_start_line": 52,
+  "qualifier": "Built-in Simple taint kind, matching any Simple source with any Simple sink except if any Simple sanitizer is in the way. Value is tainted by value passed as argument `#2` to `memset` with kind `Simple`.",
+  "severity": "ERROR"
+}

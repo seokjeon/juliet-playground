@@ -1,0 +1,39 @@
+{
+  "baseline_cwe": "CWE121",
+  "baseline_run": "artifacts/pipeline-runs/run-2026.03.10-00:49:21",
+  "expected_patched_pair_ids": [
+    "96287c035b801e53",
+    "c569d11f7550b8ca",
+    "c91162a5acaea404"
+  ],
+  "expected_primary_pair_ids": [
+    "00cbd53f9833d289",
+    "066531ee1975e596",
+    "0eacd5b75217911f",
+    "15654d4cde74cd87",
+    "5d00adb1a8bb3f92"
+  ],
+  "notes": {
+    "coverage": [
+      "stage04 strict flow coverage includes b2b/b2g1/b2g2/g2b/g2b1/g2b2",
+      "stage05-07 include both .c and .cpp primary pairs",
+      "stage07b patched export covers g2b/g2b1/g2b2"
+    ]
+  },
+  "patched_source_testcase_keys": [
+    "CWE121_01-CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf",
+    "CWE121_06-CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat",
+    "CWE121_14-CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf"
+  ],
+  "selected_testcase_keys": [
+    "CWE121_01-CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat",
+    "CWE121_01-CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf",
+    "CWE121_06-CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat",
+    "CWE121_14-CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf",
+    "CWE121_21-CWE121_Stack_Based_Buffer_Overflow__CWE129_fgets",
+    "CWE121_43-CWE121_Stack_Based_Buffer_Overflow__src_char_declare_cat"
+  ],
+  "strict_only_testcase_keys": [
+    "CWE121_21-CWE121_Stack_Based_Buffer_Overflow__CWE129_fgets"
+  ]
+}

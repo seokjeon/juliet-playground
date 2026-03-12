@@ -1,0 +1,60 @@
+{
+  "bug_trace": [
+    {
+      "column_number": 5,
+      "description": "in call to `printLine`",
+      "filename": "juliet-test-suite-v1.3/C/testcases/CWE121_Stack_Based_Buffer_Overflow/s01/CWE121_Stack_Based_Buffer_Overflow__CWE129_fgets_21.c",
+      "level": 0,
+      "line_number": 245
+    },
+    {
+      "column_number": 9,
+      "description": "source of the taint here: value passed as argument `#1` to `printf` with kind `Simple`",
+      "filename": "juliet-test-suite-v1.3/C/testcasesupport/io.c",
+      "level": 1,
+      "line_number": 15
+    },
+    {
+      "column_number": 5,
+      "description": "return from call to `printLine`",
+      "filename": "juliet-test-suite-v1.3/C/testcases/CWE121_Stack_Based_Buffer_Overflow/s01/CWE121_Stack_Based_Buffer_Overflow__CWE129_fgets_21.c",
+      "level": 0,
+      "line_number": 245
+    },
+    {
+      "column_number": 5,
+      "description": "when calling `printLine` here",
+      "filename": "juliet-test-suite-v1.3/C/testcases/CWE121_Stack_Based_Buffer_Overflow/s01/CWE121_Stack_Based_Buffer_Overflow__CWE129_fgets_21.c",
+      "level": 0,
+      "line_number": 245
+    },
+    {
+      "column_number": 9,
+      "description": "flows to this sink: value passed as argument `#1` to `printf` with kind `Simple`",
+      "filename": "juliet-test-suite-v1.3/C/testcasesupport/io.c",
+      "level": 1,
+      "line_number": 15
+    }
+  ],
+  "bug_trace_length": 5,
+  "bug_trace_max_depth": 1,
+  "bug_type": "TAINT_ERROR",
+  "bug_type_hum": "Taint Error",
+  "category": "Sensitive data flow",
+  "column": 5,
+  "extras": {
+    "taint_extra": {
+      "taint_sink": "printf",
+      "taint_source": "printf",
+      "tainted_expression": "UNKNOWN"
+    }
+  },
+  "file": "juliet-test-suite-v1.3/C/testcases/CWE121_Stack_Based_Buffer_Overflow/s01/CWE121_Stack_Based_Buffer_Overflow__CWE129_fgets_21.c",
+  "hash": "b3e69ee79dd1e6501bdef58a19f2002d",
+  "key": "CWE121_Stack_Based_Buffer_Overflow__CWE129_fgets_21.c|main|TAINT_ERROR",
+  "line": 245,
+  "procedure": "main",
+  "procedure_start_line": 240,
+  "qualifier": "Built-in Simple taint kind, matching any Simple source with any Simple sink except if any Simple sanitizer is in the way. Value is tainted by value passed as argument `#1` to `printf` with kind `Simple`.",
+  "severity": "ERROR"
+}

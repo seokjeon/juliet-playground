@@ -1,0 +1,22 @@
+{
+  "flow_tag_item_counts": {
+    "b2b": 18,
+    "b2g": 2,
+    "b2g1": 1,
+    "b2g2": 1,
+    "g2b": 8,
+    "g2b1": 4,
+    "g2b2": 4
+  },
+  "function_categories_jsonl": "expected/02b_inventory/function_names_categorized.jsonl",
+  "input_xml": "expected/01_manifest/manifest_with_comments.xml",
+  "output_xml": "expected/02c_flow/manifest_with_testcase_flows.xml",
+  "tag_counts_in_flows": {
+    "comment_fix": 10,
+    "comment_flaw": 22,
+    "flaw": 6
+  },
+  "testcases": 6,
+  "unresolved_comment_records": 0,
+  "unresolved_flaw_records": 0
+}

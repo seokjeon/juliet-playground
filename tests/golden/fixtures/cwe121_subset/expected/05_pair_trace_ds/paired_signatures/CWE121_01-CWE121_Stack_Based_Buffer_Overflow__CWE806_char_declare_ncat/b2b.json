@@ -1,0 +1,48 @@
+{
+  "bug_trace": [
+    {
+      "column_number": 5,
+      "description": "source of the taint here: value passed as argument `#0` to `memset` with kind `Simple`",
+      "filename": "juliet-test-suite-v1.3/C/testcases/CWE121_Stack_Based_Buffer_Overflow/s06/CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_01.c",
+      "level": 0,
+      "line_number": 29
+    },
+    {
+      "column_number": 29,
+      "description": "flows to this sink: value passed as argument `#0` to `strlen` with kind `Simple`",
+      "filename": "juliet-test-suite-v1.3/C/testcases/CWE121_Stack_Based_Buffer_Overflow/s06/CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_01.c",
+      "level": 0,
+      "line_number": 34
+    }
+  ],
+  "bug_trace_length": 2,
+  "bug_trace_max_depth": 0,
+  "bug_type": "TAINT_ERROR",
+  "bug_type_hum": "Taint Error",
+  "category": "Sensitive data flow",
+  "column": 29,
+  "extras": {
+    "taint_extra": {
+      "taint_sink": "strlen",
+      "taint_source": "memset",
+      "tainted_expression": "data"
+    }
+  },
+  "file": "juliet-test-suite-v1.3/C/testcases/CWE121_Stack_Based_Buffer_Overflow/s06/CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_01.c",
+  "hash": "57e6619b4d5df1ebfde2a4426020d3e1",
+  "key": "CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_01.c|CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_01_bad|TAINT_ERROR",
+  "line": 34,
+  "pairing_meta": {
+    "best_flow_type": "b2b",
+    "bug_trace_length": 2,
+    "pair_id": "5081a705ebecdd3a",
+    "role": "b2b",
+    "selection_reason": "longest_bug_trace",
+    "testcase_key": "CWE121_01-CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat",
+    "trace_file": "expected/03_signatures_non_empty/CWE121_01-CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat/3.json"
+  },
+  "procedure": "CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_01_bad",
+  "procedure_start_line": 23,
+  "qualifier": "Built-in Simple taint kind, matching any Simple source with any Simple sink except if any Simple sanitizer is in the way. `data` is tainted by value passed as argument `#0` to `memset` with kind `Simple` and flows to value passed as argument `#0` to `strlen` with kind `Simple`.",
+  "severity": "ERROR"
+}

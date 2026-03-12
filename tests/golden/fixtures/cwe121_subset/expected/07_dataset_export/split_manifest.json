@@ -1,0 +1,46 @@
+{
+  "counts": {
+    "dedup_dropped_pairs": 2,
+    "dedup_dropped_rows": 4,
+    "pairs_total": 3,
+    "rows_total": 6,
+    "test": 1,
+    "train_val": 2
+  },
+  "dedup": {
+    "collision_hash_groups": 0,
+    "collision_row_occurrences": 0,
+    "duplicate_hash_groups": 4,
+    "duplicate_row_occurrences": 4,
+    "mode": "row",
+    "pairs_after": 3,
+    "pairs_before": 5,
+    "pairs_dropped_collision": 0,
+    "pairs_dropped_duplicate": 2,
+    "row_hash_method": "md5(compact_whitespace(normalized_code))",
+    "row_hashes_unique": 6,
+    "rows_after": 6,
+    "rows_before": 10,
+    "rows_removed": 4,
+    "selection_order": "input_pair_order"
+  },
+  "dedup_dropped_csv": "expected/07_dataset_export/Real_Vul_data_dedup_dropped.csv",
+  "normalized_slices_dir": "expected/07_dataset_export/normalized_slices",
+  "output_dir": "expected/07_dataset_export",
+  "pair_ids": {
+    "test": [
+      "ef0626e75cfd7623"
+    ],
+    "train_val": [
+      "5081a705ebecdd3a",
+      "715aeffa5d49925a"
+    ]
+  },
+  "paired_signatures_dir": "expected/05_pair_trace_ds/paired_signatures",
+  "pairs_jsonl": "expected/05_pair_trace_ds/pairs.jsonl",
+  "seed": 1234,
+  "slice_dir": "expected/06_slices/slice",
+  "split_unit": "pair_id",
+  "test_ratio": 0.2,
+  "train_ratio": 0.8
+}

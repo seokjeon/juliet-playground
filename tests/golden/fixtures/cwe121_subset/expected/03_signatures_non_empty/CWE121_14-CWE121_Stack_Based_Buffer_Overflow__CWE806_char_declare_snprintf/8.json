@@ -1,0 +1,46 @@
+{
+  "bug_trace": [
+    {
+      "column_number": 9,
+      "description": "macro expanded here",
+      "filename": "juliet-test-suite-v1.3/C/testcases/CWE121_Stack_Based_Buffer_Overflow/s07/CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf_14.c",
+      "level": 0,
+      "line_number": 43
+    },
+    {
+      "column_number": -1,
+      "description": "source of the taint here: value passed as argument `#3` to `snprintf` with kind `Simple`",
+      "filename": "juliet-test-suite-v1.3/C/testcases/CWE121_Stack_Based_Buffer_Overflow/s07/CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf_14.c",
+      "level": 0,
+      "line_number": 24
+    },
+    {
+      "column_number": 9,
+      "description": "flows to this sink: value passed as argument `#0` to `printLine` with kind `Simple`",
+      "filename": "juliet-test-suite-v1.3/C/testcases/CWE121_Stack_Based_Buffer_Overflow/s07/CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf_14.c",
+      "level": 0,
+      "line_number": 44
+    }
+  ],
+  "bug_trace_length": 2,
+  "bug_trace_max_depth": 0,
+  "bug_type": "TAINT_ERROR",
+  "bug_type_hum": "Taint Error",
+  "category": "Sensitive data flow",
+  "column": 9,
+  "extras": {
+    "taint_extra": {
+      "taint_sink": "printLine",
+      "taint_source": "snprintf",
+      "tainted_expression": "data"
+    }
+  },
+  "file": "juliet-test-suite-v1.3/C/testcases/CWE121_Stack_Based_Buffer_Overflow/s07/CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf_14.c",
+  "hash": "164f645ee875d94a23b7f28401cf58e4",
+  "key": "CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf_14.c|CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf_14_bad|TAINT_ERROR",
+  "line": 44,
+  "procedure": "CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf_14_bad",
+  "procedure_start_line": 29,
+  "qualifier": "Built-in Simple taint kind, matching any Simple source with any Simple sink except if any Simple sanitizer is in the way. `data` is tainted by value passed as argument `#3` to `snprintf` with kind `Simple` and flows to value passed as argument `#0` to `printLine` with kind `Simple`.",
+  "severity": "ERROR"
+}

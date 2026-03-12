@@ -1,0 +1,82 @@
+{
+  "all_functions_sorted_by_count": [
+    {
+      "count": 6,
+      "function_name": "goodG2B"
+    },
+    {
+      "count": 4,
+      "function_name": "goodG2B1"
+    },
+    {
+      "count": 4,
+      "function_name": "goodG2B2"
+    },
+    {
+      "count": 2,
+      "function_name": "CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_01_bad"
+    },
+    {
+      "count": 2,
+      "function_name": "CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_06_bad"
+    },
+    {
+      "count": 2,
+      "function_name": "CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf_01_bad"
+    },
+    {
+      "count": 2,
+      "function_name": "CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf_14_bad"
+    },
+    {
+      "count": 1,
+      "function_name": "CWE121_Stack_Based_Buffer_Overflow__CWE129_fgets_21_bad"
+    },
+    {
+      "count": 1,
+      "function_name": "bad"
+    },
+    {
+      "count": 1,
+      "function_name": "badSink"
+    },
+    {
+      "count": 1,
+      "function_name": "badSource"
+    },
+    {
+      "count": 1,
+      "function_name": "goodB2G1"
+    },
+    {
+      "count": 1,
+      "function_name": "goodB2G1Sink"
+    },
+    {
+      "count": 1,
+      "function_name": "goodB2G2"
+    },
+    {
+      "count": 1,
+      "function_name": "goodB2G2Sink"
+    },
+    {
+      "count": 1,
+      "function_name": "goodG2BSink"
+    },
+    {
+      "count": 1,
+      "function_name": "goodG2BSource"
+    }
+  ],
+  "contains_non_c_identifier_chars": 0,
+  "contains_scope_resolution_double_colon": 0,
+  "input_xml": "expected/01_manifest/manifest_with_comments.xml",
+  "missing_or_empty_function": 0,
+  "starts_with_CWE": 5,
+  "starts_with_bad": 3,
+  "starts_with_good": 9,
+  "total_comment_tags_seen": 32,
+  "total_function_values": 32,
+  "unique_function_names": 17
+}

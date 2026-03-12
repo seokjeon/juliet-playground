@@ -1,0 +1,137 @@
+<?xml version='1.0' encoding='utf-8'?>
+<container>
+  <testcase>
+    <file path="CWE121_Stack_Based_Buffer_Overflow__CWE129_fgets_21.c">
+      <flaw line="38" name="CWE-121: Stack-based Buffer Overflow" />
+      <comment_flaw line="36" code="if (data &gt;= 0)" function="badSink" />
+      <comment_flaw line="61" code="if (fgets(inputBuffer, CHAR_ARRAY_SIZE, stdin) != NULL)" function="CWE121_Stack_Based_Buffer_Overflow__CWE129_fgets_21_bad" />
+      <comment_fix line="98" code="if (data &gt;= 0 &amp;&amp; data &lt; (10))" function="goodB2G1Sink" />
+      <comment_flaw line="123" code="if (fgets(inputBuffer, CHAR_ARRAY_SIZE, stdin) != NULL)" function="goodB2G1" />
+      <comment_fix line="146" code="if (data &gt;= 0 &amp;&amp; data &lt; (10))" function="goodB2G2Sink" />
+      <comment_flaw line="171" code="if (fgets(inputBuffer, CHAR_ARRAY_SIZE, stdin) != NULL)" function="goodB2G2" />
+      <comment_flaw line="195" code="if (data &gt;= 0)" function="goodG2BSink" />
+      <comment_fix line="219" code="data = 7;" function="goodG2B" />
+    </file>
+    <flow type="b2b">
+      <flaw line="38" name="CWE-121: Stack-based Buffer Overflow" file="CWE121_Stack_Based_Buffer_Overflow__CWE129_fgets_21.c" inferred_function="badSink" />
+      <comment_flaw line="36" code="if (data &gt;= 0)" function="badSink" file="CWE121_Stack_Based_Buffer_Overflow__CWE129_fgets_21.c" />
+      <comment_flaw line="61" code="if (fgets(inputBuffer, CHAR_ARRAY_SIZE, stdin) != NULL)" function="CWE121_Stack_Based_Buffer_Overflow__CWE129_fgets_21_bad" file="CWE121_Stack_Based_Buffer_Overflow__CWE129_fgets_21.c" />
+    </flow>
+    <flow type="b2g">
+      <comment_fix line="98" code="if (data &gt;= 0 &amp;&amp; data &lt; (10))" function="goodB2G1Sink" file="CWE121_Stack_Based_Buffer_Overflow__CWE129_fgets_21.c" />
+      <comment_fix line="146" code="if (data &gt;= 0 &amp;&amp; data &lt; (10))" function="goodB2G2Sink" file="CWE121_Stack_Based_Buffer_Overflow__CWE129_fgets_21.c" />
+    </flow>
+    <flow type="b2g1">
+      <comment_flaw line="123" code="if (fgets(inputBuffer, CHAR_ARRAY_SIZE, stdin) != NULL)" function="goodB2G1" file="CWE121_Stack_Based_Buffer_Overflow__CWE129_fgets_21.c" />
+    </flow>
+    <flow type="b2g2">
+      <comment_flaw line="171" code="if (fgets(inputBuffer, CHAR_ARRAY_SIZE, stdin) != NULL)" function="goodB2G2" file="CWE121_Stack_Based_Buffer_Overflow__CWE129_fgets_21.c" />
+    </flow>
+    <flow type="g2b">
+      <comment_flaw line="195" code="if (data &gt;= 0)" function="goodG2BSink" file="CWE121_Stack_Based_Buffer_Overflow__CWE129_fgets_21.c" />
+      <comment_fix line="219" code="data = 7;" function="goodG2B" file="CWE121_Stack_Based_Buffer_Overflow__CWE129_fgets_21.c" />
+    </flow>
+  </testcase>
+  <testcase>
+    <file path="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_01.c">
+      <flaw line="34" name="CWE-121: Stack-based Buffer Overflow" />
+      <comment_flaw line="29" code="memset(data, 'A', 100-1);" function="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_01_bad" />
+      <comment_flaw line="34" code="strncat(dest, data, strlen(data));" function="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_01_bad" />
+      <comment_fix line="51" code="memset(data, 'A', 50-1);" function="goodG2B" />
+      <comment_flaw line="56" code="strncat(dest, data, strlen(data));" function="goodG2B" />
+    </file>
+    <flow type="b2b">
+      <flaw line="34" name="CWE-121: Stack-based Buffer Overflow" file="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_01.c" inferred_function="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_01_bad" />
+      <comment_flaw line="29" code="memset(data, 'A', 100-1);" function="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_01_bad" file="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_01.c" />
+      <comment_flaw line="34" code="strncat(dest, data, strlen(data));" function="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_01_bad" file="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_01.c" />
+    </flow>
+    <flow type="g2b">
+      <comment_fix line="51" code="memset(data, 'A', 50-1);" function="goodG2B" file="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_01.c" />
+      <comment_flaw line="56" code="strncat(dest, data, strlen(data));" function="goodG2B" file="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_01.c" />
+    </flow>
+  </testcase>
+  <testcase>
+    <file path="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_06.c">
+      <flaw line="41" name="CWE-121: Stack-based Buffer Overflow" />
+      <comment_flaw line="35" code="memset(data, 'A', 100-1);" function="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_06_bad" />
+      <comment_flaw line="41" code="strncat(dest, data, strlen(data));" function="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_06_bad" />
+      <comment_fix line="65" code="memset(data, 'A', 50-1);" function="goodG2B1" />
+      <comment_flaw line="71" code="strncat(dest, data, strlen(data));" function="goodG2B1" />
+      <comment_fix line="86" code="memset(data, 'A', 50-1);" function="goodG2B2" />
+      <comment_flaw line="92" code="strncat(dest, data, strlen(data));" function="goodG2B2" />
+    </file>
+    <flow type="b2b">
+      <flaw line="41" name="CWE-121: Stack-based Buffer Overflow" file="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_06.c" inferred_function="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_06_bad" />
+      <comment_flaw line="35" code="memset(data, 'A', 100-1);" function="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_06_bad" file="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_06.c" />
+      <comment_flaw line="41" code="strncat(dest, data, strlen(data));" function="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_06_bad" file="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_06.c" />
+    </flow>
+    <flow type="g2b1">
+      <comment_fix line="65" code="memset(data, 'A', 50-1);" function="goodG2B1" file="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_06.c" />
+      <comment_flaw line="71" code="strncat(dest, data, strlen(data));" function="goodG2B1" file="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_06.c" />
+    </flow>
+    <flow type="g2b2">
+      <comment_fix line="86" code="memset(data, 'A', 50-1);" function="goodG2B2" file="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_06.c" />
+      <comment_flaw line="92" code="strncat(dest, data, strlen(data));" function="goodG2B2" file="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_06.c" />
+    </flow>
+  </testcase>
+  <testcase>
+    <file path="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf_01.c">
+      <flaw line="40" name="CWE-121: Stack-based Buffer Overflow" />
+      <comment_flaw line="35" code="memset(data, 'A', 100-1);" function="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf_01_bad" />
+      <comment_flaw line="40" code="SNPRINTF(dest, strlen(data), &quot;%s&quot;, data);" function="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf_01_bad" />
+      <comment_fix line="56" code="memset(data, 'A', 50-1);" function="goodG2B" />
+      <comment_flaw line="61" code="SNPRINTF(dest, strlen(data), &quot;%s&quot;, data);" function="goodG2B" />
+    </file>
+    <flow type="b2b">
+      <flaw line="40" name="CWE-121: Stack-based Buffer Overflow" file="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf_01.c" inferred_function="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf_01_bad" />
+      <comment_flaw line="35" code="memset(data, 'A', 100-1);" function="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf_01_bad" file="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf_01.c" />
+      <comment_flaw line="40" code="SNPRINTF(dest, strlen(data), &quot;%s&quot;, data);" function="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf_01_bad" file="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf_01.c" />
+    </flow>
+    <flow type="g2b">
+      <comment_fix line="56" code="memset(data, 'A', 50-1);" function="goodG2B" file="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf_01.c" />
+      <comment_flaw line="61" code="SNPRINTF(dest, strlen(data), &quot;%s&quot;, data);" function="goodG2B" file="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf_01.c" />
+    </flow>
+  </testcase>
+  <testcase>
+    <file path="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf_14.c">
+      <flaw line="43" name="CWE-121: Stack-based Buffer Overflow" />
+      <comment_flaw line="37" code="memset(data, 'A', 100-1);" function="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf_14_bad" />
+      <comment_flaw line="43" code="SNPRINTF(dest, strlen(data), &quot;%s&quot;, data);" function="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf_14_bad" />
+      <comment_fix line="66" code="memset(data, 'A', 50-1);" function="goodG2B1" />
+      <comment_flaw line="72" code="SNPRINTF(dest, strlen(data), &quot;%s&quot;, data);" function="goodG2B1" />
+      <comment_fix line="86" code="memset(data, 'A', 50-1);" function="goodG2B2" />
+      <comment_flaw line="92" code="SNPRINTF(dest, strlen(data), &quot;%s&quot;, data);" function="goodG2B2" />
+    </file>
+    <flow type="b2b">
+      <flaw line="43" name="CWE-121: Stack-based Buffer Overflow" file="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf_14.c" inferred_function="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf_14_bad" />
+      <comment_flaw line="37" code="memset(data, 'A', 100-1);" function="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf_14_bad" file="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf_14.c" />
+      <comment_flaw line="43" code="SNPRINTF(dest, strlen(data), &quot;%s&quot;, data);" function="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf_14_bad" file="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf_14.c" />
+    </flow>
+    <flow type="g2b1">
+      <comment_fix line="66" code="memset(data, 'A', 50-1);" function="goodG2B1" file="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf_14.c" />
+      <comment_flaw line="72" code="SNPRINTF(dest, strlen(data), &quot;%s&quot;, data);" function="goodG2B1" file="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf_14.c" />
+    </flow>
+    <flow type="g2b2">
+      <comment_fix line="86" code="memset(data, 'A', 50-1);" function="goodG2B2" file="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf_14.c" />
+      <comment_flaw line="92" code="SNPRINTF(dest, strlen(data), &quot;%s&quot;, data);" function="goodG2B2" file="CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_snprintf_14.c" />
+    </flow>
+  </testcase>
+  <testcase>
+    <file path="CWE121_Stack_Based_Buffer_Overflow__src_char_declare_cat_43.cpp">
+      <flaw line="42" name="CWE-121: Stack-based Buffer Overflow" />
+      <comment_flaw line="29" code="memset(data, 'A', 100-1);" function="badSource" />
+      <comment_flaw line="42" code="strcat(dest, data);" function="bad" />
+      <comment_fix line="55" code="memset(data, 'A', 50-1);" function="goodG2BSource" />
+      <comment_flaw line="68" code="strcat(dest, data);" function="goodG2B" />
+    </file>
+    <flow type="b2b">
+      <flaw line="42" name="CWE-121: Stack-based Buffer Overflow" file="CWE121_Stack_Based_Buffer_Overflow__src_char_declare_cat_43.cpp" inferred_function="bad" />
+      <comment_flaw line="29" code="memset(data, 'A', 100-1);" function="badSource" file="CWE121_Stack_Based_Buffer_Overflow__src_char_declare_cat_43.cpp" />
+      <comment_flaw line="42" code="strcat(dest, data);" function="bad" file="CWE121_Stack_Based_Buffer_Overflow__src_char_declare_cat_43.cpp" />
+    </flow>
+    <flow type="g2b">
+      <comment_fix line="55" code="memset(data, 'A', 50-1);" function="goodG2BSource" file="CWE121_Stack_Based_Buffer_Overflow__src_char_declare_cat_43.cpp" />
+      <comment_flaw line="68" code="strcat(dest, data);" function="goodG2B" file="CWE121_Stack_Based_Buffer_Overflow__src_char_declare_cat_43.cpp" />
+    </flow>
+  </testcase>
+</container>

@@ -1,0 +1,10 @@
+count,function_name
+2,memset
+2,strlen
+1,_snprintf
+1,_snwprintf
+1,fgets
+1,snprintf
+1,strcat
+1,strncat
+1,swprintf

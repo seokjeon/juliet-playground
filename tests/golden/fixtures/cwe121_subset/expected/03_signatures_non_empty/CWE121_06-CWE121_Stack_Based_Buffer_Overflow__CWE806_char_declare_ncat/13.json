@@ -1,0 +1,39 @@
+{
+  "bug_trace": [
+    {
+      "column_number": 5,
+      "description": "source of the taint here: value passed as argument `#0` to `srand` with kind `Simple`",
+      "filename": "juliet-test-suite-v1.3/C/testcases/CWE121_Stack_Based_Buffer_Overflow/s06/CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_06.c",
+      "level": 0,
+      "line_number": 117
+    },
+    {
+      "column_number": 5,
+      "description": "flows to this sink: value passed as argument `#0` to `srand` with kind `Simple`",
+      "filename": "juliet-test-suite-v1.3/C/testcases/CWE121_Stack_Based_Buffer_Overflow/s06/CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_06.c",
+      "level": 0,
+      "line_number": 117
+    }
+  ],
+  "bug_trace_length": 2,
+  "bug_trace_max_depth": 0,
+  "bug_type": "TAINT_ERROR",
+  "bug_type_hum": "Taint Error",
+  "category": "Sensitive data flow",
+  "column": 5,
+  "extras": {
+    "taint_extra": {
+      "taint_sink": "srand",
+      "taint_source": "srand",
+      "tainted_expression": "time()"
+    }
+  },
+  "file": "juliet-test-suite-v1.3/C/testcases/CWE121_Stack_Based_Buffer_Overflow/s06/CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_06.c",
+  "hash": "4024e8fb877e658c8dbc34a1d0d686ae",
+  "key": "CWE121_Stack_Based_Buffer_Overflow__CWE806_char_declare_ncat_06.c|main|TAINT_ERROR",
+  "line": 117,
+  "procedure": "main",
+  "procedure_start_line": 114,
+  "qualifier": "Built-in Simple taint kind, matching any Simple source with any Simple sink except if any Simple sanitizer is in the way. Value is tainted by value passed as argument `#0` to `srand` with kind `Simple`.",
+  "severity": "ERROR"
+}

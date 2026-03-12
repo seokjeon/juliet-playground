@@ -1,0 +1,433 @@
+{
+  "ACCESS": [
+    "_access",
+    "access"
+  ],
+  "ADMIN_MESSAGE": [
+    "\"Welcome, admin!\""
+  ],
+  "ALLOCA": [
+    "_alloca",
+    "alloca"
+  ],
+  "ASSERT_VALUE": [
+    "5"
+  ],
+  "BAD_OS_COMMAND": [
+    "\"cmd.exe /c dir\"",
+    "\"ls -la\"",
+    "L\"cmd.exe /c dir\"",
+    "L\"ls -la\""
+  ],
+  "BAD_PATH_SIZE": [
+    "/* maintenance note: must be < MAX_PATH in order for 'bad' to be 'bad' */"
+  ],
+  "BAD_SINK_STRING": [
+    "\"Bad Sink...\""
+  ],
+  "BAD_SOURCE_FIXED_STRING": [
+    "\"Fixed String\" /* MAINTENANCE NOTE: This string must contain the SEARCH_CHAR */",
+    "L\"Fixed String\" /* MAINTENANCE NOTE: This string must contain the SEARCH_CHAR */"
+  ],
+  "BASEPATH": [
+    "\"/tmp/\"",
+    "\"c://temp//\"",
+    "L\"/tmp/\"",
+    "L\"c://temp//\""
+  ],
+  "BUFFER_SIZE": [
+    "1024"
+  ],
+  "BUFSIZE": [
+    "1024"
+  ],
+  "CHAR_ARRAY_SIZE": [
+    "+ 2)",
+    "20",
+    "256",
+    "8"
+  ],
+  "CHAR_BUFFER_SIZE": [
+    "10"
+  ],
+  "CHAR_STRING": [
+    "\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\""
+  ],
+  "CLOSE": [
+    "_close",
+    "close"
+  ],
+  "CLOSE_SOCKET": [
+    "close",
+    "closesocket"
+  ],
+  "COMMAND_ARG1": [
+    "\"-c\"",
+    "\"/c\"",
+    "L\"-c\"",
+    "L\"/c\""
+  ],
+  "COMMAND_ARG2": [
+    "\"dir \"",
+    "\"ls \"",
+    "L\"dir \"",
+    "L\"ls \""
+  ],
+  "COMMAND_ARG3": [
+    "data"
+  ],
+  "COMMAND_INT": [
+    "\"cmd.exe\"",
+    "\"sh\"",
+    "L\"cmd.exe\"",
+    "L\"sh\""
+  ],
+  "COMMAND_INT_PATH": [
+    "\"%WINDIR%//system32//cmd.exe\"",
+    "\"/bin/sh\"",
+    "L\"%WINDIR%//system32//cmd.exe\"",
+    "L\"/bin/sh\""
+  ],
+  "COUNT_CHECK": [
+    "20000"
+  ],
+  "CRLF": [
+    "\"/r/n\""
+  ],
+  "CRYPTO_KEY": [
+    "\"Hardcoded\"",
+    "L\"Hardcoded\""
+  ],
+  "DEFAULT_MESSAGE": [
+    "\"Welcome!\""
+  ],
+  "DEST_SIZE": [
+    "10",
+    "100",
+    "100 /* maintenance note: ensure this is > 2*SOURCE_STRING to avoid buffer overflow issues */"
+  ],
+  "DOMAIN": [
+    "\"Domain\""
+  ],
+  "ENV_VARIABLE": [
+    "\"ADD\"",
+    "L\"ADD\""
+  ],
+  "EXECL": [
+    "_execl",
+    "_wexecl",
+    "execl"
+  ],
+  "EXECLP": [
+    "_execlp",
+    "_wexeclp",
+    "execlp"
+  ],
+  "EXECV": [
+    "_execv",
+    "_wexecv"
+  ],
+  "EXECVP": [
+    "_execvp",
+    "_wexecvp"
+  ],
+  "FDOPEN": [
+    "fdopen"
+  ],
+  "FILENAME": [
+    "\"/tmp/file.txt\"",
+    "\"C://temp//file.txt\"",
+    "\"conf.txt\""
+  ],
+  "FOPEN": [
+    "_wfopen",
+    "fopen"
+  ],
+  "FULL_COMMAND": [
+    "\"dir \"",
+    "\"ls \"",
+    "L\"dir \"",
+    "L\"ls \""
+  ],
+  "GETENV": [
+    "_wgetenv",
+    "getenv"
+  ],
+  "GOOD_OS_COMMAND": [
+    "\"/usr/bin/ls -la\"",
+    "\"c://windows//system32//cmd.exe /c dir\"",
+    "L\"/usr/bin/ls -la\"",
+    "L\"c://windows//system32//cmd.exe /c dir\""
+  ],
+  "GOOD_SINK_STRING": [
+    "\"Good Sink...\""
+  ],
+  "HASH_INPUT": [
+    "\"ABCDEFG123456\" /* INCIDENTAL: Hardcoded crypto */"
+  ],
+  "HELLO_STRING": [
+    "\"hello\"",
+    "L\"hello\""
+  ],
+  "INVALID_SOCKET": [
+    "-1"
+  ],
+  "IP_ADDRESS": [
+    "\"123.123.123.123\"",
+    "\"127.0.0.1\""
+  ],
+  "LISTEN_BACKLOG": [
+    "5"
+  ],
+  "LISTEN_PORT": [
+    "999"
+  ],
+  "MAIL_SERVER": [
+    "\"smtp.gmail.com\""
+  ],
+  "MAX_LOOP": [
+    "10000"
+  ],
+  "MAX_RECURSION": [
+    "10"
+  ],
+  "MD2_SUM_SIZE": [],
+  "MD5_SUM_SIZE": [],
+  "MKSTEMP": [
+    "_mkstemp",
+    "mkstemp"
+  ],
+  "MKTEMP": [
+    "_wmktemp",
+    "mktemp"
+  ],
+  "NEW_BAD_FILE_NAME": [
+    "\"newbadfilename.txt\"",
+    "L\"newbadfilename.txt\""
+  ],
+  "NEW_GOOD_FILE_NAME": [
+    "\"newgoodfilename.txt\"",
+    "L\"newgoodfilename.txt\""
+  ],
+  "NEW_PATH": [
+    "\"%SystemRoot%//system32\"",
+    "\"/bin\"",
+    "L\"%SystemRoot%//system32\"",
+    "L\"/bin\""
+  ],
+  "NUM_CHECK": [
+    "20000"
+  ],
+  "N_ITERS": [
+    "1000000"
+  ],
+  "OLD_BAD_FILE_NAME": [
+    "\"oldbadfilename.txt\"",
+    "L\"oldbadfilename.txt\""
+  ],
+  "OLD_GOOD_FILE_NAME": [
+    "\"oldgoodfilename.txt\"",
+    "L\"oldgoodfilename.txt\""
+  ],
+  "OPEN": [
+    "_open",
+    "_wopen",
+    "open"
+  ],
+  "O_CREAT": [
+    "_O_CREAT"
+  ],
+  "O_EXCL": [
+    "_O_EXCL"
+  ],
+  "O_RDWR": [
+    "_O_RDWR"
+  ],
+  "PASSWORD": [
+    "\"ABCD1234!\"",
+    "L\"ABCD1234!\""
+  ],
+  "PASSWORD_INPUT_SIZE": [
+    "128"
+  ],
+  "PATH_SZ": [
+    "100",
+    "PATH_MAX"
+  ],
+  "PAYLOAD": [
+    "\"String to be encrypted\"",
+    "\"plaintext\""
+  ],
+  "PCLOSE": [
+    "_pclose",
+    "pclose"
+  ],
+  "PIPE_NAME": [
+    "\"////.//pipe//TestPipe\"",
+    "L\"////.//pipe//TestPipe\""
+  ],
+  "POPEN": [
+    "_popen",
+    "_wpopen",
+    "popen"
+  ],
+  "PUTENV": [
+    "_putenv",
+    "_wputenv",
+    "putenv"
+  ],
+  "PUTS": [
+    "_putws",
+    "puts"
+  ],
+  "RAND32": [
+    "((int)(rand() & 1 ? URAND31() : -URAND31() - 1))"
+  ],
+  "RAND64": [
+    "((int64_t)(rand() & 1 ? URAND63() : -URAND63() - 1))"
+  ],
+  "REMOVE": [
+    "_wremove",
+    "remove"
+  ],
+  "RENAME": [
+    "_wrename",
+    "rename"
+  ],
+  "SEARCH_CHAR": [
+    "'S'",
+    "L'S'"
+  ],
+  "SECRET_HOSTNAME": [
+    "\"www.domain.nonexistanttld\""
+  ],
+  "SENTENCE": [
+    "\"This is the sentence we are printing to the file. \""
+  ],
+  "SHA1_SUM_SIZE": [],
+  "SHA512_SUM_SIZE": [],
+  "SLEEP": [
+    "Sleep",
+    "usleep"
+  ],
+  "SNPRINTF": [
+    "_snprintf",
+    "_snwprintf",
+    "snprintf",
+    "swprintf"
+  ],
+  "SOCKET": [
+    "int"
+  ],
+  "SOCKET_ERROR": [
+    "-1"
+  ],
+  "SOURCE_STRING": [
+    "\"AAA\"",
+    "\"abc/opqrstu\"",
+    "L\"abc/opqrstu\""
+  ],
+  "SRC": [
+    "\"sscanf\"",
+    "\"string\"",
+    "L\"sscanf\"",
+    "L\"string\""
+  ],
+  "SRC_STR": [
+    "\"0123456789abcdef0123456789abcde\"",
+    "L\"0123456789abcdef0123456789abcde\""
+  ],
+  "SRC_STRING": [
+    "\"AAAAAAAAAA\"",
+    "\"string\"",
+    "L\"AAAAAAAAAA\"",
+    "L\"string\""
+  ],
+  "STAT": [
+    "_stat",
+    "stat"
+  ],
+  "SYSTEM": [
+    "_wsystem",
+    "system"
+  ],
+  "S_IREAD": [
+    "_S_IREAD"
+  ],
+  "S_IWRITE": [
+    "_S_IWRITE"
+  ],
+  "TCP_PORT": [
+    "27015"
+  ],
+  "TEMPNAM": [
+    "_wtempnam",
+    "tempnam"
+  ],
+  "TIME_CHECK": [
+    "1199163600) /* Jan 1, 2008 12:00:00 AM */"
+  ],
+  "TMPNAM": [
+    "_wtmpnam",
+    "tmpnam"
+  ],
+  "TRUNCATED_USERNAME_SIZE": [
+    "4 /* maintenance note: ensure this is < USERNAME_SIZE */"
+  ],
+  "UNLINK": [
+    "_unlink",
+    "_wunlink",
+    "unlink"
+  ],
+  "URAND31": [
+    "(((unsigned)rand()<<30) ^ ((unsigned)rand()<<15) ^ rand())"
+  ],
+  "URAND63": [
+    "(((uint64_t)rand()<<60) ^ ((uint64_t)rand()<<45) ^ ((uint64_t)rand()<<30) ^ ((uint64_t)rand()<<15) ^ rand())"
+  ],
+  "USERNAME": [
+    "\"XXXXX Smith!\"",
+    "L\"cwe620testuser\""
+  ],
+  "USERNAME_SIZE": [
+    "15"
+  ],
+  "USERNAME_SZ": [
+    "15"
+  ],
+  "WIDE_STRING": [
+    "L\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\""
+  ],
+  "WRITE": [
+    "_write",
+    "write"
+  ],
+  "W_OK": [
+    "02"
+  ],
+  "_CRT_SECURE_NO_DEPRECATE": [
+    "1"
+  ],
+  "_CRT_SECURE_NO_WARNING": [
+    "1"
+  ],
+  "_DAY": [],
+  "_HOUR": [],
+  "_MINUTE": [],
+  "_SECOND": [
+    "10000000)"
+  ],
+  "_STD_TESTCASE_H": [],
+  "_STD_TESTCASE_IO_H": [],
+  "_STD_THREAD_H": [],
+  "_TESTCASES_H": [],
+  "__STDC_LIMIT_MACROS": [
+    "1"
+  ],
+  "false": [
+    "0"
+  ],
+  "true": [
+    "1"
+  ]
+}

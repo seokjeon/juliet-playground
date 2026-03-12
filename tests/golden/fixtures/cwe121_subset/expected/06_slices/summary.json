@@ -1,0 +1,20 @@
+{
+  "counts": {
+    "generated": 10,
+    "json_files_total": 10,
+    "testcase_dirs_total": 5
+  },
+  "errors": 0,
+  "new_prefix": null,
+  "old_prefix": null,
+  "output_dir": "expected/06_slices",
+  "run_dir": "expected",
+  "signature_db_dir": "expected/05_pair_trace_ds/paired_signatures",
+  "signature_db_dirs_total": 5,
+  "slice_dir": "expected/06_slices/slice",
+  "slice_extension_counts": {
+    ".c": 8,
+    ".cpp": 2
+  },
+  "total_slices": 10
+}

@@ -1,0 +1,120 @@
+{"bodies": ["_access", "access"], "name": "ACCESS"}
+{"bodies": ["\"Welcome, admin!\""], "name": "ADMIN_MESSAGE"}
+{"bodies": ["_alloca", "alloca"], "name": "ALLOCA"}
+{"bodies": ["5"], "name": "ASSERT_VALUE"}
+{"bodies": ["\"cmd.exe /c dir\"", "\"ls -la\"", "L\"cmd.exe /c dir\"", "L\"ls -la\""], "name": "BAD_OS_COMMAND"}
+{"bodies": ["/* maintenance note: must be < MAX_PATH in order for 'bad' to be 'bad' */"], "name": "BAD_PATH_SIZE"}
+{"bodies": ["\"Bad Sink...\""], "name": "BAD_SINK_STRING"}
+{"bodies": ["\"Fixed String\" /* MAINTENANCE NOTE: This string must contain the SEARCH_CHAR */", "L\"Fixed String\" /* MAINTENANCE NOTE: This string must contain the SEARCH_CHAR */"], "name": "BAD_SOURCE_FIXED_STRING"}
+{"bodies": ["\"/tmp/\"", "\"c://temp//\"", "L\"/tmp/\"", "L\"c://temp//\""], "name": "BASEPATH"}
+{"bodies": ["1024"], "name": "BUFFER_SIZE"}
+{"bodies": ["1024"], "name": "BUFSIZE"}
+{"bodies": ["+ 2)", "20", "256", "8"], "name": "CHAR_ARRAY_SIZE"}
+{"bodies": ["10"], "name": "CHAR_BUFFER_SIZE"}
+{"bodies": ["\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\""], "name": "CHAR_STRING"}
+{"bodies": ["_close", "close"], "name": "CLOSE"}
+{"bodies": ["close", "closesocket"], "name": "CLOSE_SOCKET"}
+{"bodies": ["\"-c\"", "\"/c\"", "L\"-c\"", "L\"/c\""], "name": "COMMAND_ARG1"}
+{"bodies": ["\"dir \"", "\"ls \"", "L\"dir \"", "L\"ls \""], "name": "COMMAND_ARG2"}
+{"bodies": ["data"], "name": "COMMAND_ARG3"}
+{"bodies": ["\"cmd.exe\"", "\"sh\"", "L\"cmd.exe\"", "L\"sh\""], "name": "COMMAND_INT"}
+{"bodies": ["\"%WINDIR%//system32//cmd.exe\"", "\"/bin/sh\"", "L\"%WINDIR%//system32//cmd.exe\"", "L\"/bin/sh\""], "name": "COMMAND_INT_PATH"}
+{"bodies": ["20000"], "name": "COUNT_CHECK"}
+{"bodies": ["\"/r/n\""], "name": "CRLF"}
+{"bodies": ["\"Hardcoded\"", "L\"Hardcoded\""], "name": "CRYPTO_KEY"}
+{"bodies": ["\"Welcome!\""], "name": "DEFAULT_MESSAGE"}
+{"bodies": ["10", "100", "100 /* maintenance note: ensure this is > 2*SOURCE_STRING to avoid buffer overflow issues */"], "name": "DEST_SIZE"}
+{"bodies": ["\"Domain\""], "name": "DOMAIN"}
+{"bodies": ["\"ADD\"", "L\"ADD\""], "name": "ENV_VARIABLE"}
+{"bodies": ["_execl", "_wexecl", "execl"], "name": "EXECL"}
+{"bodies": ["_execlp", "_wexeclp", "execlp"], "name": "EXECLP"}
+{"bodies": ["_execv", "_wexecv"], "name": "EXECV"}
+{"bodies": ["_execvp", "_wexecvp"], "name": "EXECVP"}
+{"bodies": ["fdopen"], "name": "FDOPEN"}
+{"bodies": ["\"/tmp/file.txt\"", "\"C://temp//file.txt\"", "\"conf.txt\""], "name": "FILENAME"}
+{"bodies": ["_wfopen", "fopen"], "name": "FOPEN"}
+{"bodies": ["\"dir \"", "\"ls \"", "L\"dir \"", "L\"ls \""], "name": "FULL_COMMAND"}
+{"bodies": ["_wgetenv", "getenv"], "name": "GETENV"}
+{"bodies": ["\"/usr/bin/ls -la\"", "\"c://windows//system32//cmd.exe /c dir\"", "L\"/usr/bin/ls -la\"", "L\"c://windows//system32//cmd.exe /c dir\""], "name": "GOOD_OS_COMMAND"}
+{"bodies": ["\"Good Sink...\""], "name": "GOOD_SINK_STRING"}
+{"bodies": ["\"ABCDEFG123456\" /* INCIDENTAL: Hardcoded crypto */"], "name": "HASH_INPUT"}
+{"bodies": ["\"hello\"", "L\"hello\""], "name": "HELLO_STRING"}
+{"bodies": ["-1"], "name": "INVALID_SOCKET"}
+{"bodies": ["\"123.123.123.123\"", "\"127.0.0.1\""], "name": "IP_ADDRESS"}
+{"bodies": ["5"], "name": "LISTEN_BACKLOG"}
+{"bodies": ["999"], "name": "LISTEN_PORT"}
+{"bodies": ["\"smtp.gmail.com\""], "name": "MAIL_SERVER"}
+{"bodies": ["10000"], "name": "MAX_LOOP"}
+{"bodies": ["10"], "name": "MAX_RECURSION"}
+{"bodies": [], "name": "MD2_SUM_SIZE"}
+{"bodies": [], "name": "MD5_SUM_SIZE"}
+{"bodies": ["_mkstemp", "mkstemp"], "name": "MKSTEMP"}
+{"bodies": ["_wmktemp", "mktemp"], "name": "MKTEMP"}
+{"bodies": ["\"newbadfilename.txt\"", "L\"newbadfilename.txt\""], "name": "NEW_BAD_FILE_NAME"}
+{"bodies": ["\"newgoodfilename.txt\"", "L\"newgoodfilename.txt\""], "name": "NEW_GOOD_FILE_NAME"}
+{"bodies": ["\"%SystemRoot%//system32\"", "\"/bin\"", "L\"%SystemRoot%//system32\"", "L\"/bin\""], "name": "NEW_PATH"}
+{"bodies": ["20000"], "name": "NUM_CHECK"}
+{"bodies": ["1000000"], "name": "N_ITERS"}
+{"bodies": ["\"oldbadfilename.txt\"", "L\"oldbadfilename.txt\""], "name": "OLD_BAD_FILE_NAME"}
+{"bodies": ["\"oldgoodfilename.txt\"", "L\"oldgoodfilename.txt\""], "name": "OLD_GOOD_FILE_NAME"}
+{"bodies": ["_open", "_wopen", "open"], "name": "OPEN"}
+{"bodies": ["_O_CREAT"], "name": "O_CREAT"}
+{"bodies": ["_O_EXCL"], "name": "O_EXCL"}
+{"bodies": ["_O_RDWR"], "name": "O_RDWR"}
+{"bodies": ["\"ABCD1234!\"", "L\"ABCD1234!\""], "name": "PASSWORD"}
+{"bodies": ["128"], "name": "PASSWORD_INPUT_SIZE"}
+{"bodies": ["100", "PATH_MAX"], "name": "PATH_SZ"}
+{"bodies": ["\"String to be encrypted\"", "\"plaintext\""], "name": "PAYLOAD"}
+{"bodies": ["_pclose", "pclose"], "name": "PCLOSE"}
+{"bodies": ["\"////.//pipe//TestPipe\"", "L\"////.//pipe//TestPipe\""], "name": "PIPE_NAME"}
+{"bodies": ["_popen", "_wpopen", "popen"], "name": "POPEN"}
+{"bodies": ["_putenv", "_wputenv", "putenv"], "name": "PUTENV"}
+{"bodies": ["_putws", "puts"], "name": "PUTS"}
+{"bodies": ["((int)(rand() & 1 ? URAND31() : -URAND31() - 1))"], "name": "RAND32"}
+{"bodies": ["((int64_t)(rand() & 1 ? URAND63() : -URAND63() - 1))"], "name": "RAND64"}
+{"bodies": ["_wremove", "remove"], "name": "REMOVE"}
+{"bodies": ["_wrename", "rename"], "name": "RENAME"}
+{"bodies": ["'S'", "L'S'"], "name": "SEARCH_CHAR"}
+{"bodies": ["\"www.domain.nonexistanttld\""], "name": "SECRET_HOSTNAME"}
+{"bodies": ["\"This is the sentence we are printing to the file. \""], "name": "SENTENCE"}
+{"bodies": [], "name": "SHA1_SUM_SIZE"}
+{"bodies": [], "name": "SHA512_SUM_SIZE"}
+{"bodies": ["Sleep", "usleep"], "name": "SLEEP"}
+{"bodies": ["_snprintf", "_snwprintf", "snprintf", "swprintf"], "name": "SNPRINTF"}
+{"bodies": ["int"], "name": "SOCKET"}
+{"bodies": ["-1"], "name": "SOCKET_ERROR"}
+{"bodies": ["\"AAA\"", "\"abc/opqrstu\"", "L\"abc/opqrstu\""], "name": "SOURCE_STRING"}
+{"bodies": ["\"sscanf\"", "\"string\"", "L\"sscanf\"", "L\"string\""], "name": "SRC"}
+{"bodies": ["\"0123456789abcdef0123456789abcde\"", "L\"0123456789abcdef0123456789abcde\""], "name": "SRC_STR"}
+{"bodies": ["\"AAAAAAAAAA\"", "\"string\"", "L\"AAAAAAAAAA\"", "L\"string\""], "name": "SRC_STRING"}
+{"bodies": ["_stat", "stat"], "name": "STAT"}
+{"bodies": ["_wsystem", "system"], "name": "SYSTEM"}
+{"bodies": ["_S_IREAD"], "name": "S_IREAD"}
+{"bodies": ["_S_IWRITE"], "name": "S_IWRITE"}
+{"bodies": ["27015"], "name": "TCP_PORT"}
+{"bodies": ["_wtempnam", "tempnam"], "name": "TEMPNAM"}
+{"bodies": ["1199163600) /* Jan 1, 2008 12:00:00 AM */"], "name": "TIME_CHECK"}
+{"bodies": ["_wtmpnam", "tmpnam"], "name": "TMPNAM"}
+{"bodies": ["4 /* maintenance note: ensure this is < USERNAME_SIZE */"], "name": "TRUNCATED_USERNAME_SIZE"}
+{"bodies": ["_unlink", "_wunlink", "unlink"], "name": "UNLINK"}
+{"bodies": ["(((unsigned)rand()<<30) ^ ((unsigned)rand()<<15) ^ rand())"], "name": "URAND31"}
+{"bodies": ["(((uint64_t)rand()<<60) ^ ((uint64_t)rand()<<45) ^ ((uint64_t)rand()<<30) ^ ((uint64_t)rand()<<15) ^ rand())"], "name": "URAND63"}
+{"bodies": ["\"XXXXX Smith!\"", "L\"cwe620testuser\""], "name": "USERNAME"}
+{"bodies": ["15"], "name": "USERNAME_SIZE"}
+{"bodies": ["15"], "name": "USERNAME_SZ"}
+{"bodies": ["L\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\""], "name": "WIDE_STRING"}
+{"bodies": ["_write", "write"], "name": "WRITE"}
+{"bodies": ["02"], "name": "W_OK"}
+{"bodies": ["1"], "name": "_CRT_SECURE_NO_DEPRECATE"}
+{"bodies": ["1"], "name": "_CRT_SECURE_NO_WARNING"}
+{"bodies": [], "name": "_DAY"}
+{"bodies": [], "name": "_HOUR"}
+{"bodies": [], "name": "_MINUTE"}
+{"bodies": ["10000000)"], "name": "_SECOND"}
+{"bodies": [], "name": "_STD_TESTCASE_H"}
+{"bodies": [], "name": "_STD_TESTCASE_IO_H"}
+{"bodies": [], "name": "_STD_THREAD_H"}
+{"bodies": [], "name": "_TESTCASES_H"}
+{"bodies": ["1"], "name": "__STDC_LIMIT_MACROS"}
+{"bodies": ["0"], "name": "false"}
+{"bodies": ["1"], "name": "true"}

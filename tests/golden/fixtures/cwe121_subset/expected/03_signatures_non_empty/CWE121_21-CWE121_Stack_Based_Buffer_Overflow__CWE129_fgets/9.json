@@ -1,0 +1,39 @@
+{
+  "bug_trace": [
+    {
+      "column_number": 13,
+      "description": "source of the taint here: value passed as argument `#2` to `fgets` with kind `Simple`",
+      "filename": "juliet-test-suite-v1.3/C/testcases/CWE121_Stack_Based_Buffer_Overflow/s01/CWE121_Stack_Based_Buffer_Overflow__CWE129_fgets_21.c",
+      "level": 0,
+      "line_number": 123
+    },
+    {
+      "column_number": 13,
+      "description": "flows to this sink: value passed as argument `#2` to `fgets` with kind `Simple`",
+      "filename": "juliet-test-suite-v1.3/C/testcases/CWE121_Stack_Based_Buffer_Overflow/s01/CWE121_Stack_Based_Buffer_Overflow__CWE129_fgets_21.c",
+      "level": 0,
+      "line_number": 123
+    }
+  ],
+  "bug_trace_length": 2,
+  "bug_trace_max_depth": 0,
+  "bug_type": "TAINT_ERROR",
+  "bug_type_hum": "Taint Error",
+  "category": "Sensitive data flow",
+  "column": 13,
+  "extras": {
+    "taint_extra": {
+      "taint_sink": "fgets",
+      "taint_source": "fgets",
+      "tainted_expression": "stdin"
+    }
+  },
+  "file": "juliet-test-suite-v1.3/C/testcases/CWE121_Stack_Based_Buffer_Overflow/s01/CWE121_Stack_Based_Buffer_Overflow__CWE129_fgets_21.c",
+  "hash": "1d501c462c500fadfbb72ac2aebb8252",
+  "key": "CWE121_Stack_Based_Buffer_Overflow__CWE129_fgets_21.c|goodB2G1|TAINT_ERROR",
+  "line": 123,
+  "procedure": "goodB2G1",
+  "procedure_start_line": 115,
+  "qualifier": "Built-in Simple taint kind, matching any Simple source with any Simple sink except if any Simple sanitizer is in the way. Value is tainted by value passed as argument `#2` to `fgets` with kind `Simple`.",
+  "severity": "ERROR"
+}

@@ -1,0 +1,62 @@
+{
+  "bug_trace": [
+    {
+      "column_number": 5,
+      "description": "in call to `CWE121_Stack_Based_Buffer_Overflow__src_char_declare_cat_43::badSource`",
+      "filename": "juliet-test-suite-v1.3/C/testcases/CWE121_Stack_Based_Buffer_Overflow/s08/CWE121_Stack_Based_Buffer_Overflow__src_char_declare_cat_43.cpp",
+      "level": 0,
+      "line_number": 38
+    },
+    {
+      "column_number": 5,
+      "description": "source of the taint here: value passed as argument `#0` to `memset` with kind `Simple`",
+      "filename": "juliet-test-suite-v1.3/C/testcases/CWE121_Stack_Based_Buffer_Overflow/s08/CWE121_Stack_Based_Buffer_Overflow__src_char_declare_cat_43.cpp",
+      "level": 1,
+      "line_number": 29
+    },
+    {
+      "column_number": 5,
+      "description": "return from call to `CWE121_Stack_Based_Buffer_Overflow__src_char_declare_cat_43::badSource`",
+      "filename": "juliet-test-suite-v1.3/C/testcases/CWE121_Stack_Based_Buffer_Overflow/s08/CWE121_Stack_Based_Buffer_Overflow__src_char_declare_cat_43.cpp",
+      "level": 0,
+      "line_number": 38
+    },
+    {
+      "column_number": 9,
+      "description": "flows to this sink: value passed as argument `#1` to `strcat` with kind `Simple`",
+      "filename": "juliet-test-suite-v1.3/C/testcases/CWE121_Stack_Based_Buffer_Overflow/s08/CWE121_Stack_Based_Buffer_Overflow__src_char_declare_cat_43.cpp",
+      "level": 0,
+      "line_number": 42
+    }
+  ],
+  "bug_trace_length": 4,
+  "bug_trace_max_depth": 1,
+  "bug_type": "TAINT_ERROR",
+  "bug_type_hum": "Taint Error",
+  "category": "Sensitive data flow",
+  "column": 9,
+  "extras": {
+    "taint_extra": {
+      "taint_sink": "strcat",
+      "taint_source": "memset",
+      "tainted_expression": "data"
+    }
+  },
+  "file": "juliet-test-suite-v1.3/C/testcases/CWE121_Stack_Based_Buffer_Overflow/s08/CWE121_Stack_Based_Buffer_Overflow__src_char_declare_cat_43.cpp",
+  "hash": "6ef1d65b4d5fe68627ddd97a9ac35186",
+  "key": "CWE121_Stack_Based_Buffer_Overflow__src_char_declare_cat_43.cpp|CWE121_Stack_Based_Buffer_Overflow__src_char_declare_cat_43::bad|TAINT_ERROR",
+  "line": 42,
+  "pairing_meta": {
+    "best_flow_type": "b2b",
+    "bug_trace_length": 4,
+    "pair_id": "715aeffa5d49925a",
+    "role": "b2b",
+    "selection_reason": "longest_bug_trace",
+    "testcase_key": "CWE121_43-CWE121_Stack_Based_Buffer_Overflow__src_char_declare_cat",
+    "trace_file": "expected/03_signatures_non_empty/CWE121_43-CWE121_Stack_Based_Buffer_Overflow__src_char_declare_cat/3.json"
+  },
+  "procedure": "CWE121_Stack_Based_Buffer_Overflow__src_char_declare_cat_43::bad",
+  "procedure_start_line": 33,
+  "qualifier": "Built-in Simple taint kind, matching any Simple source with any Simple sink except if any Simple sanitizer is in the way. `data` is tainted by value passed as argument `#0` to `memset` with kind `Simple` and flows to value passed as argument `#1` to `strcat` with kind `Simple`.",
+  "severity": "ERROR"
+}
