@@ -141,9 +141,14 @@ def choose_run_config(run_dir: Path) -> dict[str, Any]:
     if not isinstance(outputs, dict):
         outputs = {}
 
-    pairs_jsonl = Path(str(outputs.get('pairs_jsonl') or (run_dir / '05_pair_trace_ds' / 'pairs.jsonl')))
+    pairs_jsonl = Path(
+        str(outputs.get('pairs_jsonl') or (run_dir / '05_pair_trace_ds' / 'pairs.jsonl'))
+    )
     paired_signatures_dir = Path(
-        str(outputs.get('paired_signatures_dir') or (run_dir / '05_pair_trace_ds' / 'paired_signatures'))
+        str(
+            outputs.get('paired_signatures_dir')
+            or (run_dir / '05_pair_trace_ds' / 'paired_signatures')
+        )
     )
     slice_dir = Path(str(outputs.get('slice_dir') or (run_dir / '06_slices' / 'slice')))
 
@@ -178,7 +183,7 @@ def validate_inputs(run_dir: Path, config: dict[str, Any]) -> None:
 def infer_suffix_from_output_dir(output_dir: Path) -> str:
     prefix = '07_dataset_export_'
     if output_dir.name.startswith(prefix):
-        suffix = output_dir.name[len(prefix):].strip()
+        suffix = output_dir.name[len(prefix) :].strip()
         if suffix:
             return suffix
     return now_ts_compact()
@@ -214,18 +219,18 @@ def load_module(module_path: Path, module_name: str):
     return module
 
 
-def rerun_step07(*,
-                 run_dir: Path,
-                 output_dir: Path,
-                 dedup_mode: str,
-                 overwrite: bool) -> dict[str, Any]:
+def rerun_step07(
+    *, run_dir: Path, output_dir: Path, dedup_mode: str, overwrite: bool
+) -> dict[str, Any]:
     config = choose_run_config(run_dir)
     validate_inputs(run_dir, config)
 
     prepare_target(output_dir, overwrite=overwrite)
 
     sys.path.insert(0, str(Path(PROJECT_HOME) / 'tools'))
-    pipeline_module = load_module(Path(PROJECT_HOME) / 'tools' / 'run-epic001-pipeline.py', 'run_epic001_pipeline')
+    pipeline_module = load_module(
+        Path(PROJECT_HOME) / 'tools' / 'run-epic001-pipeline.py', 'run_epic001_pipeline'
+    )
 
     print(f'[Step07] run_dir={run_dir}')
     print(f'[Step07] output_dir={output_dir}')
@@ -248,31 +253,42 @@ def rerun_step07(*,
     return result
 
 
-def rerun_step07b(*,
-                  run_dir: Path,
-                  dataset_export_dir: Path,
-                  run_suffix: str,
-                  dedup_mode: str,
-                  overwrite: bool,
-                  old_prefix: str | None,
-                  new_prefix: str | None) -> dict[str, Any]:
+def rerun_step07b(
+    *,
+    run_dir: Path,
+    dataset_export_dir: Path,
+    run_suffix: str,
+    dedup_mode: str,
+    overwrite: bool,
+    old_prefix: str | None,
+    new_prefix: str | None,
+) -> dict[str, Any]:
     pair_dir = run_dir / '05_pair_trace_ds'
     slice_root_dir = run_dir / '06_slices'
     signature_output_dir = pair_dir / f'train_patched_counterparts_signatures_{run_suffix}'
     slice_output_dir = slice_root_dir / f'train_patched_counterparts_{run_suffix}'
     output_pairs_jsonl = pair_dir / f'train_patched_counterparts_pairs_{run_suffix}.jsonl'
-    selection_summary_json = pair_dir / f'train_patched_counterparts_selection_summary_{run_suffix}.json'
+    selection_summary_json = (
+        pair_dir / f'train_patched_counterparts_selection_summary_{run_suffix}.json'
+    )
 
     cmd = [
         sys.executable,
         str(Path(PROJECT_HOME) / 'tools' / 'export_train_patched_counterparts.py'),
-        '--run-dir', str(run_dir),
-        '--dataset-export-dir', str(dataset_export_dir),
-        '--signature-output-dir', str(signature_output_dir),
-        '--slice-output-dir', str(slice_output_dir),
-        '--output-pairs-jsonl', str(output_pairs_jsonl),
-        '--selection-summary-json', str(selection_summary_json),
-        '--dedup-mode', dedup_mode,
+        '--run-dir',
+        str(run_dir),
+        '--dataset-export-dir',
+        str(dataset_export_dir),
+        '--signature-output-dir',
+        str(signature_output_dir),
+        '--slice-output-dir',
+        str(slice_output_dir),
+        '--output-pairs-jsonl',
+        str(output_pairs_jsonl),
+        '--selection-summary-json',
+        str(selection_summary_json),
+        '--dedup-mode',
+        dedup_mode,
     ]
     if overwrite:
         cmd.append('--overwrite')
@@ -297,15 +313,17 @@ def rerun_step07b(*,
     return result
 
 
-def write_rerun_metadata(*,
-                         run_dir: Path,
-                         output_dir: Path,
-                         started_at: str,
-                         args: argparse.Namespace,
-                         run_step07: bool,
-                         run_step07b: bool,
-                         step07_result: dict[str, Any] | None,
-                         step07b_result: dict[str, Any] | None) -> Path:
+def write_rerun_metadata(
+    *,
+    run_dir: Path,
+    output_dir: Path,
+    started_at: str,
+    args: argparse.Namespace,
+    run_step07: bool,
+    run_step07b: bool,
+    step07_result: dict[str, Any] | None,
+    step07b_result: dict[str, Any] | None,
+) -> Path:
     payload = {
         'started_at': started_at,
         'ended_at': now_iso_utc(),
@@ -319,7 +337,9 @@ def write_rerun_metadata(*,
         'step07b_result': step07b_result,
     }
     metadata_path = output_dir / 'rerun_step07_metadata.json'
-    metadata_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+    metadata_path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
+    )
     return metadata_path
 
 
@@ -377,7 +397,9 @@ def main() -> int:
         'metadata_json': str(metadata_path),
         'step07_summary_json': str(output_dir / 'summary.json'),
         'step07_split_manifest_json': str(output_dir / 'split_manifest.json'),
-        'step07b_summary_json': str(output_dir / 'train_patched_counterparts_summary.json') if run_step07b else None,
+        'step07b_summary_json': str(output_dir / 'train_patched_counterparts_summary.json')
+        if run_step07b
+        else None,
     }
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0

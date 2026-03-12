@@ -7,18 +7,17 @@ import hashlib
 import io
 import json
 import random
-from collections import Counter
-from contextlib import redirect_stderr, redirect_stdout
-from pathlib import Path
 import shlex
 import subprocess
 import sys
 import time
+from collections import Counter
+from contextlib import redirect_stderr, redirect_stdout
+from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 import typer
-
-from paths import PROJECT_HOME, RESULT_DIR, PULSE_TAINT_CONFIG
+from paths import PROJECT_HOME, PULSE_TAINT_CONFIG, RESULT_DIR
 
 CPP_LIKE_SUFFIXES = {'.cpp', '.cc', '.cxx', '.c++', '.hpp', '.hh', '.hxx'}
 ROLE_SORT_ORDER = {'b2b': 0, 'counterpart': 1}
@@ -58,11 +57,13 @@ def unique_in_order(values: list[str]) -> list[str]:
     return result
 
 
-def build_dedup_audit_row(*,
-                          record: dict[str, Any],
-                          dedup_reason: str,
-                          dedup_trigger_hashes: list[str],
-                          matched_kept_record: dict[str, Any] | None) -> dict[str, Any]:
+def build_dedup_audit_row(
+    *,
+    record: dict[str, Any],
+    dedup_reason: str,
+    dedup_trigger_hashes: list[str],
+    matched_kept_record: dict[str, Any] | None,
+) -> dict[str, Any]:
     return {
         'pair_id': str(record['pair_id']),
         'testcase_key': str(record['testcase_key']),
@@ -74,10 +75,16 @@ def build_dedup_audit_row(*,
         'normalized_code_hash': str(record.get('normalized_code_hash') or ''),
         'dedup_reason': dedup_reason,
         'dedup_trigger_hashes': '|'.join(dedup_trigger_hashes),
-        'matched_kept_pair_id': str(matched_kept_record.get('pair_id') or '') if matched_kept_record else '',
-        'matched_kept_role': str(matched_kept_record.get('role') or '') if matched_kept_record else '',
+        'matched_kept_pair_id': str(matched_kept_record.get('pair_id') or '')
+        if matched_kept_record
+        else '',
+        'matched_kept_role': str(matched_kept_record.get('role') or '')
+        if matched_kept_record
+        else '',
         'matched_kept_source_signature_path': (
-            str(matched_kept_record.get('source_signature_path') or '') if matched_kept_record else ''
+            str(matched_kept_record.get('source_signature_path') or '')
+            if matched_kept_record
+            else ''
         ),
         'matched_kept_unique_id': '',
         'processed_func': str(record['normalized_code']),
@@ -98,8 +105,7 @@ def command_to_string(cmd: List[str]) -> str:
     return ' '.join(shlex.quote(x) for x in cmd)
 
 
-def run_command(step_key: str, cmd: List[str], cwd: Path,
-                logs_dir: Path) -> Dict[str, object]:
+def run_command(step_key: str, cmd: List[str], cwd: Path, logs_dir: Path) -> Dict[str, object]:
     started_at = now_iso_utc()
     t0 = time.perf_counter()
     proc = subprocess.run(
@@ -135,12 +141,14 @@ def run_command(step_key: str, cmd: List[str], cwd: Path,
     }
     if proc.returncode != 0:
         raise RuntimeError(
-            f'[{step_key}] failed with return code {proc.returncode}: {result["command"]}')
+            f'[{step_key}] failed with return code {proc.returncode}: {result["command"]}'
+        )
     return result
 
 
-def run_internal_step(step_key: str, logs_dir: Path,
-                      fn: Callable[[], Dict[str, object]]) -> Dict[str, object]:
+def run_internal_step(
+    step_key: str, logs_dir: Path, fn: Callable[[], Dict[str, object]]
+) -> Dict[str, object]:
     started_at = now_iso_utc()
     t0 = time.perf_counter()
     stdout_buffer = io.StringIO()
@@ -228,7 +236,7 @@ def candidate_languages_for_source(path: Path) -> list[str]:
 
 
 def node_text(node, source_bytes: bytes) -> str:
-    return source_bytes[node.start_byte:node.end_byte].decode('utf-8', errors='ignore')
+    return source_bytes[node.start_byte : node.end_byte].decode('utf-8', errors='ignore')
 
 
 def extract_function_name_from_declarator(node, source_bytes: bytes) -> str | None:
@@ -272,8 +280,9 @@ def extract_defined_function_names(root_node, source_bytes: bytes) -> set[str]:
     return names
 
 
-def collect_defined_function_names(source_path: Path,
-                                   parsers: dict[str, object]) -> tuple[set[str], str | None]:
+def collect_defined_function_names(
+    source_path: Path, parsers: dict[str, object]
+) -> tuple[set[str], str | None]:
     try:
         source_bytes = source_path.read_bytes()
     except Exception as exc:
@@ -307,8 +316,9 @@ def dedupe_paths(paths: list[Path]) -> list[Path]:
     return deduped
 
 
-def build_source_file_candidates(signature_payload: dict[str, Any],
-                                 primary_file_hint: str | None) -> list[Path]:
+def build_source_file_candidates(
+    signature_payload: dict[str, Any], primary_file_hint: str | None
+) -> list[Path]:
     candidates: list[Path] = []
 
     bug_trace = extract_std_bug_trace(signature_payload.get('bug_trace', []))
@@ -364,7 +374,7 @@ def lex_c_like(code: str) -> list[dict[str, str]]:
 
         if code.startswith('/*', i):
             j = i + 2
-            while j < n - 1 and code[j:j + 2] != '*/':
+            while j < n - 1 and code[j : j + 2] != '*/':
                 j += 1
             j = min(n, j + 2 if j < n - 1 else n)
             tokens.append({'kind': 'comment', 'text': code[i:j]})
@@ -408,7 +418,7 @@ def lex_c_like(code: str) -> list[dict[str, str]]:
             continue
 
         if code.startswith('->', i) or code.startswith('::', i):
-            tokens.append({'kind': 'punct', 'text': code[i:i + 2]})
+            tokens.append({'kind': 'punct', 'text': code[i : i + 2]})
             i += 2
             continue
 
@@ -436,8 +446,9 @@ def next_meaningful_token(tokens: list[dict[str, str]], index: int) -> dict[str,
     return None
 
 
-def normalize_slice_function_names(code: str,
-                                   user_defined_function_names: set[str]) -> tuple[str, dict[str, str], int]:
+def normalize_slice_function_names(
+    code: str, user_defined_function_names: set[str]
+) -> tuple[str, dict[str, str], int]:
     if not user_defined_function_names:
         return code, {}, 0
 
@@ -543,7 +554,9 @@ def dedupe_pairs_by_normalized_rows(
             duplicate_hash_groups += 1
             duplicate_row_occurrences += len(occurrences) - 1
 
-    collision_row_occurrences = sum(len(row_occurrences[code_hash]) for code_hash in colliding_hashes)
+    collision_row_occurrences = sum(
+        len(row_occurrences[code_hash]) for code_hash in colliding_hashes
+    )
 
     if dedup_mode == 'none':
         deduped_pairs = surviving_pairs
@@ -593,7 +606,9 @@ def dedupe_pairs_by_normalized_rows(
                             record=record,
                             dedup_reason='duplicate_pair',
                             dedup_trigger_hashes=duplicate_trigger_hashes,
-                            matched_kept_record=kept_record_by_hash.get(str(record['normalized_code_hash'])),
+                            matched_kept_record=kept_record_by_hash.get(
+                                str(record['normalized_code_hash'])
+                            ),
                         )
                     )
                 continue
@@ -632,12 +647,13 @@ def find_slice_path(slice_dir: Path, testcase_key: str, role_name: str) -> Path 
     ]
     existing = [path for path in candidates if path.exists()]
     if len(existing) > 1:
-        raise RuntimeError(f'Multiple slice candidates found for {testcase_key}/{role_name}: {existing}')
+        raise RuntimeError(
+            f'Multiple slice candidates found for {testcase_key}/{role_name}: {existing}'
+        )
     return existing[0] if existing else None
 
 
-def compute_pair_split(pair_ids: list[str], train_ratio: float,
-                       seed: int) -> dict[str, str]:
+def compute_pair_split(pair_ids: list[str], train_ratio: float, seed: int) -> dict[str, str]:
     keys = sorted(set(pair_ids))
     shuffled = list(keys)
     random.Random(seed).shuffle(shuffled)
@@ -656,16 +672,23 @@ def compute_pair_split(pair_ids: list[str], train_ratio: float,
     return split_map
 
 
-def export_dataset_from_pipeline(*,
-                                 pairs_jsonl: Path,
-                                 paired_signatures_dir: Path,
-                                 slice_dir: Path,
-                                 output_dir: Path,
-                                 split_seed: int,
-                                 train_ratio: float,
-                                 dedup_mode: str) -> dict[str, object]:
-    from tokenize_slices import (CONTENT_TOKEN_LIMIT, MAX_LENGTH, count_code_tokens,
-                                 load_tokenizer, plot_distribution)
+def export_dataset_from_pipeline(
+    *,
+    pairs_jsonl: Path,
+    paired_signatures_dir: Path,
+    slice_dir: Path,
+    output_dir: Path,
+    split_seed: int,
+    train_ratio: float,
+    dedup_mode: str,
+) -> dict[str, object]:
+    from tokenize_slices import (
+        CONTENT_TOKEN_LIMIT,
+        MAX_LENGTH,
+        count_code_tokens,
+        load_tokenizer,
+        plot_distribution,
+    )
 
     if not pairs_jsonl.exists():
         raise FileNotFoundError(f'Pairs JSONL not found: {pairs_jsonl}')
@@ -828,33 +851,43 @@ def export_dataset_from_pipeline(*,
 
     token_count_rows = sorted(
         [row for pair_records in surviving_pairs.values() for row in pair_records],
-        key=lambda row: (row['pair_id'], ROLE_SORT_ORDER.get(str(row['role']), 99), row['slice_filename']),
+        key=lambda row: (
+            row['pair_id'],
+            ROLE_SORT_ORDER.get(str(row['role']), 99),
+            row['slice_filename'],
+        ),
     )
     with normalized_token_counts_csv.open('w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
-        writer.writerow([
-            'pair_id',
-            'filename',
-            'extension',
-            'role',
-            'code_token_count',
-            'input_token_count_with_special',
-            'exceeds_510',
-        ])
+        writer.writerow(
+            [
+                'pair_id',
+                'filename',
+                'extension',
+                'role',
+                'code_token_count',
+                'input_token_count_with_special',
+                'exceeds_510',
+            ]
+        )
         for row in token_count_rows:
-            writer.writerow([
-                row['pair_id'],
-                row['slice_filename'],
-                row['extension'],
-                row['role'],
-                row['code_token_count'],
-                row['input_token_count_with_special'],
-                row['exceeds_510'],
-            ])
+            writer.writerow(
+                [
+                    row['pair_id'],
+                    row['slice_filename'],
+                    row['extension'],
+                    row['role'],
+                    row['code_token_count'],
+                    row['input_token_count_with_special'],
+                    row['exceeds_510'],
+                ]
+            )
 
     plot_distribution(token_count_rows, slice_token_distribution_png)
 
-    split_map = compute_pair_split(list(surviving_pairs.keys()), train_ratio=train_ratio, seed=split_seed)
+    split_map = compute_pair_split(
+        list(surviving_pairs.keys()), train_ratio=train_ratio, seed=split_seed
+    )
 
     ordered_rows: list[dict[str, Any]] = []
     for dataset_type in ('train_val', 'test'):
@@ -871,34 +904,40 @@ def export_dataset_from_pipeline(*,
 
     with real_vul_data_csv.open('w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
-        writer.writerow([
-            'file_name',
-            'unique_id',
-            'target',
-            'vulnerable_line_numbers',
-            'project',
-            'source_signature_path',
-            'commit_hash',
-            'dataset_type',
-            'processed_func',
-        ])
+        writer.writerow(
+            [
+                'file_name',
+                'unique_id',
+                'target',
+                'vulnerable_line_numbers',
+                'project',
+                'source_signature_path',
+                'commit_hash',
+                'dataset_type',
+                'processed_func',
+            ]
+        )
         kept_unique_id_by_pair_role: dict[tuple[str, str], int] = {}
         for idx, row in enumerate(ordered_rows, start=1):
             output_filename = f'{idx}{row["extension"]}'
-            (normalized_slices_dir / output_filename).write_text(row['normalized_code'], encoding='utf-8')
+            (normalized_slices_dir / output_filename).write_text(
+                row['normalized_code'], encoding='utf-8'
+            )
             vulnerable_line_numbers = 1 if int(row['target']) == 1 else ''
             kept_unique_id_by_pair_role[(str(row['pair_id']), str(row['role']))] = idx
-            writer.writerow([
-                idx,
-                idx,
-                row['target'],
-                vulnerable_line_numbers,
-                'Juliet',
-                row['source_signature_path'],
-                '',
-                row['dataset_type'],
-                row['normalized_code'],
-            ])
+            writer.writerow(
+                [
+                    idx,
+                    idx,
+                    row['target'],
+                    vulnerable_line_numbers,
+                    'Juliet',
+                    row['source_signature_path'],
+                    '',
+                    row['dataset_type'],
+                    row['normalized_code'],
+                ]
+            )
 
     for audit_row in dedup_audit_rows:
         matched_pair_id = str(audit_row.get('matched_kept_pair_id') or '')
@@ -910,43 +949,47 @@ def export_dataset_from_pipeline(*,
 
     with dedup_dropped_csv.open('w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
-        writer.writerow([
-            'dropped_row_id',
-            'pair_id',
-            'testcase_key',
-            'role',
-            'role_name',
-            'target',
-            'project',
-            'source_signature_path',
-            'normalized_code_hash',
-            'dedup_reason',
-            'dedup_trigger_hashes',
-            'matched_kept_pair_id',
-            'matched_kept_role',
-            'matched_kept_source_signature_path',
-            'matched_kept_unique_id',
-            'processed_func',
-        ])
+        writer.writerow(
+            [
+                'dropped_row_id',
+                'pair_id',
+                'testcase_key',
+                'role',
+                'role_name',
+                'target',
+                'project',
+                'source_signature_path',
+                'normalized_code_hash',
+                'dedup_reason',
+                'dedup_trigger_hashes',
+                'matched_kept_pair_id',
+                'matched_kept_role',
+                'matched_kept_source_signature_path',
+                'matched_kept_unique_id',
+                'processed_func',
+            ]
+        )
         for dropped_row_id, row in enumerate(dedup_audit_rows, start=1):
-            writer.writerow([
-                dropped_row_id,
-                row['pair_id'],
-                row['testcase_key'],
-                row['role'],
-                row['role_name'],
-                row['target'],
-                row['project'],
-                row['source_signature_path'],
-                row['normalized_code_hash'],
-                row['dedup_reason'],
-                row['dedup_trigger_hashes'],
-                row['matched_kept_pair_id'],
-                row['matched_kept_role'],
-                row['matched_kept_source_signature_path'],
-                row['matched_kept_unique_id'],
-                row['processed_func'],
-            ])
+            writer.writerow(
+                [
+                    dropped_row_id,
+                    row['pair_id'],
+                    row['testcase_key'],
+                    row['role'],
+                    row['role_name'],
+                    row['target'],
+                    row['project'],
+                    row['source_signature_path'],
+                    row['normalized_code_hash'],
+                    row['dedup_reason'],
+                    row['dedup_trigger_hashes'],
+                    row['matched_kept_pair_id'],
+                    row['matched_kept_role'],
+                    row['matched_kept_source_signature_path'],
+                    row['matched_kept_unique_id'],
+                    row['processed_func'],
+                ]
+            )
 
     split_manifest = {
         'output_dir': str(output_dir),
@@ -969,7 +1012,9 @@ def export_dataset_from_pipeline(*,
             'dedup_dropped_rows': dedup_dropped_rows,
         },
         'pair_ids': {
-            'train_val': sorted(pair_id for pair_id, value in split_map.items() if value == 'train_val'),
+            'train_val': sorted(
+                pair_id for pair_id, value in split_map.items() if value == 'train_val'
+            ),
             'test': sorted(pair_id for pair_id, value in split_map.items() if value == 'test'),
         },
     }
@@ -1043,41 +1088,49 @@ def export_dataset_from_pipeline(*,
 def main(
     cwes: Optional[List[int]] = typer.Argument(None),
     all_cwes: bool = typer.Option(
-        False, '--all', help='Run the pipeline for all CWEs in the testcase directory'),
+        False, '--all', help='Run the pipeline for all CWEs in the testcase directory'
+    ),
     files: List[str] = typer.Option(
-        [], '--files', help='Run infer for specific files (repeatable); if set, cwes and --all are ignored'),
+        [],
+        '--files',
+        help='Run infer for specific files (repeatable); if set, cwes and --all are ignored',
+    ),
     manifest: Path = typer.Option(
-        Path(PROJECT_HOME) / 'experiments' / 'epic001_manifest_comment_scan' / 'inputs' / 'manifest.xml',
+        Path(PROJECT_HOME)
+        / 'experiments'
+        / 'epic001_manifest_comment_scan'
+        / 'inputs'
+        / 'manifest.xml',
         '--manifest',
-        help='Input manifest.xml path'),
+        help='Input manifest.xml path',
+    ),
     source_root: Path = typer.Option(
         Path(PROJECT_HOME) / 'juliet-test-suite-v1.3' / 'C',
         '--source-root',
-        help='Juliet C source root'),
+        help='Juliet C source root',
+    ),
     pipeline_root: Path = typer.Option(
         Path(RESULT_DIR) / 'pipeline-runs',
         '--pipeline-root',
-        help='Root directory for pipeline runs'),
+        help='Root directory for pipeline runs',
+    ),
     run_id: Optional[str] = typer.Option(
-        None,
-        '--run-id',
-        help='Run id under pipeline root (default: run-<YYYY.MM.DD-HH:MM:SS>)'),
+        None, '--run-id', help='Run id under pipeline root (default: run-<YYYY.MM.DD-HH:MM:SS>)'
+    ),
     committed_taint_config: Path = typer.Option(
         Path(PULSE_TAINT_CONFIG),
         '--committed-taint-config',
-        help='Committed taint config path for fallback/reference'),
+        help='Committed taint config path for fallback/reference',
+    ),
     pair_split_seed: int = typer.Option(
-        1234,
-        '--pair-split-seed',
-        help='Random seed for pair-level train/test split'),
+        1234, '--pair-split-seed', help='Random seed for pair-level train/test split'
+    ),
     pair_train_ratio: float = typer.Option(
-        0.8,
-        '--pair-train-ratio',
-        help='Train ratio for pair-level train/test split'),
+        0.8, '--pair-train-ratio', help='Train ratio for pair-level train/test split'
+    ),
     dedup_mode: str = typer.Option(
-        'row',
-        '--dedup-mode',
-        help='Normalized-slice dedup mode before split/export: none or row'),
+        'row', '--dedup-mode', help='Normalized-slice dedup mode before split/export: none or row'
+    ),
 ):
     if not manifest.exists():
         raise typer.BadParameter(f'Manifest not found: {manifest}')
@@ -1168,16 +1221,54 @@ def main(
 
     source_testcases_root = source_root / 'testcases'
 
-    scan_script = Path(PROJECT_HOME) / 'experiments' / 'epic001_manifest_comment_scan' / 'scripts' / 'scan_manifest_comments.py'
-    code_field_script = Path(PROJECT_HOME) / 'experiments' / 'epic001a_code_field_inventory' / 'scripts' / 'extract_unique_code_fields.py'
-    function_inventory_script = Path(PROJECT_HOME) / 'experiments' / 'epic001b_function_inventory' / 'scripts' / 'extract_function_inventory.py'
-    categorize_script = Path(PROJECT_HOME) / 'experiments' / 'epic001b_function_inventory' / 'scripts' / 'categorize_function_names.py'
-    flow_partition_script = Path(PROJECT_HOME) / 'experiments' / 'epic001c_testcase_flow_partition' / 'scripts' / 'add_flow_tags_to_testcase.py'
+    scan_script = (
+        Path(PROJECT_HOME)
+        / 'experiments'
+        / 'epic001_manifest_comment_scan'
+        / 'scripts'
+        / 'scan_manifest_comments.py'
+    )
+    code_field_script = (
+        Path(PROJECT_HOME)
+        / 'experiments'
+        / 'epic001a_code_field_inventory'
+        / 'scripts'
+        / 'extract_unique_code_fields.py'
+    )
+    function_inventory_script = (
+        Path(PROJECT_HOME)
+        / 'experiments'
+        / 'epic001b_function_inventory'
+        / 'scripts'
+        / 'extract_function_inventory.py'
+    )
+    categorize_script = (
+        Path(PROJECT_HOME)
+        / 'experiments'
+        / 'epic001b_function_inventory'
+        / 'scripts'
+        / 'categorize_function_names.py'
+    )
+    flow_partition_script = (
+        Path(PROJECT_HOME)
+        / 'experiments'
+        / 'epic001c_testcase_flow_partition'
+        / 'scripts'
+        / 'add_flow_tags_to_testcase.py'
+    )
     infer_script = Path(PROJECT_HOME) / 'tools' / 'run-infer-all-juliet.py'
-    filter_script = Path(PROJECT_HOME) / 'experiments' / 'epic001d_trace_flow_filter' / 'scripts' / 'filter_traces_by_flow.py'
+    filter_script = (
+        Path(PROJECT_HOME)
+        / 'experiments'
+        / 'epic001d_trace_flow_filter'
+        / 'scripts'
+        / 'filter_traces_by_flow.py'
+    )
     pair_script = Path(PROJECT_HOME) / 'tools' / 'build-paired-trace-signatures.py'
     slice_script = Path(PROJECT_HOME) / 'tools' / 'generate_slices.py'
-    train_patched_counterparts_script = Path(PROJECT_HOME) / 'tools' / 'export_train_patched_counterparts.py'
+    train_patched_counterparts_script = (
+        Path(PROJECT_HOME) / 'tools' / 'export_train_patched_counterparts.py'
+    )
 
     started_at = now_iso_utc()
     start_perf = time.perf_counter()
@@ -1196,9 +1287,12 @@ def main(
             [
                 sys.executable,
                 str(scan_script),
-                '--manifest', str(manifest),
-                '--source-root', str(source_root),
-                '--output-xml', str(manifest_with_comments_xml),
+                '--manifest',
+                str(manifest),
+                '--source-root',
+                str(source_root),
+                '--output-xml',
+                str(manifest_with_comments_xml),
             ],
             cwd=Path(PROJECT_HOME),
             logs_dir=logs_dir,
@@ -1210,10 +1304,14 @@ def main(
             [
                 sys.executable,
                 str(code_field_script),
-                '--input-xml', str(manifest_with_comments_xml),
-                '--source-root', str(source_root),
-                '--output-dir', str(taint_dir),
-                '--pulse-taint-config-output', str(generated_taint_config),
+                '--input-xml',
+                str(manifest_with_comments_xml),
+                '--source-root',
+                str(source_root),
+                '--output-dir',
+                str(taint_dir),
+                '--pulse-taint-config-output',
+                str(generated_taint_config),
             ],
             cwd=Path(PROJECT_HOME),
             logs_dir=logs_dir,
@@ -1225,9 +1323,12 @@ def main(
             [
                 sys.executable,
                 str(function_inventory_script),
-                '--input-xml', str(manifest_with_comments_xml),
-                '--output-csv', str(function_names_unique_csv),
-                '--output-summary', str(function_inventory_summary_json),
+                '--input-xml',
+                str(manifest_with_comments_xml),
+                '--output-csv',
+                str(function_names_unique_csv),
+                '--output-summary',
+                str(function_inventory_summary_json),
             ],
             cwd=Path(PROJECT_HOME),
             logs_dir=logs_dir,
@@ -1239,12 +1340,18 @@ def main(
             [
                 sys.executable,
                 str(categorize_script),
-                '--input-csv', str(function_names_unique_csv),
-                '--manifest-xml', str(manifest_with_comments_xml),
-                '--source-root', str(source_testcases_root),
-                '--output-jsonl', str(function_names_categorized_jsonl),
-                '--output-nested-json', str(grouped_family_role_json),
-                '--output-summary', str(category_summary_json),
+                '--input-csv',
+                str(function_names_unique_csv),
+                '--manifest-xml',
+                str(manifest_with_comments_xml),
+                '--source-root',
+                str(source_testcases_root),
+                '--output-jsonl',
+                str(function_names_categorized_jsonl),
+                '--output-nested-json',
+                str(grouped_family_role_json),
+                '--output-summary',
+                str(category_summary_json),
             ],
             cwd=Path(PROJECT_HOME),
             logs_dir=logs_dir,
@@ -1256,10 +1363,14 @@ def main(
             [
                 sys.executable,
                 str(flow_partition_script),
-                '--input-xml', str(manifest_with_comments_xml),
-                '--function-categories-jsonl', str(function_names_categorized_jsonl),
-                '--output-xml', str(manifest_with_testcase_flows_xml),
-                '--summary-json', str(testcase_flow_summary_json),
+                '--input-xml',
+                str(manifest_with_comments_xml),
+                '--function-categories-jsonl',
+                str(function_names_categorized_jsonl),
+                '--output-xml',
+                str(manifest_with_testcase_flows_xml),
+                '--summary-json',
+                str(testcase_flow_summary_json),
             ],
             cwd=Path(PROJECT_HOME),
             logs_dir=logs_dir,
@@ -1276,10 +1387,14 @@ def main(
         infer_cmd = [
             sys.executable,
             str(infer_script),
-            '--pulse-taint-config', str(selected_taint_config),
-            '--infer-results-root', str(infer_results_root),
-            '--signatures-root', str(signatures_root),
-            '--summary-json', str(infer_summary_json),
+            '--pulse-taint-config',
+            str(selected_taint_config),
+            '--infer-results-root',
+            str(infer_results_root),
+            '--signatures-root',
+            str(signatures_root),
+            '--summary-json',
+            str(infer_summary_json),
         ]
         if files:
             for f in files:
@@ -1310,7 +1425,9 @@ def main(
             signature_non_empty_dir = Path(signature_output_dir) / 'non_empty'
 
         if not signature_non_empty_dir.exists():
-            raise RuntimeError(f'Signature non_empty directory not found: {signature_non_empty_dir}')
+            raise RuntimeError(
+                f'Signature non_empty directory not found: {signature_non_empty_dir}'
+            )
 
         # Step 04: filter traces by testcase flow
         steps['04_trace_flow_filter'] = run_command(
@@ -1318,9 +1435,12 @@ def main(
             [
                 sys.executable,
                 str(filter_script),
-                '--flow-xml', str(manifest_with_testcase_flows_xml),
-                '--signatures-dir', str(signature_non_empty_dir),
-                '--output-dir', str(trace_dir),
+                '--flow-xml',
+                str(manifest_with_testcase_flows_xml),
+                '--signatures-dir',
+                str(signature_non_empty_dir),
+                '--output-dir',
+                str(trace_dir),
             ],
             cwd=Path(PROJECT_HOME),
             logs_dir=logs_dir,
@@ -1335,8 +1455,10 @@ def main(
             [
                 sys.executable,
                 str(pair_script),
-                '--trace-jsonl', str(trace_strict_jsonl),
-                '--output-dir', str(pair_dir),
+                '--trace-jsonl',
+                str(trace_strict_jsonl),
+                '--output-dir',
+                str(pair_dir),
             ],
             cwd=Path(PROJECT_HOME),
             logs_dir=logs_dir,
@@ -1347,7 +1469,9 @@ def main(
         if not paired_signatures_dir.exists():
             raise RuntimeError(f'Expected paired signatures dir not found: {paired_signatures_dir}')
         if not paired_trace_summary_json.exists():
-            raise RuntimeError(f'Expected paired trace summary not found: {paired_trace_summary_json}')
+            raise RuntimeError(
+                f'Expected paired trace summary not found: {paired_trace_summary_json}'
+            )
 
         # Step 06: generate source slices from paired signatures
         steps['06_generate_slices'] = run_command(
@@ -1355,8 +1479,10 @@ def main(
             [
                 sys.executable,
                 str(slice_script),
-                '--signature-db-dir', str(paired_signatures_dir),
-                '--output-dir', str(slice_stage_dir),
+                '--signature-db-dir',
+                str(paired_signatures_dir),
+                '--output-dir',
+                str(slice_stage_dir),
             ],
             cwd=Path(PROJECT_HOME),
             logs_dir=logs_dir,
@@ -1392,11 +1518,17 @@ def main(
                 f'{real_vul_data_dedup_dropped_csv}'
             )
         if not normalized_token_counts_csv.exists():
-            raise RuntimeError(f'Expected normalized token counts CSV not found: {normalized_token_counts_csv}')
+            raise RuntimeError(
+                f'Expected normalized token counts CSV not found: {normalized_token_counts_csv}'
+            )
         if not slice_token_distribution_png.exists():
-            raise RuntimeError(f'Expected token distribution plot not found: {slice_token_distribution_png}')
+            raise RuntimeError(
+                f'Expected token distribution plot not found: {slice_token_distribution_png}'
+            )
         if not dataset_split_manifest_json.exists():
-            raise RuntimeError(f'Expected dataset split manifest not found: {dataset_split_manifest_json}')
+            raise RuntimeError(
+                f'Expected dataset split manifest not found: {dataset_split_manifest_json}'
+            )
         if not dataset_summary_json.exists():
             raise RuntimeError(f'Expected dataset summary JSON not found: {dataset_summary_json}')
 
@@ -1406,8 +1538,10 @@ def main(
             [
                 sys.executable,
                 str(train_patched_counterparts_script),
-                '--run-dir', str(run_dir),
-                '--dedup-mode', dedup_mode,
+                '--run-dir',
+                str(run_dir),
+                '--dedup-mode',
+                dedup_mode,
             ],
             cwd=Path(PROJECT_HOME),
             logs_dir=logs_dir,
@@ -1483,7 +1617,9 @@ def main(
 
     committed_taint_config = committed_taint_config.resolve()
     generated_taint_config = generated_taint_config.resolve()
-    selected_taint_config_str = str(selected_taint_config.resolve()) if selected_taint_config else None
+    selected_taint_config_str = (
+        str(selected_taint_config.resolve()) if selected_taint_config else None
+    )
 
     summary_payload = {
         'status': status,
@@ -1510,7 +1646,9 @@ def main(
         'sha256': {
             'committed_taint_config': sha256_file(committed_taint_config),
             'generated_taint_config': sha256_file(generated_taint_config),
-            'selected_taint_config': sha256_file(Path(selected_taint_config_str)) if selected_taint_config_str else None,
+            'selected_taint_config': sha256_file(Path(selected_taint_config_str))
+            if selected_taint_config_str
+            else None,
         },
         'steps': steps,
         'outputs': {
@@ -1518,19 +1656,27 @@ def main(
             'generated_taint_config': str(generated_taint_config),
             'manifest_with_testcase_flows_xml': str(manifest_with_testcase_flows_xml),
             'infer_summary_json': str(infer_summary_json),
-            'signature_non_empty_dir': str(signature_non_empty_dir) if signature_non_empty_dir else None,
+            'signature_non_empty_dir': str(signature_non_empty_dir)
+            if signature_non_empty_dir
+            else None,
             'trace_flow_match_strict_jsonl': str(trace_strict_jsonl),
             'pairs_jsonl': str(pairs_jsonl),
             'leftover_counterparts_jsonl': str(leftover_counterparts_jsonl),
             'paired_signatures_dir': str(paired_signatures_dir),
             'paired_trace_summary_json': str(paired_trace_summary_json),
             'train_patched_counterparts_pairs_jsonl': str(train_patched_counterparts_pairs_jsonl),
-            'train_patched_counterparts_signatures_dir': str(train_patched_counterparts_signatures_dir),
-            'train_patched_counterparts_selection_summary_json': str(train_patched_counterparts_selection_summary_json),
+            'train_patched_counterparts_signatures_dir': str(
+                train_patched_counterparts_signatures_dir
+            ),
+            'train_patched_counterparts_selection_summary_json': str(
+                train_patched_counterparts_selection_summary_json
+            ),
             'slice_dir': str(slice_dir),
             'slice_summary_json': str(slice_summary_json),
             'train_patched_counterparts_slice_dir': str(train_patched_counterparts_slice_dir),
-            'train_patched_counterparts_slice_summary_json': str(train_patched_counterparts_slice_summary_json),
+            'train_patched_counterparts_slice_summary_json': str(
+                train_patched_counterparts_slice_summary_json
+            ),
             'dataset_export_dir': str(dataset_stage_dir),
             'normalized_slices_dir': str(normalized_slices_dir),
             'real_vul_data_csv': str(real_vul_data_csv),
@@ -1540,11 +1686,19 @@ def main(
             'dataset_split_manifest_json': str(dataset_split_manifest_json),
             'dataset_summary_json': str(dataset_summary_json),
             'train_patched_counterparts_csv': str(train_patched_counterparts_csv),
-            'train_patched_counterparts_dedup_dropped_csv': str(train_patched_counterparts_dedup_dropped_csv),
+            'train_patched_counterparts_dedup_dropped_csv': str(
+                train_patched_counterparts_dedup_dropped_csv
+            ),
             'train_patched_counterparts_slices_dir': str(train_patched_counterparts_slices_dir),
-            'train_patched_counterparts_token_counts_csv': str(train_patched_counterparts_token_counts_csv),
-            'train_patched_counterparts_token_distribution_png': str(train_patched_counterparts_token_distribution_png),
-            'train_patched_counterparts_split_manifest_json': str(train_patched_counterparts_split_manifest_json),
+            'train_patched_counterparts_token_counts_csv': str(
+                train_patched_counterparts_token_counts_csv
+            ),
+            'train_patched_counterparts_token_distribution_png': str(
+                train_patched_counterparts_token_distribution_png
+            ),
+            'train_patched_counterparts_split_manifest_json': str(
+                train_patched_counterparts_split_manifest_json
+            ),
             'train_patched_counterparts_summary_json': str(train_patched_counterparts_summary_json),
         },
         'infer_summary': infer_summary,

@@ -1,27 +1,26 @@
-from typing import Dict, Generator, List, Optional, Set, Tuple
-
-from paths import (
-    PROJECT_HOME,
-    JULIET_TESTCASE_DIR,
-    INFER_BIN,
-    RESULT_DIR,
-    INFER_RESULTS_DIR,
-    GLOBAL_INFER_RESULTS_DIR,
-    PULSE_TAINT_CONFIG,
-)
-
 import concurrent.futures
 import csv
 import datetime
 import importlib.util
 import json
 import os
-from pathlib import Path
 import re
 import shlex
 import subprocess
 import time
+from pathlib import Path
+from typing import Dict, Generator, List, Optional, Set, Tuple
+
 import typer
+from paths import (
+    GLOBAL_INFER_RESULTS_DIR,
+    INFER_BIN,
+    INFER_RESULTS_DIR,
+    JULIET_TESTCASE_DIR,
+    PROJECT_HOME,
+    PULSE_TAINT_CONFIG,
+    RESULT_DIR,
+)
 
 TOTAL_CORES = os.cpu_count() or 4
 # Conservative memory-aware parallelization to prevent OOM
@@ -33,22 +32,26 @@ VALID_EXTENSIONS = {'c', 'cpp'}
 WINDOWS_SPECIFIC_MARKERS = ('w32', 'wchar_t')
 
 
-CaseGroup = Tuple[str, str, str, str, str, str]  # (directory, cwe_num, cwe_name, variant, flow_id, extension)
+CaseGroup = Tuple[
+    str, str, str, str, str, str
+]  # (directory, cwe_num, cwe_name, variant, flow_id, extension)
 
 
 def get_testcase_filename_regex() -> str:
-    return "^cwe" + \
-        "(?P<cwe_number>\\d+)" + \
-        "_" + \
-        "(?P<cwe_name>.*)" + \
-        "__" + \
-        "(?P<functional_variant_name>.*)" + \
-        "_" + \
-        "(?P<flow_variant_id>\\d+)" + \
-        "_?" + \
-        "(?P<subfile_id>[a-z]{1}|(bad)|(good(\\d)+)|(base)|(goodB2G)|(goodG2B))?" + \
-        "\\." + \
-        "(?P<extension>c|cpp|java|h)$"
+    return (
+        '^cwe'
+        + '(?P<cwe_number>\\d+)'
+        + '_'
+        + '(?P<cwe_name>.*)'
+        + '__'
+        + '(?P<functional_variant_name>.*)'
+        + '_'
+        + '(?P<flow_variant_id>\\d+)'
+        + '_?'
+        + '(?P<subfile_id>[a-z]{1}|(bad)|(good(\\d)+)|(base)|(goodB2G)|(goodG2B))?'
+        + '\\.'
+        + '(?P<extension>c|cpp|java|h)$'
+    )
 
 
 TESTCASE_FILENAME_REGEX = re.compile(get_testcase_filename_regex(), re.IGNORECASE)
@@ -66,8 +69,7 @@ def find_all_cwe_dirs() -> List[str]:
     """Find all CWE directories in the testcase directory."""
     cwe_dirs = []
     for entry in os.listdir(JULIET_TESTCASE_DIR):
-        if entry.startswith('CWE') and os.path.isdir(
-                os.path.join(JULIET_TESTCASE_DIR, entry)):
+        if entry.startswith('CWE') and os.path.isdir(os.path.join(JULIET_TESTCASE_DIR, entry)):
             cwe_dirs.append(entry)
     return sorted(cwe_dirs)
 
@@ -105,8 +107,14 @@ def parse_case_group(file_path: str) -> Optional[Tuple[CaseGroup, str, str, str,
         return None
 
     filename_head = f'CWE{cwe_num}_{cwe_name}__{functional_variant_name}'
-    group_key: CaseGroup = (os.path.dirname(file_path), cwe_num, cwe_name,
-                            functional_variant_name, flow_variant_id, extension)
+    group_key: CaseGroup = (
+        os.path.dirname(file_path),
+        cwe_num,
+        cwe_name,
+        functional_variant_name,
+        flow_variant_id,
+        extension,
+    )
     return group_key, f'CWE{cwe_num}', filename_head, flow_variant_id, extension
 
 
@@ -128,11 +136,12 @@ def find_group_files(group_key: CaseGroup) -> List[str]:
     return sorted(matched_files)
 
 
-def build_infer_command(target_files: List[str], extension: str,
-                        pulse_taint_config: str,
-                        cores: int = CORES_PER_JOB) -> str:
-    testcasesupport_dir = os.path.join(PROJECT_HOME, 'juliet-test-suite-v1.3',
-                                       'C', 'testcasesupport')
+def build_infer_command(
+    target_files: List[str], extension: str, pulse_taint_config: str, cores: int = CORES_PER_JOB
+) -> str:
+    testcasesupport_dir = os.path.join(
+        PROJECT_HOME, 'juliet-test-suite-v1.3', 'C', 'testcasesupport'
+    )
     io_c = os.path.join(testcasesupport_dir, 'io.c')
     std_thread_c = os.path.join(testcasesupport_dir, 'std_thread.c')
 
@@ -150,16 +159,12 @@ def build_infer_command(target_files: List[str], extension: str,
     )
 
 
-def run_case(result_path: str, infer_cmd: str,
-             representative_file: str) -> Dict[str, object]:
+def run_case(result_path: str, infer_cmd: str, representative_file: str) -> Dict[str, object]:
     """Run a single infer case. Returns a result dict (thread/process safe)."""
     os.makedirs(result_path, exist_ok=True)
     result = subprocess.run(
-        infer_cmd,
-        shell=True,
-        cwd=result_path,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE)
+        infer_cmd, shell=True, cwd=result_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    )
 
     if result.returncode != 0:
         stderr_text = result.stderr.decode(errors='replace').strip()
@@ -188,23 +193,15 @@ def _run_tasks(tasks: List[Tuple[str, str, str]], summary: Dict[str, object]) ->
     if not tasks:
         return
     futures = []
-    with concurrent.futures.ProcessPoolExecutor(
-            max_workers=MAX_PARALLEL_JOBS) as executor:
+    with concurrent.futures.ProcessPoolExecutor(max_workers=MAX_PARALLEL_JOBS) as executor:
         for result_path, infer_cmd, representative_file in tasks:
-            futures.append(
-                executor.submit(run_case, result_path, infer_cmd, representative_file))
+            futures.append(executor.submit(run_case, result_path, infer_cmd, representative_file))
         _collect_results(futures, summary)
 
 
-def run_infer_all(cwe_dir: str, result_dir: str,
-                  pulse_taint_config: str) -> Dict[str, object]:
+def run_infer_all(cwe_dir: str, result_dir: str, pulse_taint_config: str) -> Dict[str, object]:
     processed_groups = set()
-    summary: Dict[str, object] = {
-        'issue': 0,
-        'no_issue': 0,
-        'error': 0,
-        'no_issue_files': []
-    }
+    summary: Dict[str, object] = {'issue': 0, 'no_issue': 0, 'error': 0, 'no_issue_files': []}
     start_time = time.time()
     target_dir = os.path.join(JULIET_TESTCASE_DIR, cwe_dir)
 
@@ -232,14 +229,10 @@ def run_infer_all(cwe_dir: str, result_dir: str,
     return summary
 
 
-def run_infer_for_files(files: List[str], result_dir: str,
-                        pulse_taint_config: str) -> Dict[str, object]:
-    summary: Dict[str, object] = {
-        'issue': 0,
-        'no_issue': 0,
-        'error': 0,
-        'no_issue_files': []
-    }
+def run_infer_for_files(
+    files: List[str], result_dir: str, pulse_taint_config: str
+) -> Dict[str, object]:
+    summary: Dict[str, object] = {'issue': 0, 'no_issue': 0, 'error': 0, 'no_issue_files': []}
     start_time = time.time()
     processed_targets: Set[Tuple[str, ...]] = set()
 
@@ -295,10 +288,7 @@ def generate_result_csv(result_map: Dict[object, Dict[str, object]], result_dir:
     with open(csv_path, 'w') as csvfile:
         writer = csv.writer(csvfile)
 
-        writer.writerow([
-            'CWE NUMBER', 'ALL_TESTCASES', 'TIME(s)', 'ISSUE', 'NO ISSUE',
-            'ERROR'
-        ])
+        writer.writerow(['CWE NUMBER', 'ALL_TESTCASES', 'TIME(s)', 'ISSUE', 'NO ISSUE', 'ERROR'])
 
         for cwe_number in result_map:
             cwe_number_info = result_map[cwe_number]
@@ -329,8 +319,7 @@ def generate_no_issue_files(result_map: Dict[object, Dict[str, object]], result_
 
 def load_signature_module():
     module_path = os.path.join(PROJECT_HOME, 'tools', 'generate-signature.py')
-    spec = importlib.util.spec_from_file_location('generate_signature_module',
-                                                  module_path)
+    spec = importlib.util.spec_from_file_location('generate_signature_module', module_path)
     if spec is None or spec.loader is None:
         raise RuntimeError(f'Failed to load signature module: {module_path}')
 
@@ -339,7 +328,9 @@ def load_signature_module():
     return module
 
 
-def _build_summary_by_target(result_map: Dict[object, Dict[str, object]]) -> Dict[str, Dict[str, object]]:
+def _build_summary_by_target(
+    result_map: Dict[object, Dict[str, object]],
+) -> Dict[str, Dict[str, object]]:
     compact: Dict[str, Dict[str, object]] = {}
     for key, value in result_map.items():
         compact[str(key)] = {
@@ -352,36 +343,39 @@ def _build_summary_by_target(result_map: Dict[object, Dict[str, object]]) -> Dic
     return compact
 
 
-def main(cwes: Optional[List[int]] = typer.Argument(None),
-         global_result: bool = typer.Option(False),
-         all_cwes: bool = typer.Option(
-             False, '--all', help='Run all CWEs in the testcase directory'),
-         files: List[str] = typer.Option(
-             [], '--files', help='Run infer for specific files (repeatable)'),
-         pulse_taint_config: Path = typer.Option(
-             Path(PULSE_TAINT_CONFIG),
-             '--pulse-taint-config',
-             help='Pulse taint config path to pass to infer'),
-         infer_results_root: Optional[Path] = typer.Option(
-             None,
-             '--infer-results-root',
-             help='Output root for infer-* run directories'),
-         signatures_root: Path = typer.Option(
-             Path(RESULT_DIR) / 'signatures',
-             '--signatures-root',
-             help='Output root for signature directories'),
-         summary_json: Optional[Path] = typer.Option(
-             None,
-             '--summary-json',
-             help='Optional JSON summary output path')):
+def main(
+    cwes: Optional[List[int]] = typer.Argument(None),
+    global_result: bool = typer.Option(False),
+    all_cwes: bool = typer.Option(False, '--all', help='Run all CWEs in the testcase directory'),
+    files: List[str] = typer.Option(
+        [], '--files', help='Run infer for specific files (repeatable)'
+    ),
+    pulse_taint_config: Path = typer.Option(
+        Path(PULSE_TAINT_CONFIG),
+        '--pulse-taint-config',
+        help='Pulse taint config path to pass to infer',
+    ),
+    infer_results_root: Optional[Path] = typer.Option(
+        None, '--infer-results-root', help='Output root for infer-* run directories'
+    ),
+    signatures_root: Path = typer.Option(
+        Path(RESULT_DIR) / 'signatures',
+        '--signatures-root',
+        help='Output root for signature directories',
+    ),
+    summary_json: Optional[Path] = typer.Option(
+        None, '--summary-json', help='Optional JSON summary output path'
+    ),
+):
 
     pulse_taint_config = pulse_taint_config.resolve()
     if not pulse_taint_config.exists():
-        raise typer.BadParameter(
-            f'Pulse taint config not found: {pulse_taint_config}')
+        raise typer.BadParameter(f'Pulse taint config not found: {pulse_taint_config}')
 
     if infer_results_root is None:
-        infer_results_root = Path(GLOBAL_INFER_RESULTS_DIR) if global_result else Path(INFER_RESULTS_DIR)
+        infer_results_root = (
+            Path(GLOBAL_INFER_RESULTS_DIR) if global_result else Path(INFER_RESULTS_DIR)
+        )
 
     infer_results_root = infer_results_root.resolve()
     signatures_root = signatures_root.resolve()
@@ -395,11 +389,15 @@ def main(cwes: Optional[List[int]] = typer.Argument(None),
 
     result_map: Dict[object, Dict[str, object]] = {}
     if files:
-        result_map['FILES'] = run_infer_for_files(files, str(infer_run_dir), str(pulse_taint_config))
+        result_map['FILES'] = run_infer_for_files(
+            files, str(infer_run_dir), str(pulse_taint_config)
+        )
     elif all_cwes:
         cwe_dirs = find_all_cwe_dirs()
         for cwe_dir in cwe_dirs:
-            result_map[cwe_dir] = run_infer_all(cwe_dir, str(infer_run_dir), str(pulse_taint_config))
+            result_map[cwe_dir] = run_infer_all(
+                cwe_dir, str(infer_run_dir), str(pulse_taint_config)
+            )
     else:
         if not cwes:
             raise typer.BadParameter('Provide cwes, use --all, or use --files')
@@ -407,7 +405,9 @@ def main(cwes: Optional[List[int]] = typer.Argument(None),
             cwe_dir = find_cwe_dir(cwe_number)
             if cwe_dir is None:
                 continue
-            result_map[cwe_number] = run_infer_all(cwe_dir, str(infer_run_dir), str(pulse_taint_config))
+            result_map[cwe_number] = run_infer_all(
+                cwe_dir, str(infer_run_dir), str(pulse_taint_config)
+            )
 
     result_csv = generate_result_csv(result_map, str(infer_run_dir))
     no_issue_txt = generate_no_issue_files(result_map, str(infer_run_dir))
@@ -416,7 +416,8 @@ def main(cwes: Optional[List[int]] = typer.Argument(None),
     signature_output_dir = signature_module.generate_signatures(
         input_dir=Path(infer_run_dir),
         output_root=Path(signatures_root),
-        infer_run_name=Path(infer_run_dir).name)
+        infer_run_name=Path(infer_run_dir).name,
+    )
     signature_non_empty_dir = Path(signature_output_dir) / 'non_empty'
 
     compact = _build_summary_by_target(result_map)
@@ -445,8 +446,8 @@ def main(cwes: Optional[List[int]] = typer.Argument(None),
         summary_json = summary_json.resolve()
         summary_json.parent.mkdir(parents=True, exist_ok=True)
         summary_json.write_text(
-            json.dumps(summary_payload, ensure_ascii=False, indent=2) + '\n',
-            encoding='utf-8')
+            json.dumps(summary_payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
+        )
 
     print(f'Signatures generated at: {signature_output_dir}')
     print(json.dumps(summary_payload, ensure_ascii=False))

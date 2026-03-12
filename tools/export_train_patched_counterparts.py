@@ -44,11 +44,13 @@ def unique_in_order(values: list[str]) -> list[str]:
     return result
 
 
-def build_dedup_audit_row(*,
-                          record: dict[str, Any],
-                          dedup_reason: str,
-                          dedup_trigger_hashes: list[str],
-                          matched_kept_record: dict[str, Any] | None) -> dict[str, Any]:
+def build_dedup_audit_row(
+    *,
+    record: dict[str, Any],
+    dedup_reason: str,
+    dedup_trigger_hashes: list[str],
+    matched_kept_record: dict[str, Any] | None,
+) -> dict[str, Any]:
     return {
         'pair_id': str(record['pair_id']),
         'testcase_key': str(record['testcase_key']),
@@ -60,10 +62,16 @@ def build_dedup_audit_row(*,
         'normalized_code_hash': str(record.get('normalized_code_hash') or ''),
         'dedup_reason': dedup_reason,
         'dedup_trigger_hashes': '|'.join(dedup_trigger_hashes),
-        'matched_kept_pair_id': str(matched_kept_record.get('pair_id') or '') if matched_kept_record else '',
-        'matched_kept_role': str(matched_kept_record.get('role') or '') if matched_kept_record else '',
+        'matched_kept_pair_id': str(matched_kept_record.get('pair_id') or '')
+        if matched_kept_record
+        else '',
+        'matched_kept_role': str(matched_kept_record.get('role') or '')
+        if matched_kept_record
+        else '',
         'matched_kept_source_signature_path': (
-            str(matched_kept_record.get('source_signature_path') or '') if matched_kept_record else ''
+            str(matched_kept_record.get('source_signature_path') or '')
+            if matched_kept_record
+            else ''
         ),
         'matched_kept_unique_id': '',
         'processed_func': str(record['normalized_code']),
@@ -171,7 +179,9 @@ def resolve_paths(args: argparse.Namespace) -> dict[str, Path | None]:
     run_dir: Path | None
     if args.run_dir is not None:
         run_dir = args.run_dir.resolve()
-        pair_dir = args.pair_dir.resolve() if args.pair_dir is not None else run_dir / '05_pair_trace_ds'
+        pair_dir = (
+            args.pair_dir.resolve() if args.pair_dir is not None else run_dir / '05_pair_trace_ds'
+        )
     elif args.pair_dir is not None:
         pair_dir = args.pair_dir.resolve()
         run_dir = infer_run_dir_from_pair_dir(pair_dir)
@@ -264,13 +274,15 @@ def leftover_sort_key(record: dict[str, Any]) -> tuple[Any, ...]:
     )
 
 
-def make_pair_id(testcase_key: str,
-                 b2b_trace_file: str,
-                 b2b_flow_type: str,
-                 b2b_procedure: str | None,
-                 counterpart_trace_file: str,
-                 counterpart_flow_type: str,
-                 counterpart_procedure: str | None) -> str:
+def make_pair_id(
+    testcase_key: str,
+    b2b_trace_file: str,
+    b2b_flow_type: str,
+    b2b_procedure: str | None,
+    counterpart_trace_file: str,
+    counterpart_flow_type: str,
+    counterpart_procedure: str | None,
+) -> str:
     seed = '||'.join(
         [
             testcase_key,
@@ -309,13 +321,15 @@ def signature_meta(payload: dict[str, Any], record: dict[str, Any]) -> dict[str,
     }
 
 
-def build_train_patched_counterparts(*,
-                                     pair_dir: Path,
-                                     dataset_export_dir: Path,
-                                     signature_output_dir: Path,
-                                     output_pairs_jsonl: Path,
-                                     selection_summary_json: Path,
-                                     overwrite: bool) -> dict[str, Any]:
+def build_train_patched_counterparts(
+    *,
+    pair_dir: Path,
+    dataset_export_dir: Path,
+    signature_output_dir: Path,
+    output_pairs_jsonl: Path,
+    selection_summary_json: Path,
+    overwrite: bool,
+) -> dict[str, Any]:
     pairs_jsonl = pair_dir / 'pairs.jsonl'
     leftovers_jsonl = pair_dir / 'leftover_counterparts.jsonl'
     source_split_manifest_json = dataset_export_dir / 'split_manifest.json'
@@ -359,7 +373,9 @@ def build_train_patched_counterparts(*,
 
     for testcase_key, primary_pair in sorted(primary_pairs_by_testcase.items()):
         selection_counts['primary_train_val_pairs_total'] += 1
-        candidate_leftovers = sorted(leftovers_by_testcase.get(testcase_key, []), key=leftover_sort_key)
+        candidate_leftovers = sorted(
+            leftovers_by_testcase.get(testcase_key, []), key=leftover_sort_key
+        )
         if not candidate_leftovers:
             selection_counts['primary_train_val_pairs_without_leftover'] += 1
             continue
@@ -421,7 +437,9 @@ def build_train_patched_counterparts(*,
             'leftover_candidates_total': len(candidate_leftovers),
         }
 
-        b2b_output_path.write_text(json.dumps(b2b_export, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+        b2b_output_path.write_text(
+            json.dumps(b2b_export, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
+        )
         counterpart_output_path.write_text(
             json.dumps(counterpart_export, ensure_ascii=False, indent=2) + '\n',
             encoding='utf-8',
@@ -440,7 +458,9 @@ def build_train_patched_counterparts(*,
                 'b2b_signature': primary_pair.get('b2b_signature'),
                 'counterpart_flow_type': counterpart_flow_type,
                 'counterpart_trace_file': str(selected_leftover.get('trace_file') or ''),
-                'counterpart_bug_trace_length': int(selected_leftover.get('bug_trace_length', 0) or 0),
+                'counterpart_bug_trace_length': int(
+                    selected_leftover.get('bug_trace_length', 0) or 0
+                ),
                 'counterpart_signature': signature_meta(counterpart_payload, selected_leftover),
                 'output_files': {
                     'b2b': str(b2b_output_path),
@@ -469,7 +489,9 @@ def build_train_patched_counterparts(*,
         'train_val_pair_ids_total': len(train_val_pair_ids),
         'selected_testcases': len(selected_pairs),
     }
-    summary_json.write_text(json.dumps(summary_payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+    summary_json.write_text(
+        json.dumps(summary_payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
+    )
     print(json.dumps(summary_payload, ensure_ascii=False))
     return {
         'pairs': selected_pairs,
@@ -522,7 +544,7 @@ def candidate_languages_for_source(path: Path) -> list[str]:
 
 
 def node_text(node, source_bytes: bytes) -> str:
-    return source_bytes[node.start_byte:node.end_byte].decode('utf-8', errors='ignore')
+    return source_bytes[node.start_byte : node.end_byte].decode('utf-8', errors='ignore')
 
 
 def extract_function_name_from_declarator(node, source_bytes: bytes) -> str | None:
@@ -566,8 +588,9 @@ def extract_defined_function_names(root_node, source_bytes: bytes) -> set[str]:
     return names
 
 
-def collect_defined_function_names(source_path: Path,
-                                   parsers: dict[str, object]) -> tuple[set[str], str | None]:
+def collect_defined_function_names(
+    source_path: Path, parsers: dict[str, object]
+) -> tuple[set[str], str | None]:
     try:
         source_bytes = source_path.read_bytes()
     except Exception as exc:
@@ -601,8 +624,9 @@ def dedupe_paths(paths: list[Path]) -> list[Path]:
     return deduped
 
 
-def build_source_file_candidates(signature_payload: dict[str, Any],
-                                 primary_file_hint: str | None) -> list[Path]:
+def build_source_file_candidates(
+    signature_payload: dict[str, Any], primary_file_hint: str | None
+) -> list[Path]:
     candidates: list[Path] = []
 
     bug_trace = extract_std_bug_trace(signature_payload.get('bug_trace', []))
@@ -658,7 +682,7 @@ def lex_c_like(code: str) -> list[dict[str, str]]:
 
         if code.startswith('/*', i):
             j = i + 2
-            while j < n - 1 and code[j:j + 2] != '*/':
+            while j < n - 1 and code[j : j + 2] != '*/':
                 j += 1
             j = min(n, j + 2 if j < n - 1 else n)
             tokens.append({'kind': 'comment', 'text': code[i:j]})
@@ -702,7 +726,7 @@ def lex_c_like(code: str) -> list[dict[str, str]]:
             continue
 
         if code.startswith('->', i) or code.startswith('::', i):
-            tokens.append({'kind': 'punct', 'text': code[i:i + 2]})
+            tokens.append({'kind': 'punct', 'text': code[i : i + 2]})
             i += 2
             continue
 
@@ -730,8 +754,9 @@ def next_meaningful_token(tokens: list[dict[str, str]], index: int) -> dict[str,
     return None
 
 
-def normalize_slice_function_names(code: str,
-                                   user_defined_function_names: set[str]) -> tuple[str, dict[str, str], int]:
+def normalize_slice_function_names(
+    code: str, user_defined_function_names: set[str]
+) -> tuple[str, dict[str, str], int]:
     if not user_defined_function_names:
         return code, {}, 0
 
@@ -772,7 +797,9 @@ def find_slice_path(slice_dir: Path, testcase_key: str, role_name: str) -> Path 
     ]
     existing = [path for path in candidates if path.exists()]
     if len(existing) > 1:
-        raise RuntimeError(f'Multiple slice candidates found for {testcase_key}/{role_name}: {existing}')
+        raise RuntimeError(
+            f'Multiple slice candidates found for {testcase_key}/{role_name}: {existing}'
+        )
     return existing[0] if existing else None
 
 
@@ -784,11 +811,12 @@ def normalized_code_md5(code: str) -> str:
     return hashlib.md5(compact_code_for_hash(code).encode('utf-8')).hexdigest()
 
 
-def dedupe_pairs_by_normalized_rows(*,
-                                    surviving_pairs: dict[str, list[dict[str, Any]]],
-                                    filtered_pair_reasons: Counter,
-                                    dedup_mode: str
-                                    ) -> tuple[dict[str, list[dict[str, Any]]], dict[str, Any], list[dict[str, Any]]]:
+def dedupe_pairs_by_normalized_rows(
+    *,
+    surviving_pairs: dict[str, list[dict[str, Any]]],
+    filtered_pair_reasons: Counter,
+    dedup_mode: str,
+) -> tuple[dict[str, list[dict[str, Any]]], dict[str, Any], list[dict[str, Any]]]:
     if dedup_mode not in {'none', 'row'}:
         raise ValueError(f'Unsupported dedup_mode: {dedup_mode}')
 
@@ -831,7 +859,9 @@ def dedupe_pairs_by_normalized_rows(*,
             duplicate_hash_groups += 1
             duplicate_row_occurrences += len(occurrences) - 1
 
-    collision_row_occurrences = sum(len(row_occurrences[code_hash]) for code_hash in colliding_hashes)
+    collision_row_occurrences = sum(
+        len(row_occurrences[code_hash]) for code_hash in colliding_hashes
+    )
 
     if dedup_mode == 'none':
         deduped_pairs = surviving_pairs
@@ -881,7 +911,9 @@ def dedupe_pairs_by_normalized_rows(*,
                             record=record,
                             dedup_reason='duplicate_pair',
                             dedup_trigger_hashes=duplicate_trigger_hashes,
-                            matched_kept_record=kept_record_by_hash.get(str(record['normalized_code_hash'])),
+                            matched_kept_record=kept_record_by_hash.get(
+                                str(record['normalized_code_hash'])
+                            ),
                         )
                     )
                 continue
@@ -913,15 +945,22 @@ def dedupe_pairs_by_normalized_rows(*,
     return deduped_pairs, dedup_summary, dedup_audit_rows
 
 
-def export_dataset(*,
-                   pairs: list[dict[str, Any]],
-                   paired_signatures_dir: Path,
-                   slice_dir: Path,
-                   dataset_export_dir: Path,
-                   overwrite: bool,
-                   dedup_mode: str) -> dict[str, Any]:
-    from tokenize_slices import (CONTENT_TOKEN_LIMIT, MAX_LENGTH, count_code_tokens,
-                                 load_tokenizer, plot_distribution)
+def export_dataset(
+    *,
+    pairs: list[dict[str, Any]],
+    paired_signatures_dir: Path,
+    slice_dir: Path,
+    dataset_export_dir: Path,
+    overwrite: bool,
+    dedup_mode: str,
+) -> dict[str, Any]:
+    from tokenize_slices import (
+        CONTENT_TOKEN_LIMIT,
+        MAX_LENGTH,
+        count_code_tokens,
+        load_tokenizer,
+        plot_distribution,
+    )
 
     if not paired_signatures_dir.exists():
         raise FileNotFoundError(f'Paired signatures dir not found: {paired_signatures_dir}')
@@ -1087,33 +1126,40 @@ def export_dataset(*,
 
     token_count_rows = sorted(
         [row for pair_records in surviving_pairs.values() for row in pair_records],
-        key=lambda row: (row['pair_id'], ROLE_SORT_ORDER.get(str(row['role']), 99), row['slice_filename']),
+        key=lambda row: (
+            row['pair_id'],
+            ROLE_SORT_ORDER.get(str(row['role']), 99),
+            row['slice_filename'],
+        ),
     )
     with token_counts_csv.open('w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
-        writer.writerow([
-            'pair_id',
-            'filename',
-            'extension',
-            'role',
-            'code_token_count',
-            'input_token_count_with_special',
-            'exceeds_510',
-        ])
+        writer.writerow(
+            [
+                'pair_id',
+                'filename',
+                'extension',
+                'role',
+                'code_token_count',
+                'input_token_count_with_special',
+                'exceeds_510',
+            ]
+        )
         for row in token_count_rows:
-            writer.writerow([
-                row['pair_id'],
-                row['slice_filename'],
-                row['extension'],
-                row['role'],
-                row['code_token_count'],
-                row['input_token_count_with_special'],
-                row['exceeds_510'],
-            ])
+            writer.writerow(
+                [
+                    row['pair_id'],
+                    row['slice_filename'],
+                    row['extension'],
+                    row['role'],
+                    row['code_token_count'],
+                    row['input_token_count_with_special'],
+                    row['exceeds_510'],
+                ]
+            )
 
     plot_distribution(token_count_rows, token_distribution_png)
 
-    split_map = {pair_id: 'train_val' for pair_id in surviving_pairs.keys()}
     ordered_rows: list[dict[str, Any]] = []
     for pair_id in sorted(surviving_pairs.keys()):
         pair_records = sorted(
@@ -1127,34 +1173,40 @@ def export_dataset(*,
 
     with csv_path.open('w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
-        writer.writerow([
-            'file_name',
-            'unique_id',
-            'target',
-            'vulnerable_line_numbers',
-            'project',
-            'source_signature_path',
-            'commit_hash',
-            'dataset_type',
-            'processed_func',
-        ])
+        writer.writerow(
+            [
+                'file_name',
+                'unique_id',
+                'target',
+                'vulnerable_line_numbers',
+                'project',
+                'source_signature_path',
+                'commit_hash',
+                'dataset_type',
+                'processed_func',
+            ]
+        )
         kept_unique_id_by_pair_role: dict[tuple[str, str], int] = {}
         for idx, row in enumerate(ordered_rows, start=1):
             output_filename = f'{idx}{row["extension"]}'
-            (normalized_slices_dir / output_filename).write_text(row['normalized_code'], encoding='utf-8')
+            (normalized_slices_dir / output_filename).write_text(
+                row['normalized_code'], encoding='utf-8'
+            )
             vulnerable_line_numbers = 1 if int(row['target']) == 1 else ''
             kept_unique_id_by_pair_role[(str(row['pair_id']), str(row['role']))] = idx
-            writer.writerow([
-                idx,
-                idx,
-                row['target'],
-                vulnerable_line_numbers,
-                'Juliet',
-                row['source_signature_path'],
-                '',
-                row['dataset_type'],
-                row['normalized_code'],
-            ])
+            writer.writerow(
+                [
+                    idx,
+                    idx,
+                    row['target'],
+                    vulnerable_line_numbers,
+                    'Juliet',
+                    row['source_signature_path'],
+                    '',
+                    row['dataset_type'],
+                    row['normalized_code'],
+                ]
+            )
 
     for audit_row in dedup_audit_rows:
         matched_pair_id = str(audit_row.get('matched_kept_pair_id') or '')
@@ -1166,43 +1218,47 @@ def export_dataset(*,
 
     with dedup_dropped_csv.open('w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
-        writer.writerow([
-            'dropped_row_id',
-            'pair_id',
-            'testcase_key',
-            'role',
-            'role_name',
-            'target',
-            'project',
-            'source_signature_path',
-            'normalized_code_hash',
-            'dedup_reason',
-            'dedup_trigger_hashes',
-            'matched_kept_pair_id',
-            'matched_kept_role',
-            'matched_kept_source_signature_path',
-            'matched_kept_unique_id',
-            'processed_func',
-        ])
+        writer.writerow(
+            [
+                'dropped_row_id',
+                'pair_id',
+                'testcase_key',
+                'role',
+                'role_name',
+                'target',
+                'project',
+                'source_signature_path',
+                'normalized_code_hash',
+                'dedup_reason',
+                'dedup_trigger_hashes',
+                'matched_kept_pair_id',
+                'matched_kept_role',
+                'matched_kept_source_signature_path',
+                'matched_kept_unique_id',
+                'processed_func',
+            ]
+        )
         for dropped_row_id, row in enumerate(dedup_audit_rows, start=1):
-            writer.writerow([
-                dropped_row_id,
-                row['pair_id'],
-                row['testcase_key'],
-                row['role'],
-                row['role_name'],
-                row['target'],
-                row['project'],
-                row['source_signature_path'],
-                row['normalized_code_hash'],
-                row['dedup_reason'],
-                row['dedup_trigger_hashes'],
-                row['matched_kept_pair_id'],
-                row['matched_kept_role'],
-                row['matched_kept_source_signature_path'],
-                row['matched_kept_unique_id'],
-                row['processed_func'],
-            ])
+            writer.writerow(
+                [
+                    dropped_row_id,
+                    row['pair_id'],
+                    row['testcase_key'],
+                    row['role'],
+                    row['role_name'],
+                    row['target'],
+                    row['project'],
+                    row['source_signature_path'],
+                    row['normalized_code_hash'],
+                    row['dedup_reason'],
+                    row['dedup_trigger_hashes'],
+                    row['matched_kept_pair_id'],
+                    row['matched_kept_role'],
+                    row['matched_kept_source_signature_path'],
+                    row['matched_kept_unique_id'],
+                    row['processed_func'],
+                ]
+            )
 
     split_manifest = {
         'dataset_basename': DATASET_BASENAME,
@@ -1227,7 +1283,9 @@ def export_dataset(*,
             'test': [],
         },
     }
-    split_manifest_json.write_text(json.dumps(split_manifest, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+    split_manifest_json.write_text(
+        json.dumps(split_manifest, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
+    )
 
     token_values = [int(row['code_token_count']) for row in token_count_rows]
     mean_value = (sum(token_values) / len(token_values)) if token_values else 0.0
@@ -1270,7 +1328,9 @@ def export_dataset(*,
         'source_file_parse_errors': source_parse_error_cache,
         'counts': dict(counts),
     }
-    summary_json.write_text(json.dumps(summary_payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+    summary_json.write_text(
+        json.dumps(summary_payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
+    )
     print(json.dumps(summary_payload, ensure_ascii=False))
 
     return {
@@ -1295,7 +1355,13 @@ def main() -> int:
     dataset_export_dir = paths['dataset_export_dir']
     signature_output_dir = paths['signature_output_dir']
     slice_output_dir = paths['slice_output_dir']
-    if run_dir is None or pair_dir is None or dataset_export_dir is None or signature_output_dir is None or slice_output_dir is None:
+    if (
+        run_dir is None
+        or pair_dir is None
+        or dataset_export_dir is None
+        or signature_output_dir is None
+        or slice_output_dir is None
+    ):
         raise ValueError('Failed to resolve required paths.')
 
     output_pairs_jsonl = (
@@ -1339,7 +1405,9 @@ def main() -> int:
     }
     slice_summary_json = slice_output_dir / 'summary.json'
     prepare_target(slice_summary_json, overwrite=args.overwrite)
-    slice_summary_json.write_text(json.dumps(slice_summary_payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+    slice_summary_json.write_text(
+        json.dumps(slice_summary_payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
+    )
     print(json.dumps(slice_summary_payload, ensure_ascii=False))
 
     export_result = export_dataset(
