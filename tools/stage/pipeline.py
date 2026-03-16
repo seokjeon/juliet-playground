@@ -5,8 +5,6 @@ import datetime
 import hashlib
 import io
 import json
-import shlex
-import subprocess
 import sys
 import time
 from contextlib import redirect_stderr, redirect_stdout
@@ -28,11 +26,7 @@ from stage import stage07_dataset_export as _dataset_export
 from stage import stage07b_patched_export as _stage07b_patched_export
 
 PrimaryDatasetExportParams = _dataset_export.PrimaryDatasetExportParams
-PrimaryDatasetExportResult = _dataset_export.PrimaryDatasetExportResult
-compute_pair_split = _dataset_export.compute_pair_split
-export_dataset_from_pipeline = _dataset_export.export_dataset_from_pipeline
 export_primary_dataset = _dataset_export.export_primary_dataset
-load_pairs_jsonl = _dataset_export.load_pairs_jsonl
 PatchedDatasetExportParams = _stage07b_patched_export.PatchedDatasetExportParams
 export_patched_dataset = _stage07b_patched_export.export_patched_dataset
 
@@ -248,51 +242,6 @@ def sha256_file(path: Path) -> Optional[str]:
         for chunk in iter(lambda: f.read(1024 * 1024), b''):
             h.update(chunk)
     return h.hexdigest()
-
-
-def command_to_string(cmd: List[str]) -> str:
-    return ' '.join(shlex.quote(x) for x in cmd)
-
-
-def run_command(step_key: str, cmd: List[str], cwd: Path, logs_dir: Path) -> Dict[str, object]:
-    started_at = now_iso_utc()
-    t0 = time.perf_counter()
-    proc = subprocess.run(
-        cmd,
-        cwd=str(cwd),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-    )
-    duration_sec = round(time.perf_counter() - t0, 6)
-    ended_at = now_iso_utc()
-
-    logs_dir.mkdir(parents=True, exist_ok=True)
-    stdout_log = logs_dir / f'{step_key}.stdout.log'
-    stderr_log = logs_dir / f'{step_key}.stderr.log'
-    stdout_log.write_text(proc.stdout or '', encoding='utf-8')
-    stderr_log.write_text(proc.stderr or '', encoding='utf-8')
-
-    if proc.stdout:
-        print(proc.stdout, end='' if proc.stdout.endswith('\n') else '\n')
-    if proc.stderr:
-        print(proc.stderr, file=sys.stderr, end='' if proc.stderr.endswith('\n') else '\n')
-
-    result = {
-        'command': command_to_string(cmd),
-        'cwd': str(cwd),
-        'returncode': proc.returncode,
-        'started_at': started_at,
-        'ended_at': ended_at,
-        'duration_sec': duration_sec,
-        'stdout_log': str(stdout_log),
-        'stderr_log': str(stderr_log),
-    }
-    if proc.returncode != 0:
-        raise RuntimeError(
-            f'[{step_key}] failed with return code {proc.returncode}: {result["command"]}'
-        )
-    return result
 
 
 def run_internal_step(

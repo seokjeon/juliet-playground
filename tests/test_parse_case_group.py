@@ -1,8 +1,13 @@
 from __future__ import annotations
 
+from tests.helpers import REPO_ROOT, load_module_from_path
 
-def test_parse_case_group_accepts_valid_juliet_filename(load_tools_module):
-    module = load_tools_module('test_run_infer_all_module', 'run-infer-all-juliet.py')
+
+def test_parse_case_group_accepts_valid_juliet_filename():
+    module = load_module_from_path(
+        'test_stage03_infer_parse_case_group',
+        REPO_ROOT / 'tools/stage/stage03_infer.py',
+    )
 
     parsed = module.parse_case_group('/tmp/CWE78_OS_Command_Injection__char_console_execlp_52a.c')
 
@@ -22,7 +27,10 @@ def test_parse_case_group_accepts_valid_juliet_filename(load_tools_module):
     assert extension == 'c'
 
 
-def test_parse_case_group_rejects_non_juliet_filename(load_tools_module):
-    module = load_tools_module('test_run_infer_all_invalid_module', 'run-infer-all-juliet.py')
+def test_parse_case_group_rejects_non_juliet_filename():
+    module = load_module_from_path(
+        'test_stage03_infer_parse_case_group_invalid',
+        REPO_ROOT / 'tools/stage/stage03_infer.py',
+    )
 
     assert module.parse_case_group('/tmp/not_a_juliet_case.c') is None

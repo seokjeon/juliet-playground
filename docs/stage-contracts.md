@@ -27,7 +27,7 @@
 - `experiments/epic001b_function_inventory/scripts/extract_function_inventory.py`
 - `experiments/epic001b_function_inventory/scripts/categorize_function_names.py`
 - `experiments/epic001c_testcase_flow_partition/scripts/add_flow_tags_to_testcase.py`
-- `tools/run-infer-all-juliet.py`
+- `tools/stage/stage03_infer.py`
 - `experiments/epic001d_trace_flow_filter/scripts/filter_traces_by_flow.py`
 - `tools/build-paired-trace-signatures.py`
 - `tools/generate_slices.py`
@@ -672,7 +672,7 @@ Stage 02a 테스트도 계약 체크와 golden diff를 나누는 것이 좋습�
 ## 7. `03_infer_and_signature`
 
 ### 실행 스크립트
-- `tools/run-infer-all-juliet.py`
+- `tools/run_pipeline.py stage03`
 
 ### 입력
 - `--pulse-taint-config <selected_taint_config>`

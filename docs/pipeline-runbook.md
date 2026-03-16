@@ -17,12 +17,6 @@
 - `tools/run_pipeline.py`
   - 전체 파이프라인, stage별 실행, `rerun-step07`를 한 곳에서 실행하는 기본 entrypoint
   - 대표 subcommand: `full`, `stage03`, `stage05`, `stage06`, `stage07`, `stage07b`, `rerun-step07`
-- `tools/run-epic001-pipeline.py`
-  - 기존 full pipeline 호출을 위한 얇은 호환 wrapper
-- `tools/run-infer-all-juliet.py`
-  - CWE 단위 또는 파일 단위로 Infer 실행
-  - `analysis/result.csv`, `analysis/no_issue_files.txt` 생성
-  - 실행 후 `tools/generate-signature.py`를 호출해 signature도 생성
 - `tools/generate-signature.py`
   - `infer-out/report.json`에서 `bug_type == TAINT_ERROR`이고 `bug_trace`가 non-empty인 이슈만 JSON으로 저장
   - `non_empty/analysis/signature_counts.csv` 생성
@@ -35,8 +29,6 @@
 - `tools/export_train_patched_counterparts.py`
   - 기존 `07_dataset_export/split_manifest.json`의 `train_val` pair만 대상으로
     testcase별 최상위 leftover counterpart 1개를 골라 평가용 export 생성
-- `tools/rerun-step07.py`
-  - 기존 run의 Step 05/06 산출물을 재사용해 Step 07, 07b를 다시 생성
 - `tools/tokenize_slices.py`
   - slice 디렉터리를 독립적으로 토큰화하고 분포 plot을 생성하는 보조 스크립트
   - 메인 파이프라인은 이 스크립트를 직접 호출하지 않고, 내부 유틸리티를 재사용합니다.

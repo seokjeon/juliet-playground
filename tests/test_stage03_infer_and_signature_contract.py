@@ -3,9 +3,14 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from tests.helpers import REPO_ROOT, load_module_from_path
 
-def test_stage03_infer_and_signature_contract(load_tools_module, monkeypatch, tmp_path):
-    module = load_tools_module('test_stage03_infer_contract', 'run-infer-all-juliet.py')
+
+def test_stage03_infer_and_signature_contract(monkeypatch, tmp_path):
+    module = load_module_from_path(
+        'test_stage03_infer_contract',
+        REPO_ROOT / 'tools/stage/stage03_infer.py',
+    )
 
     pulse_taint_config = tmp_path / 'pulse-taint-config.json'
     pulse_taint_config.write_text('{}\n', encoding='utf-8')
@@ -45,8 +50,8 @@ def test_stage03_infer_and_signature_contract(load_tools_module, monkeypatch, tm
         )
         return output_dir
 
-    monkeypatch.setattr(module._infer_runner, 'run_infer_for_files', fake_run_infer_for_files)
-    monkeypatch.setattr(module._infer_runner, 'generate_signatures', fake_generate_signatures)
+    monkeypatch.setattr(module, 'run_infer_for_files', fake_run_infer_for_files)
+    monkeypatch.setattr(module, 'generate_signatures', fake_generate_signatures)
 
     result = module.main(
         cwes=None,

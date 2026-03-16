@@ -5,7 +5,7 @@
 
 ## 단일 Infer / Signature 산출물
 
-`python tools/run-infer-all-juliet.py ...` 또는
+`python tools/run_pipeline.py stage03 ...` 또는
 `python tools/generate-signature.py ...`를 독립 실행하면 기본적으로 아래 위치를 사용합니다.
 
 ```text
@@ -25,7 +25,7 @@ artifacts/
             └── flow_matched/
 ```
 
-추가로 `run-infer-all-juliet.py --summary-json <path>`를 주면 아래 내용을 포함한 요약 JSON을 별도로 저장합니다.
+추가로 `run_pipeline.py stage03 --summary-json <path>`를 주면 아래 내용을 포함한 요약 JSON을 별도로 저장합니다.
 
 - `infer_run_dir`, `infer_run_name`
 - `signature_output_dir`, `signature_non_empty_dir`

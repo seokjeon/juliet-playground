@@ -94,8 +94,6 @@ source .venv/bin/activate && python tools/run_pipeline.py full --all
 기본 run-id 규칙은 `run-YYYY.MM.DD-HH:MM:SS`이며,
 실제 경로는 `artifacts/pipeline-runs/run-.../` 입니다.
 
-기존 `tools/run-epic001-pipeline.py`는 동일한 full 실행을 감싼 호환 wrapper입니다.
-
 ## 파이프라인 개요
 
 `tools/run_pipeline.py full`은 아래 단계를 순서대로 실행합니다.
@@ -174,4 +172,4 @@ python tools/run_pipeline.py rerun-step07 --run-dir artifacts/pipeline-runs/run-
 - `run_pipeline.py stage03 --global-result`를 쓰면 infer 결과 root가
   로컬 `artifacts/infer-results/` 대신 `/data/pattern/result/infer-results/`로 바뀝니다.
 - CodeBERT tokenizer 캐시, `--overwrite`, `--old-prefix/--new-prefix`,
-  `rerun-step07.py`의 suffix 규칙, 재현성 옵션은 [`docs/rerun.md`](docs/rerun.md)를 참고하세요.
+  `run_pipeline.py rerun-step07`의 suffix 규칙, 재현성 옵션은 [`docs/rerun.md`](docs/rerun.md)를 참고하세요.
