@@ -29,11 +29,13 @@ paired trace → slice → dataset export까지 이어지는 실험 저장소입
 ## 코드 구조 원칙
 
 - `tools/`
-  - 사람이 직접 실행하는 CLI entrypoint와 독립 유틸리티를 둡니다.
+  - 사람이 직접 실행하는 CLI entrypoint, 상위 orchestration, 독립 유틸리티를 둡니다.
+  - `tools/run_pipeline.py`는 thin wrapper가 아니라 전체 파이프라인 orchestration 본체를
+    포함하는 주 entrypoint입니다.
   - hyphenated filename은 CLI entrypoint에만 사용합니다.
 - `tools/stage/`
   - 파이프라인 단계의 실제 구현을 둡니다.
-  - 특정 단계의 계약, output schema, runner 로직을 직접 구현하는 코드는 여기에 둡니다.
+  - 특정 단계의 계약, output schema, 단계별 처리 로직을 직접 구현하는 코드는 여기에 둡니다.
 - `tools/shared/`
   - 여러 단계/CLI가 함께 쓰는 공통 helper만 둡니다.
   - path/fs/json/signature/trace/source-analysis 같은 공통 로직은 여기에 둡니다.
@@ -43,9 +45,9 @@ paired trace → slice → dataset export까지 이어지는 실험 저장소입
 
 판단 기준은 간단합니다.
 
-- 한 단계의 계약을 직접 구현하면 `tools/stage/`
+- 전체 파이프라인 orchestration 또는 사람이 직접 실행하는 상위 명령이면 `tools/`
+- 한 단계의 계약/처리를 직접 구현하면 `tools/stage/`
 - 둘 이상이 재사용하면 `tools/shared/`
-- 사람이 직접 실행하면 `tools/`
 
 ## Quick Start
 
