@@ -8,7 +8,7 @@ This repository runs Infer on the Juliet C/C++ test suite and maintains the pipe
 - For stage-specific logic, open the matching `experiments/*/README.md` before editing that stage.
 
 ## Repository Map
-- `tools/`: user-facing CLI scripts such as `run-epic001-pipeline.py`, `run-infer-all-juliet.py`, and rerun/export helpers.
+- `tools/`: user-facing CLI scripts such as `run_pipeline.py`, `run-infer-all-juliet.py`, and rerun/export helpers.
 - `tools/stage/`: importable stage implementations for pipeline steps and rerun/export workflows.
 - `tools/shared/`: helper modules shared across stages and CLI entrypoints. Keep CLI wrappers thin and put reusable helper behavior here.
 - `tests/`: unit and regression tests. `tests/golden/` contains stage-level golden fixtures and fixture update tooling.
@@ -64,7 +64,7 @@ Also:
 - `source .venv/bin/activate && python tests/golden/update_goldens.py --stage <stage>` only when expected outputs intentionally change
 
 ### Expensive / optional
-- `source .venv/bin/activate && python tools/run-epic001-pipeline.py 78` only when end-to-end pipeline verification is necessary
+- `source .venv/bin/activate && python tools/run_pipeline.py full 78` only when end-to-end pipeline verification is necessary
 
 ## Coding Style
 - Python 3.9, 4-space indentation, 100-character lines, single quotes; `ruff format` is the formatter.
