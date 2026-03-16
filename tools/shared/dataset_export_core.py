@@ -621,10 +621,6 @@ def _build_export_summary(
     content_token_limit: int,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     split_manifest = {
-        **split_manifest_metadata,
-        'normalized_slices_dir': str(normalized_slices_dir),
-        'dedup_dropped_csv': str(dedup_dropped_csv),
-        'dedup': dedup_summary,
         'counts': {
             'pairs_total': len(surviving_pairs),
             'train_val': len(pair_ids_by_dataset_type.get('train_val', [])),
@@ -656,34 +652,23 @@ def _build_export_summary(
     counts['train_val_rows'] = sum(1 for row in ordered_rows if row['dataset_type'] == 'train_val')
     counts['test_rows'] = sum(1 for row in ordered_rows if row['dataset_type'] == 'test')
 
-    summary_payload = {
-        **summary_metadata,
-        'normalized_slices_dir': str(normalized_slices_dir),
-        'dedup_dropped_csv': str(dedup_dropped_csv),
-        'split_manifest_json': str(split_manifest_json),
-        'dedup': dedup_summary,
-        'max_length': max_length,
-        'content_token_limit': content_token_limit,
-        'token_stats': {
-            'total': len(token_values),
-            'mean': round(mean_value, 6),
-            'median': median_value,
-            'over_limit_count': sum(1 for value in token_values if value > content_token_limit),
-        },
-        'filtered_pair_reasons': dict(filtered_pair_reasons),
-        'source_file_parse_errors': source_parse_error_cache,
-        'counts': dict(counts),
-    }
-    if (
-        'token_counts_csv' not in summary_payload
-        and 'normalized_token_counts_csv' not in summary_payload
-    ):
-        summary_payload['token_counts_csv'] = str(token_counts_csv)
-    if (
-        'token_distribution_png' not in summary_payload
-        and 'slice_token_distribution_png' not in summary_payload
-    ):
-        summary_payload['token_distribution_png'] = str(token_distribution_png)
+    summary_payload: dict[str, Any] = {}
+    dataset_basename = summary_metadata.get('dataset_basename')
+    if dataset_basename is not None:
+        summary_payload['dataset_basename'] = dataset_basename
+    summary_payload.update(
+        {
+            'dedup': dedup_summary,
+            'token_stats': {
+                'total': len(token_values),
+                'mean': round(mean_value, 6),
+                'median': median_value,
+                'over_limit_count': sum(1 for value in token_values if value > content_token_limit),
+            },
+            'filtered_pair_reasons': dict(filtered_pair_reasons),
+            'counts': dict(counts),
+        }
+    )
     return split_manifest, summary_payload
 
 

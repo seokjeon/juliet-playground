@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import argparse
 import datetime
-import hashlib
 import io
 import json
 import sys
@@ -11,7 +10,7 @@ import time
 from contextlib import redirect_stderr, redirect_stdout
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Callable, Optional
 
 from shared import dataset_dedup as _dataset_dedup
 from shared.artifact_layout import (
@@ -31,7 +30,6 @@ from stage import stage01_manifest as _stage01_manifest
 from stage import stage02a_taint as _stage02a_taint
 from stage import stage02b_flow as _stage02b_flow
 from stage import stage03_infer as _stage03_infer
-from stage import stage03_signature as _stage03_signature
 from stage import stage04_trace_flow as _stage04_trace_flow
 from stage import stage05_pair_trace as _stage05_pair_trace
 from stage import stage06_slices as _stage06_slices
@@ -72,17 +70,8 @@ class FullRunPaths:
     patched_dataset: DatasetExportPaths
 
 
-def _print_result(result: Any) -> int:
-    if hasattr(result, 'to_payload'):
-        result = result.to_payload()
-    if isinstance(result, dict):
-        print(json.dumps(result, ensure_ascii=False, indent=2))
-        return 0
-    return int(result or 0)
-
-
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description='Unified runner for pipeline full/stage commands.')
+    parser = argparse.ArgumentParser(description='Unified runner for the full pipeline.')
     subparsers = parser.add_subparsers(dest='command', required=True)
 
     full = subparsers.add_parser('full', help='Run the full pipeline.')
@@ -118,107 +107,6 @@ def parse_args() -> argparse.Namespace:
     full.add_argument('--pair-train-ratio', type=float, default=0.8)
     full.add_argument('--dedup-mode', choices=['none', 'row'], default='row')
 
-    stage01 = subparsers.add_parser('stage01', help='Run Stage 01 manifest comment scan.')
-    stage01.add_argument('--manifest', type=Path, required=True)
-    stage01.add_argument('--source-root', type=Path, required=True)
-    stage01.add_argument('--output-xml', type=Path, required=True)
-
-    stage02a = subparsers.add_parser('stage02a', help='Run Stage 02a taint extraction.')
-    stage02a.add_argument('--input-xml', type=Path, required=True)
-    stage02a.add_argument('--source-root', type=Path, required=True)
-    stage02a.add_argument('--output-dir', type=Path, required=True)
-    stage02a.add_argument('--pulse-taint-config-output', type=Path, default=None)
-
-    stage02b = subparsers.add_parser('stage02b', help='Run Stage 02b flow bundle.')
-    stage02b.add_argument('--input-xml', type=Path, required=True)
-    stage02b.add_argument('--source-root', type=Path, required=True)
-    stage02b.add_argument('--output-dir', type=Path, required=True)
-
-    stage03 = subparsers.add_parser('stage03', help='Run Stage 03 infer and signature.')
-    stage03.add_argument('cwes', nargs='*', type=int)
-    stage03.add_argument('--global-result', action='store_true')
-    stage03.add_argument('--all', action='store_true', dest='all_cwes')
-    stage03.add_argument('--files', action='append', default=[])
-    stage03.add_argument(
-        '--pulse-taint-config',
-        type=Path,
-        default=Path(_stage03_infer.PULSE_TAINT_CONFIG),
-    )
-    stage03.add_argument('--infer-results-root', type=Path, default=None)
-    stage03.add_argument(
-        '--signatures-root',
-        type=Path,
-        default=Path(_stage03_infer.RESULT_DIR) / 'signatures',
-    )
-    stage03.add_argument('--summary-json', type=Path, default=None)
-
-    stage03_signature = subparsers.add_parser(
-        'stage03-signature',
-        help='Run signature generation from an existing infer-* directory.',
-    )
-    stage03_signature.add_argument('--input-dir', type=Path, default=None)
-    stage03_signature.add_argument(
-        '--output-root',
-        type=Path,
-        default=Path(_stage03_signature.RESULT_DIR) / 'signatures',
-    )
-
-    stage04 = subparsers.add_parser('stage04', help='Run Stage 04 trace flow filter.')
-    stage04.add_argument('--flow-xml', type=Path, required=True)
-    stage04.add_argument('--signatures-dir', type=Path, required=True)
-    stage04.add_argument('--output-dir', type=Path, required=True)
-
-    stage05 = subparsers.add_parser('stage05', help='Run Stage 05 pair trace dataset.')
-    stage05.add_argument('--trace-jsonl', type=Path, default=None)
-    stage05.add_argument('--output-dir', type=Path, default=None)
-    stage05.add_argument(
-        '--pipeline-root',
-        type=Path,
-        default=Path(_stage05_pair_trace.RESULT_DIR) / 'pipeline-runs',
-    )
-    stage05.add_argument('--overwrite', action='store_true')
-    stage05.add_argument('--run-dir', type=Path, default=None)
-
-    stage06 = subparsers.add_parser('stage06', help='Run Stage 06 slices generation.')
-    stage06.add_argument('--signature-db-dir', type=Path, default=None)
-    stage06.add_argument('--output-dir', type=Path, default=None)
-    stage06.add_argument(
-        '--pipeline-root',
-        type=Path,
-        default=Path(_stage06_slices.RESULT_DIR) / 'pipeline-runs',
-    )
-    stage06.add_argument('--old-prefix', type=str, default=None)
-    stage06.add_argument('--new-prefix', type=str, default=None)
-    stage06.add_argument('--overwrite', action='store_true')
-    stage06.add_argument('--run-dir', type=Path, default=None)
-
-    stage07 = subparsers.add_parser('stage07', help='Run Stage 07 dataset export.')
-    stage07.add_argument('--pairs-jsonl', type=Path, required=True)
-    stage07.add_argument('--paired-signatures-dir', type=Path, required=True)
-    stage07.add_argument('--slice-dir', type=Path, required=True)
-    stage07.add_argument('--output-dir', type=Path, required=True)
-    stage07.add_argument('--split-seed', type=int, default=1234)
-    stage07.add_argument('--train-ratio', type=float, default=0.8)
-    stage07.add_argument('--dedup-mode', choices=['none', 'row'], default='row')
-
-    stage07b = subparsers.add_parser('stage07b', help='Run Stage 07b patched export.')
-    stage07b.add_argument('--run-dir', type=Path, default=None)
-    stage07b.add_argument('--pair-dir', type=Path, default=None)
-    stage07b.add_argument('--dataset-export-dir', type=Path, default=None)
-    stage07b.add_argument('--signature-output-dir', type=Path, default=None)
-    stage07b.add_argument('--slice-output-dir', type=Path, default=None)
-    stage07b.add_argument('--output-pairs-jsonl', type=Path, default=None)
-    stage07b.add_argument('--selection-summary-json', type=Path, default=None)
-    stage07b.add_argument(
-        '--pipeline-root',
-        type=Path,
-        default=Path(RESULT_DIR) / 'pipeline-runs',
-    )
-    stage07b.add_argument('--dedup-mode', choices=['none', 'row'], default='row')
-    stage07b.add_argument('--overwrite', action='store_true')
-    stage07b.add_argument('--old-prefix', type=str, default=None)
-    stage07b.add_argument('--new-prefix', type=str, default=None)
-
     return parser.parse_args()
 
 
@@ -228,16 +116,6 @@ def now_ts() -> str:
 
 def now_iso_utc() -> str:
     return datetime.datetime.now(datetime.timezone.utc).isoformat()
-
-
-def sha256_file(path: Path) -> Optional[str]:
-    if not path.exists() or not path.is_file():
-        return None
-    hasher = hashlib.sha256()
-    with path.open('rb') as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b''):
-            hasher.update(chunk)
-    return hasher.hexdigest()
 
 
 def _build_full_run_paths(*, run_dir: Path, source_root: Path) -> FullRunPaths:
@@ -636,21 +514,24 @@ def run_step07b_train_patched_counterparts(
         step_key='07b_train_patched_counterparts_export',
         paths=paths,
         runner=export_patched_dataset,
-        params=PatchedDatasetExportParams(
-            run_dir=paths.run_dir,
-            pair_dir=paths.pair.output_dir,
-            dataset_export_dir=paths.dataset.output_dir,
-            signature_output_dir=paths.patched_pair.signatures_dir,
-            slice_output_dir=paths.patched_slices.output_dir,
-            output_pairs_jsonl=paths.patched_pair.pairs_jsonl,
-            selection_summary_json=paths.patched_pair.selection_summary_json,
-            dedup_mode=dedup_mode,
-            overwrite=False,
-            old_prefix=None,
-            new_prefix=None,
-        ),
+        params=PatchedDatasetExportParams(run_dir=paths.run_dir, dedup_mode=dedup_mode),
         required_outputs=required_outputs,
     )
+
+
+def _summarize_steps(steps: dict[str, dict[str, object]]) -> dict[str, dict[str, object]]:
+    keys = (
+        'returncode',
+        'started_at',
+        'ended_at',
+        'duration_sec',
+        'stdout_log',
+        'stderr_log',
+    )
+    return {
+        step_key: {key: value[key] for key in keys if key in value}
+        for step_key, value in steps.items()
+    }
 
 
 def _build_run_summary_payload(
@@ -678,8 +559,6 @@ def _build_run_summary_payload(
     infer_summary: dict[str, object],
     signature_non_empty_dir: Optional[Path],
 ) -> dict[str, object]:
-    committed_taint_config = committed_taint_config.resolve()
-    generated_taint_config = paths.generated_taint_config.resolve()
     selected_taint_config_str = (
         str(selected_taint_config.resolve()) if selected_taint_config is not None else None
     )
@@ -699,7 +578,6 @@ def _build_run_summary_payload(
             'manifest': str(manifest.resolve()),
             'source_root': str(source_root.resolve()),
             'mode': 'files' if files else ('all' if all_cwes else 'cwes'),
-            'all_cwes': all_cwes,
             'cwes': cwes or [],
             'files': files,
         },
@@ -707,55 +585,35 @@ def _build_run_summary_payload(
             'pair_split_seed': pair_split_seed,
             'pair_train_ratio': pair_train_ratio,
             'dedup_mode': dedup_mode,
-            'taint_config': {
-                'committed_path': str(committed_taint_config),
-                'generated_path': str(generated_taint_config),
-                'selected_path': selected_taint_config_str,
-                'selected_reason': selected_reason,
-                'sha256': {
-                    'committed_taint_config': sha256_file(committed_taint_config),
-                    'generated_taint_config': sha256_file(generated_taint_config),
-                    'selected_taint_config': sha256_file(Path(selected_taint_config_str))
-                    if selected_taint_config_str
-                    else None,
-                },
-            },
+            'selected_taint_config_path': selected_taint_config_str,
+            'selected_reason': selected_reason,
         },
-        'steps': steps,
+        'steps': _summarize_steps(steps),
         'outputs': {
-            'stage01': {
-                'output_dir': str(paths.manifest_dir),
-                'manifest_with_comments_xml': str(paths.manifest_with_comments_xml),
-            },
-            'stage02a': {
-                'output_dir': str(paths.taint_dir),
-                'generated_taint_config': str(paths.generated_taint_config),
-            },
-            'stage02b': paths.stage02b.to_payload(
-                include=('output_dir', *paths.stage02b._required_fields),
-            ),
+            'stage01': {'output_dir': str(paths.manifest_dir)},
+            'stage02a': {'output_dir': str(paths.taint_dir)},
+            'stage02b': {'output_dir': str(paths.stage02b.output_dir)},
             'stage03': {
-                'infer_results_root': str(paths.infer_results_root),
-                'signatures_root': str(paths.signatures_root),
                 'infer_summary_json': str(paths.infer_summary_json),
                 'signature_non_empty_dir': str(signature_non_empty_dir)
                 if signature_non_empty_dir is not None
                 else None,
             },
-            'stage04': {
-                'output_dir': str(paths.trace_dir),
-                'trace_flow_match_strict_jsonl': str(paths.trace_strict_jsonl),
+            'stage04': {'trace_flow_match_strict_jsonl': str(paths.trace_strict_jsonl)},
+            'stage05': {'output_dir': str(paths.pair.output_dir)},
+            'stage06': {
+                'output_dir': str(paths.slices.output_dir),
+                'slice_dir': str(paths.slices.slice_dir),
             },
-            'stage05': paths.pair.to_payload(),
-            'stage06': paths.slices.to_payload(),
-            'stage07': paths.dataset.to_payload(),
+            'stage07': {
+                'output_dir': str(paths.dataset.output_dir),
+                'summary_json': str(paths.dataset.summary_json),
+            },
             'stage07b': {
-                'pairing': paths.patched_pair.to_payload(),
-                'slices': paths.patched_slices.to_payload(),
-                'dataset': paths.patched_dataset.to_payload(),
+                'output_dir': str(paths.patched_dataset.output_dir),
+                'summary_json': str(paths.patched_dataset.summary_json),
             },
         },
-        'infer_summary': infer_summary,
     }
 
 
@@ -888,183 +746,23 @@ def run_full_pipeline(
 
 def main() -> int:
     args = parse_args()
-
-    if args.command == 'full':
-        try:
-            return run_full_pipeline(
-                cwes=args.cwes or None,
-                all_cwes=args.all_cwes,
-                files=args.files,
-                manifest=args.manifest,
-                source_root=args.source_root,
-                pipeline_root=args.pipeline_root,
-                run_id=args.run_id,
-                committed_taint_config=args.committed_taint_config,
-                pair_split_seed=args.pair_split_seed,
-                pair_train_ratio=args.pair_train_ratio,
-                dedup_mode=args.dedup_mode,
-            )
-        except ValueError as exc:
-            print(str(exc), file=sys.stderr)
-            return 2
-
-    if args.command == 'stage01':
-        return _print_result(
-            _stage01_manifest.scan_manifest_comments(
-                manifest=args.manifest,
-                source_root=args.source_root,
-                output_xml=args.output_xml,
-            )
-        )
-
-    if args.command == 'stage02a':
-        return _print_result(
-            _stage02a_taint.extract_unique_code_fields(
-                input_xml=args.input_xml,
-                source_root=args.source_root,
-                output_dir=args.output_dir,
-                pulse_taint_config_output=args.pulse_taint_config_output,
-            )
-        )
-
-    if args.command == 'stage02b':
-        return _print_result(
-            _stage02b_flow.run_stage02b_flow(
-                input_xml=args.input_xml,
-                source_root=args.source_root,
-                output_dir=args.output_dir,
-            )
-        )
-
-    if args.command == 'stage03':
-        return _print_result(
-            _stage03_infer.run_infer_and_signature(
-                cwes=args.cwes or None,
-                global_result=args.global_result,
-                all_cwes=args.all_cwes,
-                files=args.files,
-                pulse_taint_config=args.pulse_taint_config,
-                infer_results_root=args.infer_results_root,
-                signatures_root=args.signatures_root,
-                summary_json=args.summary_json,
-            )
-        )
-
-    if args.command == 'stage03-signature':
-        return _print_result(
-            _stage03_signature.run_signature_generation(
-                input_dir=args.input_dir,
-                output_root=args.output_root,
-            )
-        )
-
-    if args.command == 'stage04':
-        return _print_result(
-            _stage04_trace_flow.filter_traces_by_flow(
-                flow_xml=args.flow_xml,
-                signatures_dir=args.signatures_dir,
-                output_dir=args.output_dir,
-            )
-        )
-
-    if args.command == 'stage05':
-        trace_jsonl, output_dir, run_dir = _stage05_pair_trace.resolve_paths(
-            trace_jsonl=args.trace_jsonl,
-            output_dir=args.output_dir,
+    try:
+        return run_full_pipeline(
+            cwes=args.cwes or None,
+            all_cwes=args.all_cwes,
+            files=args.files,
+            manifest=args.manifest,
+            source_root=args.source_root,
             pipeline_root=args.pipeline_root,
-            run_dir=args.run_dir,
+            run_id=args.run_id,
+            committed_taint_config=args.committed_taint_config,
+            pair_split_seed=args.pair_split_seed,
+            pair_train_ratio=args.pair_train_ratio,
+            dedup_mode=args.dedup_mode,
         )
-        return _print_result(
-            _stage05_pair_trace.build_paired_trace_dataset(
-                trace_jsonl=trace_jsonl,
-                output_dir=output_dir,
-                overwrite=args.overwrite,
-                run_dir=run_dir,
-            )
-        )
-
-    if args.command == 'stage06':
-        signature_db_dir, output_dir, _slice_dir, run_dir = _stage06_slices.resolve_paths(
-            signature_db_dir=args.signature_db_dir,
-            output_dir=args.output_dir,
-            pipeline_root=args.pipeline_root,
-            run_dir=args.run_dir,
-        )
-        return _print_result(
-            _stage06_slices.generate_slices(
-                signature_db_dir=signature_db_dir,
-                output_dir=output_dir,
-                old_prefix=args.old_prefix,
-                new_prefix=args.new_prefix,
-                overwrite=args.overwrite,
-                run_dir=run_dir,
-            )
-        )
-
-    if args.command == 'stage07':
-        return _print_result(
-            _stage07_dataset_export.export_primary_dataset(
-                _stage07_dataset_export.PrimaryDatasetExportParams(
-                    pairs_jsonl=args.pairs_jsonl,
-                    paired_signatures_dir=args.paired_signatures_dir,
-                    slice_dir=args.slice_dir,
-                    output_dir=args.output_dir,
-                    split_seed=args.split_seed,
-                    train_ratio=args.train_ratio,
-                    dedup_mode=args.dedup_mode,
-                )
-            )
-        )
-
-    if args.command == 'stage07b':
-        paths = _stage07b_patched_export.resolve_paths(
-            run_dir=args.run_dir,
-            pair_dir=args.pair_dir,
-            dataset_export_dir=args.dataset_export_dir,
-            signature_output_dir=args.signature_output_dir,
-            slice_output_dir=args.slice_output_dir,
-            pipeline_root=args.pipeline_root,
-        )
-        _stage07b_patched_export.validate_args(
-            paths,
-            old_prefix=args.old_prefix,
-            new_prefix=args.new_prefix,
-        )
-        if paths.run_dir is None:
-            raise ValueError('Failed to resolve required stage07b paths.')
-        patched_pairing_paths = build_patched_pairing_paths(
-            paths.pair_dir,
-            _stage07b_patched_export.DATASET_BASENAME,
-        )
-        output_pairs_jsonl = (
-            args.output_pairs_jsonl.resolve()
-            if args.output_pairs_jsonl is not None
-            else patched_pairing_paths.pairs_jsonl
-        )
-        selection_summary_json = (
-            args.selection_summary_json.resolve()
-            if args.selection_summary_json is not None
-            else patched_pairing_paths.selection_summary_json
-        )
-        return _print_result(
-            _stage07b_patched_export.export_patched_dataset(
-                _stage07b_patched_export.PatchedDatasetExportParams(
-                    run_dir=paths.run_dir,
-                    pair_dir=paths.pair_dir,
-                    dataset_export_dir=paths.dataset_export_dir,
-                    signature_output_dir=paths.signature_output_dir,
-                    slice_output_dir=paths.slice_output_dir,
-                    output_pairs_jsonl=output_pairs_jsonl,
-                    selection_summary_json=selection_summary_json,
-                    dedup_mode=args.dedup_mode,
-                    overwrite=args.overwrite,
-                    old_prefix=args.old_prefix,
-                    new_prefix=args.new_prefix,
-                )
-            )
-        )
-
-    raise ValueError(f'Unsupported command: {args.command}')
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
 
 
 if __name__ == '__main__':

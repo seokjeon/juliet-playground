@@ -26,8 +26,6 @@ from shared.pairing import (
     build_trace_priority_key,
     make_pair_id,
 )
-from shared.paths import RESULT_DIR
-from shared.pipeline_runs import find_latest_pipeline_run_dir
 from shared.signatures import load_signature_payload
 
 from stage.stage06_slices import generate_slices
@@ -39,25 +37,18 @@ prepare_target = _fs_utils.prepare_target
 @dataclass(frozen=True)
 class PatchedDatasetExportParams:
     run_dir: Path
-    pair_dir: Path
-    dataset_export_dir: Path
-    signature_output_dir: Path
-    slice_output_dir: Path
-    output_pairs_jsonl: Path
-    selection_summary_json: Path
     dedup_mode: str
-    overwrite: bool
-    old_prefix: str | None
-    new_prefix: str | None
 
 
 @dataclass(frozen=True)
-class ResolvedPatchedExportPaths:
-    run_dir: Path | None
+class Stage07BPaths:
+    run_dir: Path
     pair_dir: Path
     dataset_export_dir: Path
-    signature_output_dir: Path
-    slice_output_dir: Path
+    pairing: PatchedPairingPaths
+    slices: SliceStagePaths
+    dataset: DatasetExportPaths
+    primary_split_manifest_json: Path
 
 
 @dataclass(frozen=True)
@@ -89,82 +80,23 @@ class PatchedDatasetExportResult:
         }
 
 
-def infer_run_dir_from_pair_dir(pair_dir: Path) -> Path | None:
-    if pair_dir.name != '05_pair_trace_ds':
-        return None
-    return pair_dir.parent
-
-
-def resolve_paths(
-    *,
-    run_dir: Path | None = None,
-    pair_dir: Path | None = None,
-    dataset_export_dir: Path | None = None,
-    signature_output_dir: Path | None = None,
-    slice_output_dir: Path | None = None,
-    pipeline_root: Path = Path(RESULT_DIR) / 'pipeline-runs',
-) -> ResolvedPatchedExportPaths:
-    resolved_run_dir: Path | None
-    if run_dir is not None:
-        resolved_run_dir = run_dir.resolve()
-        resolved_pair_dir = (
-            pair_dir.resolve() if pair_dir is not None else resolved_run_dir / '05_pair_trace_ds'
-        )
-    elif pair_dir is not None:
-        resolved_pair_dir = pair_dir.resolve()
-        resolved_run_dir = infer_run_dir_from_pair_dir(resolved_pair_dir)
-    else:
-        resolved_run_dir = find_latest_pipeline_run_dir(pipeline_root.resolve())
-        resolved_pair_dir = resolved_run_dir / '05_pair_trace_ds'
-
-    if dataset_export_dir is None:
-        if resolved_run_dir is None:
-            raise ValueError('--dataset-export-dir is required when run-dir cannot be inferred.')
-        resolved_dataset_export_dir = resolved_run_dir / '07_dataset_export'
-    else:
-        resolved_dataset_export_dir = dataset_export_dir.resolve()
-
-    if signature_output_dir is None:
-        resolved_signature_output_dir = build_patched_pairing_paths(
-            resolved_pair_dir, DATASET_BASENAME
-        ).signatures_dir
-    else:
-        resolved_signature_output_dir = signature_output_dir.resolve()
-
-    if slice_output_dir is None:
-        if resolved_run_dir is None:
-            raise ValueError('--slice-output-dir is required when run-dir cannot be inferred.')
-        resolved_slice_output_dir = resolved_run_dir / '06_slices' / DATASET_BASENAME
-    else:
-        resolved_slice_output_dir = slice_output_dir.resolve()
-
-    return ResolvedPatchedExportPaths(
+def build_stage07b_paths(run_dir: Path) -> Stage07BPaths:
+    resolved_run_dir = run_dir.resolve()
+    pair_dir = resolved_run_dir / '05_pair_trace_ds'
+    dataset_export_dir = resolved_run_dir / '07_dataset_export'
+    pairing = build_patched_pairing_paths(pair_dir, DATASET_BASENAME)
+    slices = build_slice_stage_paths(resolved_run_dir / '06_slices' / DATASET_BASENAME)
+    dataset = build_dataset_export_paths(dataset_export_dir, DATASET_BASENAME)
+    primary_dataset = build_dataset_export_paths(dataset_export_dir)
+    return Stage07BPaths(
         run_dir=resolved_run_dir,
-        pair_dir=resolved_pair_dir,
-        dataset_export_dir=resolved_dataset_export_dir,
-        signature_output_dir=resolved_signature_output_dir,
-        slice_output_dir=resolved_slice_output_dir,
+        pair_dir=pair_dir,
+        dataset_export_dir=dataset_export_dir,
+        pairing=pairing,
+        slices=slices,
+        dataset=dataset,
+        primary_split_manifest_json=primary_dataset.split_manifest_json,
     )
-
-
-def validate_args(
-    paths: ResolvedPatchedExportPaths,
-    *,
-    old_prefix: str | None = None,
-    new_prefix: str | None = None,
-) -> None:
-    if not paths.pair_dir.exists():
-        raise FileNotFoundError(f'Pair dir not found: {paths.pair_dir}')
-    if not paths.pair_dir.is_dir():
-        raise NotADirectoryError(f'Pair dir is not a directory: {paths.pair_dir}')
-    if not paths.dataset_export_dir.exists():
-        raise FileNotFoundError(f'Dataset export dir not found: {paths.dataset_export_dir}')
-    if not paths.dataset_export_dir.is_dir():
-        raise NotADirectoryError(
-            f'Dataset export dir is not a directory: {paths.dataset_export_dir}'
-        )
-    if bool(old_prefix) != bool(new_prefix):
-        raise ValueError('--old-prefix and --new-prefix must be provided together.')
 
 
 def leftover_sort_key(record: dict[str, Any]) -> tuple[Any, ...]:
@@ -176,23 +108,9 @@ def leftover_sort_key(record: dict[str, Any]) -> tuple[Any, ...]:
     )
 
 
-def build_train_patched_counterparts(
-    *,
-    pair_dir: Path,
-    dataset_export_dir: Path,
-    signature_output_dir: Path,
-    output_pairs_jsonl: Path,
-    selection_summary_json: Path,
-    overwrite: bool,
-) -> PatchedPairingSelectionResult:
-    pair_trace_paths = build_pair_trace_paths(pair_dir)
-    pairing_paths = PatchedPairingPaths(
-        output_dir=pair_dir,
-        pairs_jsonl=output_pairs_jsonl,
-        signatures_dir=signature_output_dir,
-        selection_summary_json=selection_summary_json,
-    )
-    source_split_manifest_json = build_dataset_export_paths(dataset_export_dir).split_manifest_json
+def build_train_patched_counterparts(*, run_dir: Path) -> PatchedPairingSelectionResult:
+    paths = build_stage07b_paths(run_dir)
+    pair_trace_paths = build_pair_trace_paths(paths.pair_dir)
 
     if not pair_trace_paths.pairs_jsonl.exists():
         raise FileNotFoundError(f'Pairs JSONL not found: {pair_trace_paths.pairs_jsonl}')
@@ -200,20 +118,22 @@ def build_train_patched_counterparts(
         raise FileNotFoundError(
             f'Leftover counterparts JSONL not found: {pair_trace_paths.leftover_counterparts_jsonl}'
         )
-    if not source_split_manifest_json.exists():
-        raise FileNotFoundError(f'Primary split manifest not found: {source_split_manifest_json}')
+    if not paths.primary_split_manifest_json.exists():
+        raise FileNotFoundError(
+            f'Primary split manifest not found: {paths.primary_split_manifest_json}'
+        )
 
-    prepare_target(pairing_paths.signatures_dir, overwrite=overwrite)
-    prepare_target(pairing_paths.pairs_jsonl, overwrite=overwrite)
-    prepare_target(pairing_paths.selection_summary_json, overwrite=overwrite)
-    pairing_paths.signatures_dir.mkdir(parents=True, exist_ok=True)
-    pairing_paths.pairs_jsonl.parent.mkdir(parents=True, exist_ok=True)
-    pairing_paths.selection_summary_json.parent.mkdir(parents=True, exist_ok=True)
+    prepare_target(paths.pairing.signatures_dir, overwrite=False)
+    prepare_target(paths.pairing.pairs_jsonl, overwrite=False)
+    prepare_target(paths.pairing.selection_summary_json, overwrite=False)
+    paths.pairing.signatures_dir.mkdir(parents=True, exist_ok=True)
+    paths.pairing.pairs_jsonl.parent.mkdir(parents=True, exist_ok=True)
+    paths.pairing.selection_summary_json.parent.mkdir(parents=True, exist_ok=True)
 
-    split_manifest = json.loads(source_split_manifest_json.read_text(encoding='utf-8'))
+    split_manifest = json.loads(paths.primary_split_manifest_json.read_text(encoding='utf-8'))
     train_val_pair_ids = set(split_manifest.get('pair_ids', {}).get('train_val') or [])
     if not train_val_pair_ids:
-        raise ValueError(f'No train_val pair_ids found in {source_split_manifest_json}')
+        raise ValueError(f'No train_val pair_ids found in {paths.primary_split_manifest_json}')
 
     primary_pairs = load_jsonl(pair_trace_paths.pairs_jsonl)
     primary_pairs_by_testcase = {
@@ -269,7 +189,7 @@ def build_train_patched_counterparts(
             dataset_namespace=DATASET_BASENAME,
         )
 
-        testcase_dir = pairing_paths.signatures_dir / testcase_key
+        testcase_dir = paths.pairing.signatures_dir / testcase_key
         testcase_dir.mkdir(parents=True, exist_ok=True)
         b2b_output_path = testcase_dir / 'b2b.json'
         counterpart_output_path = testcase_dir / f'{counterpart_flow_type}.json'
@@ -338,25 +258,19 @@ def build_train_patched_counterparts(
         if len(candidate_leftovers) > 1:
             selection_counts['selected_pairs_with_extra_leftovers'] += 1
 
-    write_jsonl(pairing_paths.pairs_jsonl, selected_pairs)
+    write_jsonl(paths.pairing.pairs_jsonl, selected_pairs)
 
     summary_payload = {
         'dataset_basename': DATASET_BASENAME,
-        'pair_dir': str(pair_dir),
-        'source_pairs_jsonl': str(pair_trace_paths.pairs_jsonl),
-        'source_leftover_counterparts_jsonl': str(pair_trace_paths.leftover_counterparts_jsonl),
-        'source_split_manifest_json': str(source_split_manifest_json),
-        'signature_output_dir': str(pairing_paths.signatures_dir),
-        'output_pairs_jsonl': str(pairing_paths.pairs_jsonl),
         'counts': dict(selection_counts),
         'train_val_pair_ids_total': len(train_val_pair_ids),
         'selected_testcases': len(selected_pairs),
     }
-    write_json(pairing_paths.selection_summary_json, summary_payload)
+    write_json(paths.pairing.selection_summary_json, summary_payload)
     print(json.dumps(summary_payload, ensure_ascii=False))
     return PatchedPairingSelectionResult(
         pairs=selected_pairs,
-        pairing=pairing_paths,
+        pairing=paths.pairing,
         selection_counts=dict(selection_counts),
     )
 
@@ -366,35 +280,18 @@ def export_dataset(
     pairs: list[dict[str, Any]],
     paired_signatures_dir: Path,
     slice_dir: Path,
-    dataset_export_dir: Path,
-    overwrite: bool,
+    dataset_paths: DatasetExportPaths,
     dedup_mode: str,
 ) -> DatasetExportPaths:
-    dataset_paths = build_dataset_export_paths(dataset_export_dir, DATASET_BASENAME)
     run_configured_step07_export(
         pairs=pairs,
         paired_signatures_dir=paired_signatures_dir,
         slice_dir=slice_dir,
         export_paths=dataset_paths,
         dedup_mode=dedup_mode,
-        prepare_target_fn=prepare_target,
-        overwrite=overwrite,
         split_assignments_fn=lambda pair_ids: {pair_id: 'train_val' for pair_id in pair_ids},
-        summary_metadata={
-            'dataset_basename': DATASET_BASENAME,
-            'paired_signatures_dir': str(paired_signatures_dir),
-            'slice_dir': str(slice_dir),
-            'output_dir': str(dataset_export_dir),
-            'csv_path': str(dataset_paths.csv_path),
-        },
-        split_manifest_metadata={
-            'dataset_basename': DATASET_BASENAME,
-            'output_dir': str(dataset_export_dir),
-            'paired_signatures_dir': str(paired_signatures_dir),
-            'slice_dir': str(slice_dir),
-            'split_unit': 'pair_id',
-            'split_mode': 'inherited_train_val_only',
-        },
+        summary_metadata={'dataset_basename': DATASET_BASENAME},
+        split_manifest_metadata={},
         collect_defined_function_names_fn=collect_defined_function_names,
         build_source_file_candidates_fn=build_source_file_candidates,
         run_step07_export_core_fn=run_step07_export_core,
@@ -403,43 +300,31 @@ def export_dataset(
 
 
 def export_patched_dataset(params: PatchedDatasetExportParams) -> PatchedDatasetExportResult:
-    selected = build_train_patched_counterparts(
-        pair_dir=params.pair_dir,
-        dataset_export_dir=params.dataset_export_dir,
-        signature_output_dir=params.signature_output_dir,
-        output_pairs_jsonl=params.output_pairs_jsonl,
-        selection_summary_json=params.selection_summary_json,
-        overwrite=params.overwrite,
-    )
+    paths = build_stage07b_paths(params.run_dir)
+    selected = build_train_patched_counterparts(run_dir=params.run_dir)
 
-    prepare_target(params.slice_output_dir, overwrite=params.overwrite)
-    params.slice_output_dir.mkdir(parents=True, exist_ok=True)
     generate_slices(
         signature_db_dir=selected.pairing.signatures_dir,
-        output_dir=params.slice_output_dir,
-        old_prefix=params.old_prefix,
-        new_prefix=params.new_prefix,
+        output_dir=paths.slices.output_dir,
         overwrite=False,
-        run_dir=params.run_dir,
+        run_dir=paths.run_dir,
         summary_metadata={'dataset_basename': DATASET_BASENAME},
     )
-    slice_paths = build_slice_stage_paths(params.slice_output_dir)
 
     dataset_paths = export_dataset(
         pairs=selected.pairs,
         paired_signatures_dir=selected.pairing.signatures_dir,
-        slice_dir=slice_paths.slice_dir,
-        dataset_export_dir=params.dataset_export_dir,
-        overwrite=params.overwrite,
+        slice_dir=paths.slices.slice_dir,
+        dataset_paths=paths.dataset,
         dedup_mode=params.dedup_mode,
     )
 
     return PatchedDatasetExportResult(
         dataset_basename=DATASET_BASENAME,
-        run_dir=params.run_dir,
-        pair_dir=params.pair_dir,
+        run_dir=paths.run_dir,
+        pair_dir=paths.pair_dir,
         pairing=selected.pairing,
-        slices=slice_paths,
+        slices=paths.slices,
         dataset=dataset_paths,
         dedup_mode=params.dedup_mode,
     )
