@@ -12,6 +12,9 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
+from shared.csvio import write_csv_rows
+from shared.jsonio import write_json
+from shared.jsonio import write_jsonl as _write_jsonl
 from shared.juliet_manifest import build_manifest_source_index
 
 TARGET_TAGS = {'comment_flaw', 'comment_fix'}
@@ -71,11 +74,11 @@ def extract_function_inventory(
 
     sorted_rows = sorted(counter.items(), key=lambda item: (-item[1], item[0]))
 
-    output_csv.parent.mkdir(parents=True, exist_ok=True)
-    with output_csv.open('w', newline='', encoding='utf-8') as f:
-        writer = csv.writer(f)
-        writer.writerow(['function_name', 'count'])
-        writer.writerows(sorted_rows)
+    write_csv_rows(
+        output_csv,
+        ['function_name', 'count'],
+        ([name, count] for name, count in sorted_rows),
+    )
 
     unique_names = list(counter.keys())
     starts_with_good = sum(1 for name in unique_names if name.startswith('good'))
@@ -103,9 +106,7 @@ def extract_function_inventory(
         ],
     }
 
-    output_summary.parent.mkdir(parents=True, exist_ok=True)
-    with output_summary.open('w', encoding='utf-8') as f:
-        json.dump(summary, f, ensure_ascii=False, indent=2)
+    write_json(output_summary, summary, trailing_newline=False)
 
     return {
         'output_csv': str(output_csv),
@@ -426,10 +427,7 @@ def categorize_rows(
 
 
 def write_jsonl(rows: list[FunctionRow], output_jsonl: Path) -> None:
-    output_jsonl.parent.mkdir(parents=True, exist_ok=True)
-    with output_jsonl.open('w', encoding='utf-8') as f:
-        for row in rows:
-            f.write(json.dumps(row.to_jsonl_record(), ensure_ascii=False) + '\n')
+    _write_jsonl(output_jsonl, (row.to_jsonl_record() for row in rows))
 
 
 def build_group_maps(
@@ -527,9 +525,7 @@ def build_nested_output(
 
 
 def write_nested_json(nested: dict[str, object], output_nested_json: Path) -> None:
-    output_nested_json.parent.mkdir(parents=True, exist_ok=True)
-    with output_nested_json.open('w', encoding='utf-8') as f:
-        json.dump(nested, f, ensure_ascii=False, indent=2)
+    write_json(output_nested_json, nested, trailing_newline=False)
 
 
 def build_summary(
@@ -560,9 +556,19 @@ def build_summary(
 
 
 def write_summary(summary: dict[str, object], output_summary: Path) -> None:
-    output_summary.parent.mkdir(parents=True, exist_ok=True)
-    with output_summary.open('w', encoding='utf-8') as f:
-        json.dump(summary, f, ensure_ascii=False, indent=2)
+    write_json(output_summary, summary, trailing_newline=False)
+
+
+def build_stage02b_output_paths(output_dir: Path) -> dict[str, Path]:
+    return {
+        'function_names_unique_csv': output_dir / 'function_names_unique.csv',
+        'function_inventory_summary_json': output_dir / 'function_inventory_summary.json',
+        'function_names_categorized_jsonl': output_dir / 'function_names_categorized.jsonl',
+        'grouped_family_role_json': output_dir / 'grouped_family_role.json',
+        'category_summary_json': output_dir / 'category_summary.json',
+        'manifest_with_testcase_flows_xml': output_dir / 'manifest_with_testcase_flows.xml',
+        'testcase_flow_summary_json': output_dir / 'testcase_flow_summary.json',
+    }
 
 
 def categorize_function_names(
@@ -800,51 +806,42 @@ def add_flow_tags_to_testcase(
         'unresolved_comment_records': unresolved_comment,
         'unresolved_flaw_records': unresolved_flaw,
     }
-    summary_json.parent.mkdir(parents=True, exist_ok=True)
-    summary_json.write_text(
-        json.dumps(summary, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
-    )
+    write_json(summary_json, summary)
     return summary
 
 
 def run_stage02b_flow(*, input_xml: Path, source_root: Path, output_dir: Path) -> dict[str, object]:
-    output_csv = output_dir / 'function_names_unique.csv'
-    function_inventory_summary_json = output_dir / 'function_inventory_summary.json'
-    output_jsonl = output_dir / 'function_names_categorized.jsonl'
-    output_nested_json = output_dir / 'grouped_family_role.json'
-    category_summary_json = output_dir / 'category_summary.json'
-    output_xml = output_dir / 'manifest_with_testcase_flows.xml'
-    testcase_flow_summary_json = output_dir / 'testcase_flow_summary.json'
+    output_paths = build_stage02b_output_paths(output_dir)
 
     extract_result = extract_function_inventory(
         input_xml=input_xml,
-        output_csv=output_csv,
-        output_summary=function_inventory_summary_json,
+        output_csv=output_paths['function_names_unique_csv'],
+        output_summary=output_paths['function_inventory_summary_json'],
     )
     categorize_result = categorize_function_names(
-        input_csv=output_csv,
+        input_csv=output_paths['function_names_unique_csv'],
         manifest_xml=input_xml,
         source_root=source_root,
-        output_jsonl=output_jsonl,
-        output_nested_json=output_nested_json,
-        output_summary=category_summary_json,
+        output_jsonl=output_paths['function_names_categorized_jsonl'],
+        output_nested_json=output_paths['grouped_family_role_json'],
+        output_summary=output_paths['category_summary_json'],
     )
     partition_result = add_flow_tags_to_testcase(
         input_xml=input_xml,
-        function_categories_jsonl=output_jsonl,
-        output_xml=output_xml,
-        summary_json=testcase_flow_summary_json,
+        function_categories_jsonl=output_paths['function_names_categorized_jsonl'],
+        output_xml=output_paths['manifest_with_testcase_flows_xml'],
+        summary_json=output_paths['testcase_flow_summary_json'],
     )
 
     return {
         'output_dir': str(output_dir),
-        'function_names_unique_csv': str(output_csv),
-        'function_inventory_summary_json': str(function_inventory_summary_json),
-        'function_names_categorized_jsonl': str(output_jsonl),
-        'grouped_family_role_json': str(output_nested_json),
-        'category_summary_json': str(category_summary_json),
-        'manifest_with_testcase_flows_xml': str(output_xml),
-        'testcase_flow_summary_json': str(testcase_flow_summary_json),
+        'function_names_unique_csv': str(output_paths['function_names_unique_csv']),
+        'function_inventory_summary_json': str(output_paths['function_inventory_summary_json']),
+        'function_names_categorized_jsonl': str(output_paths['function_names_categorized_jsonl']),
+        'grouped_family_role_json': str(output_paths['grouped_family_role_json']),
+        'category_summary_json': str(output_paths['category_summary_json']),
+        'manifest_with_testcase_flows_xml': str(output_paths['manifest_with_testcase_flows_xml']),
+        'testcase_flow_summary_json': str(output_paths['testcase_flow_summary_json']),
         'extract_result': extract_result,
         'categorize_result': categorize_result,
         'partition_result': partition_result,

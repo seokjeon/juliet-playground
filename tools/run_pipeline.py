@@ -21,6 +21,7 @@ from shared.artifact_layout import (
     build_patched_pairing_paths,
     build_slice_stage_paths,
 )
+from shared.jsonio import write_json
 from shared.paths import PROJECT_HOME, PULSE_TAINT_CONFIG, RESULT_DIR
 from stage import stage01_manifest as _stage01_manifest
 from stage import stage02a_taint as _stage02a_taint
@@ -299,6 +300,7 @@ def _build_full_run_paths(*, run_dir: Path, source_root: Path) -> FullRunPaths:
         dataset_stage_dir,
         TRAIN_PATCHED_COUNTERPARTS_BASENAME,
     )
+    stage02b_output_paths = _stage02b_flow.build_stage02b_output_paths(flow_dir)
 
     return FullRunPaths(
         run_dir=run_dir,
@@ -314,13 +316,13 @@ def _build_full_run_paths(*, run_dir: Path, source_root: Path) -> FullRunPaths:
         logs_dir=logs_dir,
         manifest_with_comments_xml=manifest_dir / 'manifest_with_comments.xml',
         generated_taint_config=taint_dir / 'pulse-taint-config.json',
-        function_names_unique_csv=flow_dir / 'function_names_unique.csv',
-        function_inventory_summary_json=flow_dir / 'function_inventory_summary.json',
-        function_names_categorized_jsonl=flow_dir / 'function_names_categorized.jsonl',
-        grouped_family_role_json=flow_dir / 'grouped_family_role.json',
-        category_summary_json=flow_dir / 'category_summary.json',
-        manifest_with_testcase_flows_xml=flow_dir / 'manifest_with_testcase_flows.xml',
-        testcase_flow_summary_json=flow_dir / 'testcase_flow_summary.json',
+        function_names_unique_csv=stage02b_output_paths['function_names_unique_csv'],
+        function_inventory_summary_json=stage02b_output_paths['function_inventory_summary_json'],
+        function_names_categorized_jsonl=stage02b_output_paths['function_names_categorized_jsonl'],
+        grouped_family_role_json=stage02b_output_paths['grouped_family_role_json'],
+        category_summary_json=stage02b_output_paths['category_summary_json'],
+        manifest_with_testcase_flows_xml=stage02b_output_paths['manifest_with_testcase_flows_xml'],
+        testcase_flow_summary_json=stage02b_output_paths['testcase_flow_summary_json'],
         infer_summary_json=run_dir / '03_infer_summary.json',
         trace_strict_jsonl=trace_dir / 'trace_flow_match_strict.jsonl',
         pairs_jsonl=pair_trace_paths['pairs_jsonl'],
@@ -520,26 +522,27 @@ def run_step02a_code_field_inventory(
 
 
 def run_step02b_flow_build(*, paths: FullRunPaths) -> dict[str, dict[str, object]]:
+    stage02b_output_paths = _stage02b_flow.build_stage02b_output_paths(paths['flow_dir'])
     results: dict[str, dict[str, object]] = {}
     results['02b_function_inventory_extract'] = run_internal_step(
         '02b_function_inventory_extract',
         logs_dir=paths['logs_dir'],
         fn=lambda: _stage02b_flow.extract_function_inventory(
             input_xml=paths['manifest_with_comments_xml'],
-            output_csv=paths['function_names_unique_csv'],
-            output_summary=paths['function_inventory_summary_json'],
+            output_csv=stage02b_output_paths['function_names_unique_csv'],
+            output_summary=stage02b_output_paths['function_inventory_summary_json'],
         ),
     )
     results['02b_function_inventory_categorize'] = run_internal_step(
         '02b_function_inventory_categorize',
         logs_dir=paths['logs_dir'],
         fn=lambda: _stage02b_flow.categorize_function_names(
-            input_csv=paths['function_names_unique_csv'],
+            input_csv=stage02b_output_paths['function_names_unique_csv'],
             manifest_xml=paths['manifest_with_comments_xml'],
             source_root=paths['source_testcases_root'],
-            output_jsonl=paths['function_names_categorized_jsonl'],
-            output_nested_json=paths['grouped_family_role_json'],
-            output_summary=paths['category_summary_json'],
+            output_jsonl=stage02b_output_paths['function_names_categorized_jsonl'],
+            output_nested_json=stage02b_output_paths['grouped_family_role_json'],
+            output_summary=stage02b_output_paths['category_summary_json'],
         ),
     )
     results['02b_testcase_flow_partition'] = run_internal_step(
@@ -547,43 +550,46 @@ def run_step02b_flow_build(*, paths: FullRunPaths) -> dict[str, dict[str, object
         logs_dir=paths['logs_dir'],
         fn=lambda: _stage02b_flow.add_flow_tags_to_testcase(
             input_xml=paths['manifest_with_comments_xml'],
-            function_categories_jsonl=paths['function_names_categorized_jsonl'],
-            output_xml=paths['manifest_with_testcase_flows_xml'],
-            summary_json=paths['testcase_flow_summary_json'],
+            function_categories_jsonl=stage02b_output_paths['function_names_categorized_jsonl'],
+            output_xml=stage02b_output_paths['manifest_with_testcase_flows_xml'],
+            summary_json=stage02b_output_paths['testcase_flow_summary_json'],
         ),
     )
 
     required_outputs = [
         (
-            paths['function_names_unique_csv'],
-            f'Expected function inventory CSV not found: {paths["function_names_unique_csv"]}',
+            stage02b_output_paths['function_names_unique_csv'],
+            'Expected function inventory CSV not found: '
+            f'{stage02b_output_paths["function_names_unique_csv"]}',
         ),
         (
-            paths['function_inventory_summary_json'],
+            stage02b_output_paths['function_inventory_summary_json'],
             'Expected function inventory summary not found: '
-            f'{paths["function_inventory_summary_json"]}',
+            f'{stage02b_output_paths["function_inventory_summary_json"]}',
         ),
         (
-            paths['function_names_categorized_jsonl'],
+            stage02b_output_paths['function_names_categorized_jsonl'],
             'Expected categorized functions JSONL not found: '
-            f'{paths["function_names_categorized_jsonl"]}',
+            f'{stage02b_output_paths["function_names_categorized_jsonl"]}',
         ),
         (
-            paths['grouped_family_role_json'],
-            f'Expected grouped family role JSON not found: {paths["grouped_family_role_json"]}',
+            stage02b_output_paths['grouped_family_role_json'],
+            'Expected grouped family role JSON not found: '
+            f'{stage02b_output_paths["grouped_family_role_json"]}',
         ),
         (
-            paths['category_summary_json'],
-            f'Expected category summary JSON not found: {paths["category_summary_json"]}',
+            stage02b_output_paths['category_summary_json'],
+            f'Expected category summary JSON not found: {stage02b_output_paths["category_summary_json"]}',
         ),
         (
-            paths['manifest_with_testcase_flows_xml'],
+            stage02b_output_paths['manifest_with_testcase_flows_xml'],
             'Expected manifest_with_testcase_flows.xml not found: '
-            f'{paths["manifest_with_testcase_flows_xml"]}',
+            f'{stage02b_output_paths["manifest_with_testcase_flows_xml"]}',
         ),
         (
-            paths['testcase_flow_summary_json'],
-            f'Expected testcase flow summary JSON not found: {paths["testcase_flow_summary_json"]}',
+            stage02b_output_paths['testcase_flow_summary_json'],
+            'Expected testcase flow summary JSON not found: '
+            f'{stage02b_output_paths["testcase_flow_summary_json"]}',
         ),
     ]
     _require_all(required_outputs)
@@ -1099,10 +1105,7 @@ def run_full_pipeline(
         infer_summary=infer_summary,
         signature_non_empty_dir=signature_non_empty_dir,
     )
-    paths['run_summary_path'].write_text(
-        json.dumps(summary_payload, ensure_ascii=False, indent=2) + '\n',
-        encoding='utf-8',
-    )
+    write_json(paths['run_summary_path'], summary_payload)
 
     print(json.dumps(summary_payload, ensure_ascii=False))
     return 0 if status == 'success' else 1
