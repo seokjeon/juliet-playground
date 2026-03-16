@@ -143,6 +143,96 @@ def test_build_train_patched_counterparts_requires_train_val_pairs(tmp_path):
         )
 
 
+def test_build_train_patched_counterparts_pair_id_is_stable_across_run_roots(tmp_path):
+    module = load_module_from_path(
+        'test_step07b_behavior_pair_id_stability',
+        REPO_ROOT / 'tools/stage/stage07b_patched_export.py',
+    )
+
+    def build_selection(root: Path) -> str:
+        pair_dir = root / 'run' / '05_pair_trace_ds'
+        dataset_export_dir = root / 'run' / '07_dataset_export'
+        signature_output_dir = pair_dir / 'train_patched_counterparts_signatures'
+        output_pairs_jsonl = pair_dir / 'train_patched_counterparts_pairs.jsonl'
+        selection_summary_json = pair_dir / 'train_patched_counterparts_selection_summary.json'
+
+        b2b_path = pair_dir / 'paired_signatures' / 'CASE1' / 'b2b.json'
+        counterpart_path = pair_dir / 'leftovers' / 'case1_g2b.json'
+        for path, payload in (
+            (b2b_path, {'bug_trace': [], 'key': 'CASE1|bad|TAINT_ERROR', 'hash': 'hash-b2b'}),
+            (
+                counterpart_path,
+                {'bug_trace': [], 'key': 'CASE1|goodG2B|TAINT_ERROR', 'hash': 'hash-g2b'},
+            ),
+        ):
+            write_json(path, payload)
+
+        write_jsonl(
+            pair_dir / 'pairs.jsonl',
+            [
+                {
+                    'pair_id': 'primary-1',
+                    'testcase_key': 'CASE1',
+                    'b2b_trace_file': str(b2b_path),
+                    'b2b_flow_type': 'b2b',
+                    'b2b_bug_trace_length': 4,
+                    'b2b_signature': {'procedure': 'bad'},
+                    'output_files': {'b2b': str(b2b_path)},
+                }
+            ],
+        )
+        write_jsonl(
+            pair_dir / 'leftover_counterparts.jsonl',
+            [
+                {
+                    'testcase_key': 'CASE1',
+                    'trace_file': str(counterpart_path),
+                    'best_flow_type': 'g2b',
+                    'bug_trace_length': 8,
+                    'procedure': 'goodG2B',
+                }
+            ],
+        )
+        write_json(
+            dataset_export_dir / 'split_manifest.json',
+            {'pair_ids': {'train_val': ['primary-1'], 'test': []}},
+        )
+
+        result = module.build_train_patched_counterparts(
+            pair_dir=pair_dir,
+            dataset_export_dir=dataset_export_dir,
+            signature_output_dir=signature_output_dir,
+            output_pairs_jsonl=output_pairs_jsonl,
+            selection_summary_json=selection_summary_json,
+            overwrite=False,
+        )
+        return result['pairs'][0]['pair_id']
+
+    assert build_selection(tmp_path / 'root_a') == build_selection(tmp_path / 'root_b')
+
+
+def test_leftover_sort_key_ignores_run_prefix():
+    module = load_module_from_path(
+        'test_step07b_behavior_leftover_sort_key_stability',
+        REPO_ROOT / 'tools/stage/stage07b_patched_export.py',
+    )
+
+    left = {
+        'trace_file': '/tmp/run-a/leftovers/CASE1/7.json',
+        'best_flow_type': 'g2b',
+        'bug_trace_length': 8,
+        'procedure': 'goodG2B',
+    }
+    right = {
+        'trace_file': '/tmp/run-b/leftovers/CASE1/7.json',
+        'best_flow_type': 'g2b',
+        'bug_trace_length': 8,
+        'procedure': 'goodG2B',
+    }
+
+    assert module.leftover_sort_key(left) == module.leftover_sort_key(right)
+
+
 def test_export_patched_dataset_runs_selection_slice_and_export(tmp_path, monkeypatch):
     module = load_module_from_path(
         'test_step07b_behavior_export_api',

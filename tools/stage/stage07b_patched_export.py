@@ -13,7 +13,7 @@ from shared.dataset_sources import build_source_file_candidates, collect_defined
 from shared.jsonio import load_jsonl
 from shared.paths import RESULT_DIR
 from shared.pipeline_runs import find_latest_pipeline_run_dir
-from shared.signatures import load_signature_payload
+from shared.signatures import load_signature_payload, stable_signature_ref, stable_trace_ref
 
 from stage.stage06_slices import process_signature_db
 
@@ -162,7 +162,7 @@ def validate_args(
 def leftover_sort_key(record: dict[str, Any]) -> tuple[Any, ...]:
     return (
         -int(record.get('bug_trace_length', 0) or 0),
-        str(record.get('trace_file') or ''),
+        stable_trace_ref(record.get('trace_file') or ''),
         str(record.get('best_flow_type') or ''),
         str(record.get('procedure') or ''),
     )
@@ -170,22 +170,20 @@ def leftover_sort_key(record: dict[str, Any]) -> tuple[Any, ...]:
 
 def make_pair_id(
     testcase_key: str,
+    b2b_payload: dict[str, Any],
     b2b_trace_file: str,
     b2b_flow_type: str,
-    b2b_procedure: str | None,
+    counterpart_payload: dict[str, Any],
     counterpart_trace_file: str,
     counterpart_flow_type: str,
-    counterpart_procedure: str | None,
 ) -> str:
     seed = '||'.join(
         [
             testcase_key,
-            b2b_trace_file,
             b2b_flow_type,
-            b2b_procedure or '',
-            counterpart_trace_file,
+            stable_signature_ref(b2b_payload, b2b_trace_file),
             counterpart_flow_type,
-            counterpart_procedure or '',
+            stable_signature_ref(counterpart_payload, counterpart_trace_file),
             DATASET_BASENAME,
         ]
     )
@@ -288,12 +286,12 @@ def build_train_patched_counterparts(
 
         pair_id = make_pair_id(
             testcase_key=testcase_key,
+            b2b_payload=b2b_payload,
             b2b_trace_file=str(primary_pair.get('b2b_trace_file') or ''),
             b2b_flow_type=str(primary_pair.get('b2b_flow_type') or ''),
-            b2b_procedure=(primary_pair.get('b2b_signature') or {}).get('procedure'),
+            counterpart_payload=counterpart_payload,
             counterpart_trace_file=str(selected_leftover.get('trace_file') or ''),
             counterpart_flow_type=counterpart_flow_type,
-            counterpart_procedure=selected_leftover.get('procedure'),
         )
 
         b2b_export = dict(b2b_payload)

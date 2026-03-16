@@ -10,7 +10,7 @@ from typing import Any
 from shared.fs import prepare_output_dir
 from shared.paths import RESULT_DIR
 from shared.pipeline_runs import find_latest_pipeline_run_dir
-from shared.signatures import load_signature_payload
+from shared.signatures import load_signature_payload, stable_signature_ref, stable_trace_ref
 
 COUNTERPART_FLOW_TYPES = {
     'g2b',
@@ -120,7 +120,7 @@ def group_by_testcase(
 def record_sort_key(record: StrictTraceRecord) -> tuple[Any, ...]:
     return (
         -record.bug_trace_length,
-        str(record.trace_file),
+        stable_trace_ref(record.trace_file),
         record.best_flow_type,
         record.procedure or '',
     )
@@ -133,17 +133,19 @@ def select_best_record(records: list[StrictTraceRecord]) -> StrictTraceRecord | 
 
 
 def make_pair_id(
-    testcase_key: str, b2b_record: StrictTraceRecord, counterpart_record: StrictTraceRecord
+    testcase_key: str,
+    b2b_record: StrictTraceRecord,
+    b2b_payload: dict[str, Any],
+    counterpart_record: StrictTraceRecord,
+    counterpart_payload: dict[str, Any],
 ) -> str:
     seed = '||'.join(
         [
             testcase_key,
-            str(b2b_record.trace_file),
             b2b_record.best_flow_type,
-            b2b_record.procedure or '',
-            str(counterpart_record.trace_file),
+            stable_signature_ref(b2b_payload, b2b_record.trace_file),
             counterpart_record.best_flow_type,
-            counterpart_record.procedure or '',
+            stable_signature_ref(counterpart_payload, counterpart_record.trace_file),
         ]
     )
     return hashlib.sha1(seed.encode('utf-8')).hexdigest()[:16]
@@ -179,7 +181,6 @@ def build_paired_trace_dataset(
     grouped = group_by_testcase(strict_records)
 
     pair_candidates: list[dict[str, Any]] = []
-    leftovers: list[dict[str, Any]] = []
     summary_counter = Counter()
     counterpart_flow_counter = Counter()
 
@@ -207,42 +208,33 @@ def build_paired_trace_dataset(
         selected_counterpart = sorted_counterparts[0]
         unselected_counterparts = sorted_counterparts[1:]
 
-        pair_id = make_pair_id(testcase_key, selected_b2b, selected_counterpart)
         pair_candidates.append(
             {
-                'pair_id': pair_id,
                 'testcase_key': testcase_key,
                 'selection_reason': 'longest_bug_trace',
                 'b2b': selected_b2b,
                 'counterpart': selected_counterpart,
+                'leftovers': unselected_counterparts,
             }
         )
         counterpart_flow_counter[selected_counterpart.best_flow_type] += 1
 
-        for leftover in unselected_counterparts:
-            leftovers.append(
-                {
-                    'testcase_key': testcase_key,
-                    'related_pair_id': pair_id,
-                    'trace_file': str(leftover.trace_file),
-                    'best_flow_type': leftover.best_flow_type,
-                    'bug_trace_length': leftover.bug_trace_length,
-                    'procedure': leftover.procedure,
-                    'primary_file': leftover.primary_file,
-                    'primary_line': leftover.primary_line,
-                    'dropped_reason': 'not_selected_longest_bug_trace',
-                }
-            )
-
     final_pairs: list[dict[str, Any]] = []
+    leftovers: list[dict[str, Any]] = []
     for pair in pair_candidates:
         testcase_key = pair['testcase_key']
-        pair_id = pair['pair_id']
         b2b_record: StrictTraceRecord = pair['b2b']
         counterpart_record: StrictTraceRecord = pair['counterpart']
 
         b2b_payload = load_signature_payload(b2b_record.trace_file)
         counterpart_payload = load_signature_payload(counterpart_record.trace_file)
+        pair_id = make_pair_id(
+            testcase_key=testcase_key,
+            b2b_record=b2b_record,
+            b2b_payload=b2b_payload,
+            counterpart_record=counterpart_record,
+            counterpart_payload=counterpart_payload,
+        )
 
         testcase_dir = paired_signatures_dir / testcase_key
         testcase_dir.mkdir(parents=True, exist_ok=True)
@@ -299,6 +291,21 @@ def build_paired_trace_dataset(
                 },
             }
         )
+
+        for leftover in pair['leftovers']:
+            leftovers.append(
+                {
+                    'testcase_key': testcase_key,
+                    'related_pair_id': pair_id,
+                    'trace_file': str(leftover.trace_file),
+                    'best_flow_type': leftover.best_flow_type,
+                    'bug_trace_length': leftover.bug_trace_length,
+                    'procedure': leftover.procedure,
+                    'primary_file': leftover.primary_file,
+                    'primary_line': leftover.primary_line,
+                    'dropped_reason': 'not_selected_longest_bug_trace',
+                }
+            )
 
     with pairs_jsonl.open('w', encoding='utf-8') as f:
         for record in final_pairs:
