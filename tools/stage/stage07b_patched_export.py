@@ -15,7 +15,7 @@ from shared.paths import RESULT_DIR
 from shared.pipeline_runs import find_latest_pipeline_run_dir
 from shared.signatures import load_signature_payload, stable_signature_ref, stable_trace_ref
 
-from stage.stage06_slices import process_signature_db
+from stage.stage06_slices import generate_slices
 
 DATASET_BASENAME = 'train_patched_counterparts'
 prepare_target = _fs_utils.prepare_target
@@ -436,30 +436,17 @@ def export_patched_dataset(params: PatchedDatasetExportParams) -> PatchedDataset
 
     prepare_target(params.slice_output_dir, overwrite=params.overwrite)
     params.slice_output_dir.mkdir(parents=True, exist_ok=True)
-    slice_dir = params.slice_output_dir / 'slice'
-    slice_summary = process_signature_db(
+    generate_slices(
         signature_db_dir=params.signature_output_dir,
-        slice_dir=slice_dir,
+        output_dir=params.slice_output_dir,
         old_prefix=params.old_prefix,
         new_prefix=params.new_prefix,
+        overwrite=False,
+        run_dir=params.run_dir,
+        summary_metadata={'dataset_basename': DATASET_BASENAME},
     )
-    slice_summary_payload = {
-        'dataset_basename': DATASET_BASENAME,
-        'signature_db_dir': str(params.signature_output_dir),
-        'output_dir': str(params.slice_output_dir),
-        'slice_dir': str(slice_dir),
-        'run_dir': str(params.run_dir),
-        'old_prefix': params.old_prefix,
-        'new_prefix': params.new_prefix,
-        **slice_summary,
-    }
+    slice_dir = params.slice_output_dir / 'slice'
     slice_summary_json = params.slice_output_dir / 'summary.json'
-    prepare_target(slice_summary_json, overwrite=params.overwrite)
-    slice_summary_json.write_text(
-        json.dumps(slice_summary_payload, ensure_ascii=False, indent=2) + '\n',
-        encoding='utf-8',
-    )
-    print(json.dumps(slice_summary_payload, ensure_ascii=False))
 
     export_result = export_dataset(
         pairs=selected['pairs'],

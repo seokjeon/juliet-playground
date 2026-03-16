@@ -257,9 +257,22 @@ def test_export_patched_dataset_runs_selection_slice_and_export(tmp_path, monkey
             'selection_counts': {},
         }
 
-    def fake_process_signature_db(**kwargs):
+    def fake_generate_slices(**kwargs):
         captured['slice_args'] = kwargs
-        return {'signature_db_dirs_total': 0, 'total_slices': 0, 'errors': 0, 'counts': {}}
+        out = kwargs['output_dir']
+        (out / 'slice').mkdir(parents=True, exist_ok=True)
+        (out / 'summary.json').write_text('{}\n', encoding='utf-8')
+        return {
+            'dataset_basename': module.DATASET_BASENAME,
+            'signature_db_dir': str(kwargs['signature_db_dir']),
+            'output_dir': str(out),
+            'slice_dir': str(out / 'slice'),
+            'run_dir': str(kwargs['run_dir']),
+            'signature_db_dirs_total': 0,
+            'total_slices': 0,
+            'errors': 0,
+            'counts': {},
+        }
 
     def fake_export_dataset(**kwargs):
         captured['export_args'] = kwargs
@@ -277,7 +290,7 @@ def test_export_patched_dataset_runs_selection_slice_and_export(tmp_path, monkey
     monkeypatch.setattr(
         module, 'build_train_patched_counterparts', fake_build_train_patched_counterparts
     )
-    monkeypatch.setattr(module, 'process_signature_db', fake_process_signature_db)
+    monkeypatch.setattr(module, 'generate_slices', fake_generate_slices)
     monkeypatch.setattr(module, 'export_dataset', fake_export_dataset)
 
     result = module.export_patched_dataset(
@@ -300,6 +313,10 @@ def test_export_patched_dataset_runs_selection_slice_and_export(tmp_path, monkey
     assert captured['build_args']['pair_dir'] == pair_dir
     assert captured['build_args']['dataset_export_dir'] == dataset_export_dir
     assert captured['slice_args']['signature_db_dir'] == tmp_path / 'sig-out'
+    assert captured['slice_args']['output_dir'] == tmp_path / 'slice-out'
+    assert captured['slice_args']['summary_metadata'] == {
+        'dataset_basename': module.DATASET_BASENAME
+    }
     assert result.summary_json == dataset_export_dir / 'train_patched_counterparts_summary.json'
     assert result.slice_summary_json == tmp_path / 'slice-out' / 'summary.json'
 

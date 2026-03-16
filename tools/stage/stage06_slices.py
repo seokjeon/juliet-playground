@@ -209,6 +209,7 @@ def generate_slices(
     new_prefix: str | None = None,
     overwrite: bool = False,
     run_dir: Path | None = None,
+    summary_metadata: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     validate_args(signature_db_dir, old_prefix=old_prefix, new_prefix=new_prefix)
     prepare_output_dir(output_dir, overwrite)
@@ -230,6 +231,10 @@ def generate_slices(
         'new_prefix': new_prefix,
         **summary,
     }
+    if summary_metadata:
+        for key, value in summary_metadata.items():
+            if key not in summary_payload:
+                summary_payload[key] = value
     summary_path = output_dir / 'summary.json'
     summary_path.write_text(
         json.dumps(summary_payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
