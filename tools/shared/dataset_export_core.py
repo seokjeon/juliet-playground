@@ -15,21 +15,7 @@ from shared.dataset_sources import (
 )
 
 
-def _validate_export_inputs(
-    *,
-    paired_signatures_dir: Path,
-    slice_dir: Path,
-    dedup_mode: str,
-    csv_path: Path,
-    normalized_slices_dir: Path,
-) -> None:
-    if not paired_signatures_dir.exists():
-        raise FileNotFoundError(f'Paired signatures dir not found: {paired_signatures_dir}')
-    if not slice_dir.exists():
-        raise FileNotFoundError(f'Slice dir not found: {slice_dir}')
-    if dedup_mode not in {'none', 'row'}:
-        raise ValueError(f'Unsupported dedup_mode: {dedup_mode}')
-
+def _prepare_export_outputs(*, csv_path: Path, normalized_slices_dir: Path) -> None:
     csv_path.parent.mkdir(parents=True, exist_ok=True)
     normalized_slices_dir.mkdir(parents=True, exist_ok=True)
 
@@ -454,13 +440,7 @@ def run_step07_export_core(
         plot_distribution,
     )
 
-    _validate_export_inputs(
-        paired_signatures_dir=paired_signatures_dir,
-        slice_dir=slice_dir,
-        dedup_mode=dedup_mode,
-        csv_path=csv_path,
-        normalized_slices_dir=normalized_slices_dir,
-    )
+    _prepare_export_outputs(csv_path=csv_path, normalized_slices_dir=normalized_slices_dir)
 
     print('Loading tokenizer for normalized slices...')
     tokenizer = load_tokenizer('microsoft/codebert-base')
