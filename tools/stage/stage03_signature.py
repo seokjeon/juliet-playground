@@ -7,20 +7,18 @@ import json
 import os
 import re
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Optional
 
 import typer
 from shared.paths import INFER_RESULTS_DIR, RESULT_DIR
+from shared.pipeline_runs import find_latest_prefixed_dir
 
 
 def find_latest_infer_run_dir(infer_results_dir: Path) -> Path:
-    candidates: Iterable[Path] = (
-        p for p in infer_results_dir.iterdir() if p.is_dir() and p.name.startswith('infer-')
-    )
-    latest = max(candidates, key=lambda p: p.stat().st_mtime, default=None)
-    if latest is None:
-        raise typer.BadParameter(f'No infer-* directory found under: {infer_results_dir}')
-    return latest
+    try:
+        return find_latest_prefixed_dir(infer_results_dir, 'infer-')
+    except FileNotFoundError as exc:
+        raise typer.BadParameter(str(exc)) from exc
 
 
 def resolve_infer_run_name(input_dir: Path, infer_run_name: Optional[str] = None) -> str:

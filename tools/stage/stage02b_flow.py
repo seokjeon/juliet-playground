@@ -701,19 +701,6 @@ def _flow_sort_key(flow_type: str) -> tuple[int, int, str]:
     return (10**9, 10**9, flow_type)
 
 
-def indent(elem: ET.Element, level: int = 0) -> None:
-    i = '\n' + level * '  '
-    if len(elem):
-        if not elem.text or not elem.text.strip():
-            elem.text = i + '  '
-        for child in elem:
-            indent(child, level + 1)
-        if not elem[-1].tail or not elem[-1].tail.strip():
-            elem[-1].tail = i
-    if level and (not elem.tail or not elem.tail.strip()):
-        elem.tail = i
-
-
 def add_flow_tags_to_testcase(
     *,
     input_xml: Path,
@@ -795,7 +782,10 @@ def add_flow_tags_to_testcase(
             testcase.append(flow_elem)
 
     output_xml.parent.mkdir(parents=True, exist_ok=True)
-    indent(root)
+    try:
+        ET.indent(tree, space='  ')
+    except AttributeError:
+        pass
     tree.write(output_xml, encoding='utf-8', xml_declaration=True)
 
     summary = {

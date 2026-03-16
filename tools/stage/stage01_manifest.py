@@ -25,11 +25,6 @@ def inc(stats: dict, key: str, n: int = 1) -> None:
     stats[key] += n
 
 
-def print_summary(output_xml: str, stats: dict) -> None:
-    payload = {'output_xml': output_xml, **stats}
-    print(json.dumps(payload, ensure_ascii=False))
-
-
 SOURCE_EXTS = {'.c', '.cpp', '.h'}
 FLAW_RE = re.compile(
     r'^\s*/\*+\s*(?!.*\bINCIDENTAL\s+FLAW\b).*\b(?:POTENTIAL\s+)?FLAW\b',
