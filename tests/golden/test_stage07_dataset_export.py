@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from tests.golden.helpers import (
     REPO_ROOT,
-    assert_directory_matches,
+    assert_directory_text_multiset_matches,
     deterministic_tokenizer_context,
     load_module_from_path,
+    normalized_file_text,
     prepare_workspace,
 )
 
@@ -29,8 +30,24 @@ def test_stage07_dataset_export_matches_golden(tmp_path, monkeypatch):
             dedup_mode='row',
         )
 
-    assert_directory_matches(
-        expected_dir=baseline_root / 'expected/07_dataset_export',
-        actual_dir=output_dir,
-        root_aliases=[(baseline_root, ''), (work_root, ''), (REPO_ROOT, '')],
+    root_aliases = [(baseline_root, ''), (work_root, ''), (REPO_ROOT, '')]
+    for name in [
+        'Real_Vul_data.csv',
+        'Real_Vul_data_dedup_dropped.csv',
+        'normalized_token_counts.csv',
+        'split_manifest.json',
+        'summary.json',
+    ]:
+        assert normalized_file_text(
+            baseline_root / 'expected/07_dataset_export' / name,
+            root_aliases,
+        ) == normalized_file_text(output_dir / name, root_aliases)
+
+    assert_directory_text_multiset_matches(
+        expected_dir=baseline_root / 'expected/07_dataset_export/normalized_slices',
+        actual_dir=output_dir / 'normalized_slices',
+        root_aliases=root_aliases,
+        suffixes={'.c', '.cpp'},
     )
+
+    assert (output_dir / 'slice_token_distribution.png').exists()

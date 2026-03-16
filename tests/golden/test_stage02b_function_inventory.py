@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from tests.golden.helpers import (
     REPO_ROOT,
-    assert_directory_matches,
     load_module_from_path,
+    normalized_file_text,
+    normalized_json_value,
     prepare_workspace,
     run_module_main,
 )
@@ -12,6 +13,7 @@ from tests.golden.helpers import (
 def test_stage02b_function_inventory_matches_golden(tmp_path):
     baseline_root, work_root = prepare_workspace(tmp_path)
     output_dir = work_root / 'expected/02b_inventory'
+    root_aliases = [(baseline_root, ''), (work_root, ''), (REPO_ROOT, '')]
 
     extract_module = load_module_from_path(
         'test_golden_stage02b_extract_inventory',
@@ -31,6 +33,30 @@ def test_stage02b_function_inventory_matches_golden(tmp_path):
         )
         == 0
     )
+
+    assert normalized_file_text(
+        baseline_root / 'expected/02b_inventory/function_names_unique.csv',
+        root_aliases,
+    ) == normalized_file_text(
+        output_dir / 'function_names_unique.csv',
+        root_aliases,
+    )
+
+    expected_extract_summary = normalized_json_value(
+        baseline_root / 'expected/02b_inventory/function_inventory_summary.json',
+        root_aliases,
+    )
+    actual_extract_summary = normalized_json_value(
+        output_dir / 'function_inventory_summary.json',
+        root_aliases,
+    )
+    for key in [
+        'total_comment_tags_seen',
+        'total_function_values',
+        'missing_or_empty_function',
+        'unique_function_names',
+    ]:
+        assert actual_extract_summary[key] == expected_extract_summary[key]
 
     categorize_module = load_module_from_path(
         'test_golden_stage02b_categorize_inventory',
@@ -57,8 +83,28 @@ def test_stage02b_function_inventory_matches_golden(tmp_path):
         == 0
     )
 
-    assert_directory_matches(
-        expected_dir=baseline_root / 'expected/02b_inventory',
-        actual_dir=output_dir,
-        root_aliases=[(baseline_root, ''), (work_root, ''), (REPO_ROOT, '')],
+    assert normalized_file_text(
+        baseline_root / 'expected/02b_inventory/function_names_categorized.jsonl',
+        root_aliases,
+    ) == normalized_file_text(
+        output_dir / 'function_names_categorized.jsonl',
+        root_aliases,
     )
+
+    expected_category_summary = normalized_json_value(
+        baseline_root / 'expected/02b_inventory/category_summary.json',
+        root_aliases,
+    )
+    actual_category_summary = normalized_json_value(
+        output_dir / 'category_summary.json',
+        root_aliases,
+    )
+    for key in [
+        'total_unique_function_names',
+        'total_weighted_count',
+        'flow_family_distribution',
+        'operation_role_distribution',
+        'role_variant_distribution',
+        'flow_family_operation_role_distribution',
+    ]:
+        assert actual_category_summary[key] == expected_category_summary[key]

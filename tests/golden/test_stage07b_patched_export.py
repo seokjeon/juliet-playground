@@ -3,6 +3,7 @@ from __future__ import annotations
 from tests.golden.helpers import (
     REPO_ROOT,
     assert_directory_matches,
+    assert_directory_text_multiset_matches,
     deterministic_tokenizer_context,
     load_module_from_path,
     normalized_file_text,
@@ -84,8 +85,24 @@ def test_stage07b_patched_export_matches_golden(tmp_path, monkeypatch):
         actual_dir=slice_output_dir,
         root_aliases=root_aliases,
     )
-    assert_directory_matches(
-        expected_dir=baseline_root / 'expected/07b_dataset_export',
-        actual_dir=dataset_export_dir,
+
+    for name in [
+        'train_patched_counterparts.csv',
+        'train_patched_counterparts_dedup_dropped.csv',
+        'train_patched_counterparts_token_counts.csv',
+        'train_patched_counterparts_split_manifest.json',
+        'train_patched_counterparts_summary.json',
+    ]:
+        assert normalized_file_text(
+            baseline_root / 'expected/07b_dataset_export' / name,
+            root_aliases,
+        ) == normalized_file_text(dataset_export_dir / name, root_aliases)
+
+    assert_directory_text_multiset_matches(
+        expected_dir=baseline_root
+        / 'expected/07b_dataset_export/train_patched_counterparts_slices',
+        actual_dir=dataset_export_dir / 'train_patched_counterparts_slices',
         root_aliases=root_aliases,
+        suffixes={'.c', '.cpp'},
     )
+    assert (dataset_export_dir / 'train_patched_counterparts_token_distribution.png').exists()

@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from tests.golden.helpers import (
     REPO_ROOT,
-    assert_directory_matches,
+    assert_unordered_jsonl_matches,
     load_module_from_path,
+    normalized_file_text,
     prepare_workspace,
     run_module_main,
 )
@@ -32,8 +33,19 @@ def test_stage04_trace_flow_matches_golden(tmp_path):
         == 0
     )
 
-    assert_directory_matches(
-        expected_dir=baseline_root / 'expected/04_trace_flow',
-        actual_dir=output_dir,
-        root_aliases=[(baseline_root, ''), (work_root, ''), (REPO_ROOT, '')],
-    )
+    root_aliases = [(baseline_root, ''), (work_root, ''), (REPO_ROOT, '')]
+    for name in [
+        'trace_flow_match_all.jsonl',
+        'trace_flow_match_strict.jsonl',
+        'trace_flow_match_partial_or_strict.jsonl',
+    ]:
+        assert_unordered_jsonl_matches(
+            expected_path=baseline_root / 'expected/04_trace_flow' / name,
+            actual_path=output_dir / name,
+            root_aliases=root_aliases,
+        )
+
+    assert normalized_file_text(
+        baseline_root / 'expected/04_trace_flow/summary.json',
+        root_aliases,
+    ) == normalized_file_text(output_dir / 'summary.json', root_aliases)

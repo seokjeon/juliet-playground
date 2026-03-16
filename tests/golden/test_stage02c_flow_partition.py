@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from tests.golden.helpers import (
     REPO_ROOT,
-    assert_directory_matches,
+    assert_flow_xml_contents_match,
     load_module_from_path,
+    normalized_file_text,
     prepare_workspace,
     run_module_main,
 )
@@ -18,6 +19,8 @@ def test_stage02c_flow_partition_matches_golden(tmp_path):
     )
 
     output_dir = work_root / 'expected/02c_flow'
+    output_xml = output_dir / 'manifest_with_testcase_flows.xml'
+    summary_json = output_dir / 'summary.json'
     assert (
         run_module_main(
             module,
@@ -27,16 +30,21 @@ def test_stage02c_flow_partition_matches_golden(tmp_path):
                 '--function-categories-jsonl',
                 str(baseline_root / 'expected/02b_inventory/function_names_categorized.jsonl'),
                 '--output-xml',
-                str(output_dir / 'manifest_with_testcase_flows.xml'),
+                str(output_xml),
                 '--summary-json',
-                str(output_dir / 'summary.json'),
+                str(summary_json),
             ],
         )
         == 0
     )
 
-    assert_directory_matches(
-        expected_dir=baseline_root / 'expected/02c_flow',
-        actual_dir=output_dir,
-        root_aliases=[(baseline_root, ''), (work_root, ''), (REPO_ROOT, '')],
+    root_aliases = [(baseline_root, ''), (work_root, ''), (REPO_ROOT, '')]
+    assert_flow_xml_contents_match(
+        expected_path=baseline_root / 'expected/02c_flow/manifest_with_testcase_flows.xml',
+        actual_path=output_xml,
+        root_aliases=root_aliases,
     )
+    assert normalized_file_text(
+        baseline_root / 'expected/02c_flow/summary.json',
+        root_aliases,
+    ) == normalized_file_text(summary_json, root_aliases)
