@@ -25,7 +25,8 @@
 - 소스 인덱싱 확장자: `.c`, `.cpp`, `.h`
 - 실제 주석 스캔/함수 파싱 대상: `.c`, `.cpp` (`.h`는 스킵)
 - tree-sitter 파서 로드 실패 또는 파일 파싱 실패 시 해당 파일은 `parse_failed_files`로 집계하고 스킵합니다.
-- 파일 매핑 키는 manifest의 `file@path`(파일명)이며, 동명 파일이 여러 개면 source tree에서 먼저 발견된 1개만 사용합니다.
+- 파일 매핑은 manifest의 `file@path`(파일명)를 기준으로 해당 testcase의 CWE 디렉터리 안에서만 찾습니다.
+- `--source-root`는 `juliet-test-suite-v1.3/C` 또는 `juliet-test-suite-v1.3/C/testcases` 둘 다 사용할 수 있습니다.
 
 ## 구조
 - `scripts/scan_manifest_comments.py`: 스캔/태깅 실행

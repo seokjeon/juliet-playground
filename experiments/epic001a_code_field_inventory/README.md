@@ -28,7 +28,7 @@
   - `duplicate_key_skipped`, `flaw_records_processed`
 
 ## 매크로 치환 규칙
-- `juliet-test-suite-v1.3/C/**`에서 `#define`를 전역 수집합니다.
+- 입력 manifest에서 실제로 resolve된 Juliet source/header 파일들만 대상으로 `#define`를 수집합니다.
 - `RAND32`, `RAND64`는 항상 `rand`로 치환됩니다.
 - 매크로 body에서 replacement identifier를 추출해 함수명을 해석합니다.
 - 같은 원본 함수명에 대해 여러 replacement identifier가 발견되면
