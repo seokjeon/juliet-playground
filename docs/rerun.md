@@ -82,14 +82,6 @@ python tools/run_pipeline.py rerun-step07 \
   --only-07b
 ```
 
-### 5) Tokenize 보조 유틸리티
-
-```bash
-python tools/tokenize_slices.py \
-  --slice-dir artifacts/pipeline-runs/run-2026.03.10-00:49:21/06_slices/slice \
-  --output-dir /tmp/tokenized-slices
-```
-
 ## 운영 메모
 
 ### `stage03-signature`의 추출 대상
@@ -113,7 +105,6 @@ python tools/tokenize_slices.py \
 - `tools/run_pipeline.py stage05`
 - `tools/run_pipeline.py stage06`
 - `tools/run_pipeline.py stage07b`
-- `tools/tokenize_slices.py`
 - `tools/run_pipeline.py rerun-step07` (`--output-dir` 또는 대상 경로가 이미 있는 경우)
 
 재실행 시 기존 산출물을 교체하려면 `--overwrite`를 명시하세요.

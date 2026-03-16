@@ -18,9 +18,6 @@
   - 전체 파이프라인, stage별 실행, `rerun-step07`를 한 곳에서 실행하는 기본 entrypoint
   - 대표 subcommand: `full`, `stage03`, `stage03-signature`, `stage05`, `stage06`, `stage07`, `stage07b`, `rerun-step07`
   - `tools/stage/stage03_infer.py`, `stage05_pair_trace.py`, `stage06_slices.py`, `stage07b_patched_export.py`는 standalone CLI가 아니라 이 entrypoint가 호출하는 내부 모듈입니다.
-- `tools/tokenize_slices.py`
-  - slice 디렉터리를 독립적으로 토큰화하고 분포 plot을 생성하는 보조 스크립트
-  - 메인 파이프라인은 이 스크립트를 직접 호출하지 않고, 내부 유틸리티를 재사용합니다.
 
 ## 빠른 이동
 
