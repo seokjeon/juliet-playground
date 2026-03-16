@@ -333,31 +333,17 @@ def _build_summary_by_target(
     return compact
 
 
-def main(
-    cwes: Optional[List[int]] = typer.Argument(None),
-    global_result: bool = typer.Option(False),
-    all_cwes: bool = typer.Option(False, '--all', help='Run all CWEs in the testcase directory'),
-    files: List[str] = typer.Option(
-        [], '--files', help='Run infer for specific files (repeatable)'
-    ),
-    pulse_taint_config: Path = typer.Option(
-        Path(PULSE_TAINT_CONFIG),
-        '--pulse-taint-config',
-        help='Pulse taint config path to pass to infer',
-    ),
-    infer_results_root: Optional[Path] = typer.Option(
-        None, '--infer-results-root', help='Output root for infer-* run directories'
-    ),
-    signatures_root: Path = typer.Option(
-        Path(RESULT_DIR) / 'signatures',
-        '--signatures-root',
-        help='Output root for signature directories',
-    ),
-    summary_json: Optional[Path] = typer.Option(
-        None, '--summary-json', help='Optional JSON summary output path'
-    ),
-):
-
+def run_infer_and_signature(
+    *,
+    cwes: Optional[List[int]],
+    global_result: bool,
+    all_cwes: bool,
+    files: List[str],
+    pulse_taint_config: Path,
+    infer_results_root: Optional[Path],
+    signatures_root: Path,
+    summary_json: Optional[Path],
+) -> dict[str, object]:
     pulse_taint_config = pulse_taint_config.resolve()
     if not pulse_taint_config.exists():
         raise typer.BadParameter(f'Pulse taint config not found: {pulse_taint_config}')
@@ -438,7 +424,44 @@ def main(
             json.dumps(summary_payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
         )
 
-    print(f'Signatures generated at: {signature_output_dir}')
+    return summary_payload
+
+
+def main(
+    cwes: Optional[List[int]] = typer.Argument(None),
+    global_result: bool = typer.Option(False),
+    all_cwes: bool = typer.Option(False, '--all', help='Run all CWEs in the testcase directory'),
+    files: List[str] = typer.Option(
+        [], '--files', help='Run infer for specific files (repeatable)'
+    ),
+    pulse_taint_config: Path = typer.Option(
+        Path(PULSE_TAINT_CONFIG),
+        '--pulse-taint-config',
+        help='Pulse taint config path to pass to infer',
+    ),
+    infer_results_root: Optional[Path] = typer.Option(
+        None, '--infer-results-root', help='Output root for infer-* run directories'
+    ),
+    signatures_root: Path = typer.Option(
+        Path(RESULT_DIR) / 'signatures',
+        '--signatures-root',
+        help='Output root for signature directories',
+    ),
+    summary_json: Optional[Path] = typer.Option(
+        None, '--summary-json', help='Optional JSON summary output path'
+    ),
+):
+    summary_payload = run_infer_and_signature(
+        cwes=cwes,
+        global_result=global_result,
+        all_cwes=all_cwes,
+        files=files,
+        pulse_taint_config=pulse_taint_config,
+        infer_results_root=infer_results_root,
+        signatures_root=signatures_root,
+        summary_json=summary_json,
+    )
+    print(f'Signatures generated at: {summary_payload["signature_output_dir"]}')
     print(json.dumps(summary_payload, ensure_ascii=False))
 
 

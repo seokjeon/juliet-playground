@@ -163,27 +163,21 @@ def _parse_file(
     return function_spans, comments, False
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(
-        description='Scan manifest files and append comment_flaw/comment_fix tags.'
-    )
-    parser.add_argument('--manifest', type=Path, required=True)
-    parser.add_argument('--source-root', type=Path, required=True)
-    parser.add_argument('--output-xml', type=Path, required=True)
-    args = parser.parse_args()
-
-    if not args.manifest.exists():
-        raise FileNotFoundError(f'Manifest not found: {args.manifest}')
-    if not args.source_root.exists():
-        raise FileNotFoundError(f'Source root not found: {args.source_root}')
+def scan_manifest_comments(
+    *, manifest: Path, source_root: Path, output_xml: Path
+) -> dict[str, object]:
+    if not manifest.exists():
+        raise FileNotFoundError(f'Manifest not found: {manifest}')
+    if not source_root.exists():
+        raise FileNotFoundError(f'Source root not found: {source_root}')
 
     source_index: dict[str, Path] = {}
-    for p in args.source_root.rglob('*'):
+    for p in source_root.rglob('*'):
         if p.is_file() and p.suffix.lower() in SOURCE_EXTS and p.name not in source_index:
             source_index[p.name] = p
 
     parsers = load_parsers()
-    tree = ET.parse(args.manifest)
+    tree = ET.parse(manifest)
     root = tree.getroot()
     stats = new_stats()
 
@@ -216,14 +210,31 @@ def main() -> int:
                 {'line': str(line_no), 'code': code_text, 'function': function_name},
             )
 
-    args.output_xml.parent.mkdir(parents=True, exist_ok=True)
+    output_xml.parent.mkdir(parents=True, exist_ok=True)
     try:
         ET.indent(tree, space='  ')
     except AttributeError:
         pass
-    tree.write(args.output_xml, encoding='utf-8', xml_declaration=True)
+    tree.write(output_xml, encoding='utf-8', xml_declaration=True)
 
-    print_summary(str(args.output_xml), stats)
+    return {'output_xml': str(output_xml), **stats}
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description='Scan manifest files and append comment_flaw/comment_fix tags.'
+    )
+    parser.add_argument('--manifest', type=Path, required=True)
+    parser.add_argument('--source-root', type=Path, required=True)
+    parser.add_argument('--output-xml', type=Path, required=True)
+    args = parser.parse_args()
+
+    payload = scan_manifest_comments(
+        manifest=args.manifest,
+        source_root=args.source_root,
+        output_xml=args.output_xml,
+    )
+    print(json.dumps(payload, ensure_ascii=False))
     return 0
 
 

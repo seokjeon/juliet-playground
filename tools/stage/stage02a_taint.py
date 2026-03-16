@@ -448,39 +448,21 @@ def write_outputs(
     return function_name_counts
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(
-        description='Extract code values/frequency and build source-sink candidate call map.'
-    )
-    parser.add_argument(
-        '--input-xml',
-        type=Path,
-        default=Path(
-            'experiments/epic001_manifest_comment_scan/outputs/manifest_with_comments.xml'
-        ),
-    )
-    parser.add_argument('--source-root', type=Path, default=Path('juliet-test-suite-v1.3/C'))
-    parser.add_argument(
-        '--output-dir',
-        type=Path,
-        default=Path('experiments/epic001a_code_field_inventory/outputs'),
-    )
-    parser.add_argument(
-        '--pulse-taint-config-output',
-        type=Path,
-        default=None,
-        help=f'Optional output path (default: <output-dir>/{DEFAULT_PULSE_TAINT_CONFIG_NAME}).',
-    )
-    args = parser.parse_args()
-
-    if not args.input_xml.exists():
-        raise FileNotFoundError(f'Input XML not found: {args.input_xml}')
-    if not args.source_root.exists():
-        raise FileNotFoundError(f'Source root not found: {args.source_root}')
+def extract_unique_code_fields(
+    *,
+    input_xml: Path,
+    source_root: Path,
+    output_dir: Path,
+    pulse_taint_config_output: Path | None = None,
+) -> dict[str, object]:
+    if not input_xml.exists():
+        raise FileNotFoundError(f'Input XML not found: {input_xml}')
+    if not source_root.exists():
+        raise FileNotFoundError(f'Source root not found: {source_root}')
 
     parsers = load_parsers()
-    source_index = build_source_index(args.source_root)
-    root = ET.parse(args.input_xml).getroot()
+    source_index = build_source_index(source_root)
+    root = ET.parse(input_xml).getroot()
 
     all_comment_codes: list[str] = []
     counts: Counter[str] = Counter()
@@ -533,17 +515,17 @@ def main() -> int:
         for call in calls
         if str(call.get('name', '')).strip()
     }
-    macro_defs = _collect_macro_definitions(args.source_root)
+    macro_defs = _collect_macro_definitions(source_root)
     resolution_map = _build_resolution_map(raw_function_names, macro_defs)
     candidate_map = _apply_resolution_to_candidate_map(candidate_map_raw, resolution_map)
 
-    args.output_dir.mkdir(parents=True, exist_ok=True)
-    macro_dump_stats = _write_global_macro_dump(args.output_dir, macro_defs)
-    macro_stats = _write_macro_resolution_csv(args.output_dir, resolution_map)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    macro_dump_stats = _write_global_macro_dump(output_dir, macro_defs)
+    macro_stats = _write_macro_resolution_csv(output_dir, resolution_map)
     extra_stats = {**macro_dump_stats, **macro_stats}
 
     function_name_counts = write_outputs(
-        args.output_dir,
+        output_dir,
         all_comment_codes,
         counts,
         candidate_map,
@@ -552,33 +534,60 @@ def main() -> int:
         extra_stats,
     )
 
-    pulse_output_path = args.pulse_taint_config_output or (
-        args.output_dir / DEFAULT_PULSE_TAINT_CONFIG_NAME
-    )
+    pulse_output_path = pulse_taint_config_output or (output_dir / DEFAULT_PULSE_TAINT_CONFIG_NAME)
     pulse_stats = _write_pulse_taint_config(pulse_output_path, function_name_counts)
 
-    print(
-        json.dumps(
-            {
-                'input_xml': str(args.input_xml),
-                'source_root': str(args.source_root),
-                'output_dir': str(args.output_dir),
-                'total_code_entries': len(all_comment_codes),
-                'unique_code_entries': len(counts),
-                'max_frequency': max(counts.values()) if counts else 0,
-                'candidate_map_keys': len(candidate_map),
-                'keys_with_calls': sum(1 for v in candidate_map.values() if v),
-                'unique_function_names': len(function_name_counts),
-                'total_function_name_occurrences': sum(function_name_counts.values()),
-                'duplicate_key_skipped': duplicate_key_skipped,
-                'flaw_records_processed': flaw_records_processed,
-                'pulse_taint_config_output': str(pulse_output_path),
-                **extra_stats,
-                **pulse_stats,
-            },
-            ensure_ascii=False,
-        )
+    return {
+        'input_xml': str(input_xml),
+        'source_root': str(source_root),
+        'output_dir': str(output_dir),
+        'total_code_entries': len(all_comment_codes),
+        'unique_code_entries': len(counts),
+        'max_frequency': max(counts.values()) if counts else 0,
+        'candidate_map_keys': len(candidate_map),
+        'keys_with_calls': sum(1 for v in candidate_map.values() if v),
+        'unique_function_names': len(function_name_counts),
+        'total_function_name_occurrences': sum(function_name_counts.values()),
+        'duplicate_key_skipped': duplicate_key_skipped,
+        'flaw_records_processed': flaw_records_processed,
+        'pulse_taint_config_output': str(pulse_output_path),
+        **extra_stats,
+        **pulse_stats,
+    }
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description='Extract code values/frequency and build source-sink candidate call map.'
     )
+    parser.add_argument(
+        '--input-xml',
+        type=Path,
+        default=Path(
+            'experiments/epic001_manifest_comment_scan/outputs/manifest_with_comments.xml'
+        ),
+    )
+    parser.add_argument('--source-root', type=Path, default=Path('juliet-test-suite-v1.3/C'))
+    parser.add_argument(
+        '--output-dir',
+        type=Path,
+        default=Path('experiments/epic001a_code_field_inventory/outputs'),
+    )
+    parser.add_argument(
+        '--pulse-taint-config-output',
+        type=Path,
+        default=None,
+        help=f'Optional output path (default: <output-dir>/{DEFAULT_PULSE_TAINT_CONFIG_NAME}).',
+    )
+    args = parser.parse_args()
+
+    payload = extract_unique_code_fields(
+        input_xml=args.input_xml,
+        source_root=args.source_root,
+        output_dir=args.output_dir,
+        pulse_taint_config_output=args.pulse_taint_config_output,
+    )
+    print(json.dumps(payload, ensure_ascii=False))
     return 0
 
 

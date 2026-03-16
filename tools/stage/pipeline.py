@@ -17,10 +17,15 @@ from typing import Callable, Dict, List, Optional
 import typer
 from shared.paths import PROJECT_HOME, PULSE_TAINT_CONFIG, RESULT_DIR
 
+from stage import stage01_manifest as _stage01_manifest
+from stage import stage02a_taint as _stage02a_taint
+from stage import stage02b_flow as _stage02b_flow
+from stage import stage03_infer as _stage03_infer
 from stage import stage04_trace_flow as _trace_flow
 from stage import stage05_pair_trace as _pair_trace
 from stage import stage06_slices as _slices
 from stage import stage07_dataset_export as _dataset_export
+from stage import stage07b_patched_export as _stage07b_patched_export
 
 PrimaryDatasetExportParams = _dataset_export.PrimaryDatasetExportParams
 PrimaryDatasetExportResult = _dataset_export.PrimaryDatasetExportResult
@@ -28,6 +33,8 @@ compute_pair_split = _dataset_export.compute_pair_split
 export_dataset_from_pipeline = _dataset_export.export_dataset_from_pipeline
 export_primary_dataset = _dataset_export.export_primary_dataset
 load_pairs_jsonl = _dataset_export.load_pairs_jsonl
+PatchedDatasetExportParams = _stage07b_patched_export.PatchedDatasetExportParams
+export_patched_dataset = _stage07b_patched_export.export_patched_dataset
 
 
 @dataclass(frozen=True)
@@ -82,13 +89,6 @@ class PipelinePaths:
     train_patched_counterparts_summary_json: Path
     run_summary_path: Path
     source_testcases_root: Path
-    scan_script: Path
-    code_field_script: Path
-    function_inventory_script: Path
-    categorize_script: Path
-    flow_partition_script: Path
-    infer_script: Path
-    train_patched_counterparts_script: Path
 
     @classmethod
     def from_run_dir(cls, *, run_dir: Path, source_root: Path) -> PipelinePaths:
@@ -166,46 +166,6 @@ class PipelinePaths:
 
         source_testcases_root = source_root / 'testcases'
 
-        scan_script = (
-            Path(PROJECT_HOME)
-            / 'experiments'
-            / 'epic001_manifest_comment_scan'
-            / 'scripts'
-            / 'scan_manifest_comments.py'
-        )
-        code_field_script = (
-            Path(PROJECT_HOME)
-            / 'experiments'
-            / 'epic001a_code_field_inventory'
-            / 'scripts'
-            / 'extract_unique_code_fields.py'
-        )
-        function_inventory_script = (
-            Path(PROJECT_HOME)
-            / 'experiments'
-            / 'epic001b_function_inventory'
-            / 'scripts'
-            / 'extract_function_inventory.py'
-        )
-        categorize_script = (
-            Path(PROJECT_HOME)
-            / 'experiments'
-            / 'epic001b_function_inventory'
-            / 'scripts'
-            / 'categorize_function_names.py'
-        )
-        flow_partition_script = (
-            Path(PROJECT_HOME)
-            / 'experiments'
-            / 'epic001c_testcase_flow_partition'
-            / 'scripts'
-            / 'add_flow_tags_to_testcase.py'
-        )
-        infer_script = Path(PROJECT_HOME) / 'tools' / 'run-infer-all-juliet.py'
-        train_patched_counterparts_script = (
-            Path(PROJECT_HOME) / 'tools' / 'export_train_patched_counterparts.py'
-        )
-
         return cls(
             run_dir=run_dir,
             manifest_dir=manifest_dir,
@@ -269,13 +229,6 @@ class PipelinePaths:
             train_patched_counterparts_summary_json=train_patched_counterparts_summary_json,
             run_summary_path=run_summary_path,
             source_testcases_root=source_testcases_root,
-            scan_script=scan_script,
-            code_field_script=code_field_script,
-            function_inventory_script=function_inventory_script,
-            categorize_script=categorize_script,
-            flow_partition_script=flow_partition_script,
-            infer_script=infer_script,
-            train_patched_counterparts_script=train_patched_counterparts_script,
         )
 
 
@@ -431,20 +384,14 @@ def _select_taint_config(
 def run_step01_manifest_comment_scan(
     *, paths: PipelinePaths, manifest: Path, source_root: Path
 ) -> Dict[str, object]:
-    result = run_command(
+    result = run_internal_step(
         '01_manifest_comment_scan',
-        [
-            sys.executable,
-            str(paths.scan_script),
-            '--manifest',
-            str(manifest),
-            '--source-root',
-            str(source_root),
-            '--output-xml',
-            str(paths.manifest_with_comments_xml),
-        ],
-        cwd=Path(PROJECT_HOME),
         logs_dir=paths.logs_dir,
+        fn=lambda: _stage01_manifest.scan_manifest_comments(
+            manifest=manifest,
+            source_root=source_root,
+            output_xml=paths.manifest_with_comments_xml,
+        ),
     )
     _require_exists(
         paths.manifest_with_comments_xml,
@@ -456,79 +403,55 @@ def run_step01_manifest_comment_scan(
 def run_step02a_code_field_inventory(
     *, paths: PipelinePaths, source_root: Path
 ) -> Dict[str, object]:
-    return run_command(
+    result = run_internal_step(
         '02a_code_field_inventory',
-        [
-            sys.executable,
-            str(paths.code_field_script),
-            '--input-xml',
-            str(paths.manifest_with_comments_xml),
-            '--source-root',
-            str(source_root),
-            '--output-dir',
-            str(paths.taint_dir),
-            '--pulse-taint-config-output',
-            str(paths.generated_taint_config),
-        ],
-        cwd=Path(PROJECT_HOME),
         logs_dir=paths.logs_dir,
+        fn=lambda: _stage02a_taint.extract_unique_code_fields(
+            input_xml=paths.manifest_with_comments_xml,
+            source_root=source_root,
+            output_dir=paths.taint_dir,
+            pulse_taint_config_output=paths.generated_taint_config,
+        ),
     )
+    _require_exists(
+        paths.generated_taint_config,
+        f'Expected generated taint config not found: {paths.generated_taint_config}',
+    )
+    return result
 
 
 def run_step02b_flow_build(*, paths: PipelinePaths) -> Dict[str, Dict[str, object]]:
     results: Dict[str, Dict[str, object]] = {}
-    results['02b_function_inventory_extract'] = run_command(
+    results['02b_function_inventory_extract'] = run_internal_step(
         '02b_function_inventory_extract',
-        [
-            sys.executable,
-            str(paths.function_inventory_script),
-            '--input-xml',
-            str(paths.manifest_with_comments_xml),
-            '--output-csv',
-            str(paths.function_names_unique_csv),
-            '--output-summary',
-            str(paths.function_inventory_summary_json),
-        ],
-        cwd=Path(PROJECT_HOME),
         logs_dir=paths.logs_dir,
+        fn=lambda: _stage02b_flow.extract_function_inventory(
+            input_xml=paths.manifest_with_comments_xml,
+            output_csv=paths.function_names_unique_csv,
+            output_summary=paths.function_inventory_summary_json,
+        ),
     )
-    results['02b_function_inventory_categorize'] = run_command(
+    results['02b_function_inventory_categorize'] = run_internal_step(
         '02b_function_inventory_categorize',
-        [
-            sys.executable,
-            str(paths.categorize_script),
-            '--input-csv',
-            str(paths.function_names_unique_csv),
-            '--manifest-xml',
-            str(paths.manifest_with_comments_xml),
-            '--source-root',
-            str(paths.source_testcases_root),
-            '--output-jsonl',
-            str(paths.function_names_categorized_jsonl),
-            '--output-nested-json',
-            str(paths.grouped_family_role_json),
-            '--output-summary',
-            str(paths.category_summary_json),
-        ],
-        cwd=Path(PROJECT_HOME),
         logs_dir=paths.logs_dir,
+        fn=lambda: _stage02b_flow.categorize_function_names(
+            input_csv=paths.function_names_unique_csv,
+            manifest_xml=paths.manifest_with_comments_xml,
+            source_root=paths.source_testcases_root,
+            output_jsonl=paths.function_names_categorized_jsonl,
+            output_nested_json=paths.grouped_family_role_json,
+            output_summary=paths.category_summary_json,
+        ),
     )
-    results['02b_testcase_flow_partition'] = run_command(
+    results['02b_testcase_flow_partition'] = run_internal_step(
         '02b_testcase_flow_partition',
-        [
-            sys.executable,
-            str(paths.flow_partition_script),
-            '--input-xml',
-            str(paths.manifest_with_comments_xml),
-            '--function-categories-jsonl',
-            str(paths.function_names_categorized_jsonl),
-            '--output-xml',
-            str(paths.manifest_with_testcase_flows_xml),
-            '--summary-json',
-            str(paths.testcase_flow_summary_json),
-        ],
-        cwd=Path(PROJECT_HOME),
         logs_dir=paths.logs_dir,
+        fn=lambda: _stage02b_flow.add_flow_tags_to_testcase(
+            input_xml=paths.manifest_with_comments_xml,
+            function_categories_jsonl=paths.function_names_categorized_jsonl,
+            output_xml=paths.manifest_with_testcase_flows_xml,
+            summary_json=paths.testcase_flow_summary_json,
+        ),
     )
 
     required_outputs = [
@@ -578,31 +501,19 @@ def run_step03_infer_and_signature(
     all_cwes: bool,
     cwes: Optional[List[int]],
 ) -> tuple[Dict[str, object], Dict[str, object], Path]:
-    infer_cmd = [
-        sys.executable,
-        str(paths.infer_script),
-        '--pulse-taint-config',
-        str(selected_taint_config),
-        '--infer-results-root',
-        str(paths.infer_results_root),
-        '--signatures-root',
-        str(paths.signatures_root),
-        '--summary-json',
-        str(paths.infer_summary_json),
-    ]
-    if files:
-        for file_path in files:
-            infer_cmd.extend(['--files', file_path])
-    elif all_cwes:
-        infer_cmd.append('--all')
-    else:
-        infer_cmd[2:2] = [str(x) for x in cwes or []]
-
-    result = run_command(
+    result = run_internal_step(
         '03_infer_and_signature',
-        infer_cmd,
-        cwd=Path(PROJECT_HOME),
         logs_dir=paths.logs_dir,
+        fn=lambda: _stage03_infer.run_infer_and_signature(
+            cwes=cwes,
+            global_result=False,
+            all_cwes=all_cwes,
+            files=files,
+            pulse_taint_config=selected_taint_config,
+            infer_results_root=paths.infer_results_root,
+            signatures_root=paths.signatures_root,
+            summary_json=paths.infer_summary_json,
+        ),
     )
 
     _require_exists(
@@ -751,18 +662,24 @@ def run_step07_dataset_export(
 def run_step07b_train_patched_counterparts(
     *, paths: PipelinePaths, dedup_mode: str
 ) -> Dict[str, object]:
-    result = run_command(
+    result = run_internal_step(
         '07b_train_patched_counterparts_export',
-        [
-            sys.executable,
-            str(paths.train_patched_counterparts_script),
-            '--run-dir',
-            str(paths.run_dir),
-            '--dedup-mode',
-            dedup_mode,
-        ],
-        cwd=Path(PROJECT_HOME),
         logs_dir=paths.logs_dir,
+        fn=lambda: export_patched_dataset(
+            PatchedDatasetExportParams(
+                run_dir=paths.run_dir,
+                pair_dir=paths.pair_dir,
+                dataset_export_dir=paths.dataset_stage_dir,
+                signature_output_dir=paths.train_patched_counterparts_signatures_dir,
+                slice_output_dir=paths.train_patched_counterparts_slice_stage_dir,
+                output_pairs_jsonl=paths.train_patched_counterparts_pairs_jsonl,
+                selection_summary_json=paths.train_patched_counterparts_selection_summary_json,
+                dedup_mode=dedup_mode,
+                overwrite=False,
+                old_prefix=None,
+                new_prefix=None,
+            )
+        ).to_payload(),
     )
 
     required_outputs = [

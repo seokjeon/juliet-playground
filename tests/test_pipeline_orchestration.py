@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 from tests.helpers import REPO_ROOT, load_module_from_path, write_text
 
 
@@ -29,9 +27,72 @@ def test_pipeline_paths_from_run_dir_recreates_expected_layout(tmp_path):
         run_dir.resolve() / '07_dataset_export' / 'train_patched_counterparts_summary.json'
     )
     assert paths.source_testcases_root == source_root / 'testcases'
-    assert paths.train_patched_counterparts_script == (
-        Path(module.PROJECT_HOME) / 'tools' / 'export_train_patched_counterparts.py'
+
+
+def test_run_step01_manifest_comment_scan_uses_stage_api(tmp_path, monkeypatch):
+    module = load_module_from_path(
+        'test_pipeline_step01_helper',
+        REPO_ROOT / 'tools/stage/pipeline.py',
     )
+
+    paths = module.PipelinePaths.from_run_dir(
+        run_dir=tmp_path / 'run',
+        source_root=tmp_path / 'juliet' / 'C',
+    )
+    captured: dict[str, object] = {}
+
+    def fake_scan_manifest_comments(**kwargs):
+        captured.update(kwargs)
+        write_text(kwargs['output_xml'], '<root />\n')
+        return {'output_xml': str(kwargs['output_xml']), 'scanned_files': 1}
+
+    monkeypatch.setattr(
+        module._stage01_manifest, 'scan_manifest_comments', fake_scan_manifest_comments
+    )
+    monkeypatch.setattr(module, 'run_internal_step', lambda step_key, logs_dir, fn: fn())
+
+    result = module.run_step01_manifest_comment_scan(
+        paths=paths,
+        manifest=tmp_path / 'manifest.xml',
+        source_root=tmp_path / 'juliet' / 'C',
+    )
+
+    assert captured['output_xml'] == paths.manifest_with_comments_xml
+    assert result['output_xml'] == str(paths.manifest_with_comments_xml)
+
+
+def test_run_step02a_code_field_inventory_uses_stage_api(tmp_path, monkeypatch):
+    module = load_module_from_path(
+        'test_pipeline_step02a_helper',
+        REPO_ROOT / 'tools/stage/pipeline.py',
+    )
+
+    paths = module.PipelinePaths.from_run_dir(
+        run_dir=tmp_path / 'run',
+        source_root=tmp_path / 'juliet' / 'C',
+    )
+    captured: dict[str, object] = {}
+
+    def fake_extract_unique_code_fields(**kwargs):
+        captured.update(kwargs)
+        write_text(kwargs['pulse_taint_config_output'], '{}\n')
+        return {'pulse_taint_config_output': str(kwargs['pulse_taint_config_output'])}
+
+    monkeypatch.setattr(
+        module._stage02a_taint,
+        'extract_unique_code_fields',
+        fake_extract_unique_code_fields,
+    )
+    monkeypatch.setattr(module, 'run_internal_step', lambda step_key, logs_dir, fn: fn())
+
+    result = module.run_step02a_code_field_inventory(
+        paths=paths,
+        source_root=tmp_path / 'juliet' / 'C',
+    )
+
+    assert captured['input_xml'] == paths.manifest_with_comments_xml
+    assert captured['output_dir'] == paths.taint_dir
+    assert result['pulse_taint_config_output'] == str(paths.generated_taint_config)
 
 
 def test_run_step02b_flow_build_returns_all_step_results(tmp_path, monkeypatch):
@@ -46,28 +107,41 @@ def test_run_step02b_flow_build_returns_all_step_results(tmp_path, monkeypatch):
     )
     called: list[str] = []
 
-    def fake_run_command(step_key, cmd, cwd, logs_dir):
-        called.append(step_key)
-        outputs_by_step = {
-            '02b_function_inventory_extract': [
-                paths.function_names_unique_csv,
-                paths.function_inventory_summary_json,
-            ],
-            '02b_function_inventory_categorize': [
-                paths.function_names_categorized_jsonl,
-                paths.grouped_family_role_json,
-                paths.category_summary_json,
-            ],
-            '02b_testcase_flow_partition': [
-                paths.manifest_with_testcase_flows_xml,
-                paths.testcase_flow_summary_json,
-            ],
-        }
-        for output_path in outputs_by_step[step_key]:
-            write_text(output_path, f'{step_key}\n')
-        return {'step_key': step_key, 'command': cmd, 'cwd': str(cwd), 'stdout_log': str(logs_dir)}
+    def fake_extract_function_inventory(**kwargs):
+        called.append('02b_function_inventory_extract')
+        write_text(kwargs['output_csv'], 'function_name,count\nfoo,1\n')
+        write_text(kwargs['output_summary'], '{}\n')
+        return {'step_key': '02b_function_inventory_extract'}
 
-    monkeypatch.setattr(module, 'run_command', fake_run_command)
+    def fake_categorize_function_names(**kwargs):
+        called.append('02b_function_inventory_categorize')
+        write_text(kwargs['output_jsonl'], '{}\n')
+        write_text(kwargs['output_nested_json'], '{}\n')
+        write_text(kwargs['output_summary'], '{}\n')
+        return {'step_key': '02b_function_inventory_categorize'}
+
+    def fake_add_flow_tags_to_testcase(**kwargs):
+        called.append('02b_testcase_flow_partition')
+        write_text(kwargs['output_xml'], '<root />\n')
+        write_text(kwargs['summary_json'], '{}\n')
+        return {'step_key': '02b_testcase_flow_partition'}
+
+    monkeypatch.setattr(
+        module._stage02b_flow,
+        'extract_function_inventory',
+        fake_extract_function_inventory,
+    )
+    monkeypatch.setattr(
+        module._stage02b_flow,
+        'categorize_function_names',
+        fake_categorize_function_names,
+    )
+    monkeypatch.setattr(
+        module._stage02b_flow,
+        'add_flow_tags_to_testcase',
+        fake_add_flow_tags_to_testcase,
+    )
+    monkeypatch.setattr(module, 'run_internal_step', lambda step_key, logs_dir, fn: fn())
 
     result = module.run_step02b_flow_build(paths=paths)
 
@@ -139,3 +213,101 @@ def test_run_step07_dataset_export_uses_primary_dataset_api(tmp_path, monkeypatc
     assert params.train_ratio == 0.8
     assert params.dedup_mode == 'row'
     assert result['summary_json'] == str(paths.dataset_summary_json)
+
+
+def test_run_step03_infer_and_signature_uses_stage_api(tmp_path, monkeypatch):
+    module = load_module_from_path(
+        'test_pipeline_step03_helper',
+        REPO_ROOT / 'tools/stage/pipeline.py',
+    )
+
+    paths = module.PipelinePaths.from_run_dir(
+        run_dir=tmp_path / 'run',
+        source_root=tmp_path / 'juliet' / 'C',
+    )
+    captured: dict[str, object] = {}
+
+    def fake_run_infer_and_signature(**kwargs):
+        captured.update(kwargs)
+        write_text(
+            paths.infer_summary_json,
+            '{"signature_non_empty_dir": "%s"}\n' % (paths.signatures_root / 'sig' / 'non_empty'),
+        )
+        (paths.signatures_root / 'sig' / 'non_empty').mkdir(parents=True, exist_ok=True)
+        return {'signature_output_dir': str(paths.signatures_root / 'sig')}
+
+    monkeypatch.setattr(
+        module._stage03_infer,
+        'run_infer_and_signature',
+        fake_run_infer_and_signature,
+    )
+    monkeypatch.setattr(module, 'run_internal_step', lambda step_key, logs_dir, fn: fn())
+
+    result, infer_summary, signature_non_empty_dir = module.run_step03_infer_and_signature(
+        paths=paths,
+        selected_taint_config=tmp_path / 'config.json',
+        files=['demo.c'],
+        all_cwes=False,
+        cwes=None,
+    )
+
+    assert captured['infer_results_root'] == paths.infer_results_root
+    assert captured['signatures_root'] == paths.signatures_root
+    assert captured['summary_json'] == paths.infer_summary_json
+    assert result['signature_output_dir'] == str(paths.signatures_root / 'sig')
+    assert infer_summary['signature_non_empty_dir'] == str(
+        paths.signatures_root / 'sig' / 'non_empty'
+    )
+    assert signature_non_empty_dir == paths.signatures_root / 'sig' / 'non_empty'
+
+
+def test_run_step07b_train_patched_counterparts_uses_stage_api(tmp_path, monkeypatch):
+    module = load_module_from_path(
+        'test_pipeline_step07b_helper',
+        REPO_ROOT / 'tools/stage/pipeline.py',
+    )
+
+    paths = module.PipelinePaths.from_run_dir(
+        run_dir=tmp_path / 'run',
+        source_root=tmp_path / 'juliet' / 'C',
+    )
+    captured: dict[str, object] = {}
+
+    class FakeResult:
+        def to_payload(self):
+            return {
+                'summary_json': str(paths.train_patched_counterparts_summary_json),
+                'pairs_jsonl': str(paths.train_patched_counterparts_pairs_jsonl),
+            }
+
+    def fake_export_patched_dataset(params):
+        captured['params'] = params
+        paths.train_patched_counterparts_signatures_dir.mkdir(parents=True, exist_ok=True)
+        paths.train_patched_counterparts_slice_dir.mkdir(parents=True, exist_ok=True)
+        for output_path in [
+            paths.train_patched_counterparts_pairs_jsonl,
+            paths.train_patched_counterparts_selection_summary_json,
+            paths.train_patched_counterparts_slice_summary_json,
+            paths.train_patched_counterparts_csv,
+            paths.train_patched_counterparts_dedup_dropped_csv,
+            paths.train_patched_counterparts_token_counts_csv,
+            paths.train_patched_counterparts_token_distribution_png,
+            paths.train_patched_counterparts_split_manifest_json,
+            paths.train_patched_counterparts_summary_json,
+        ]:
+            write_text(output_path, 'ok\n')
+        paths.train_patched_counterparts_slices_dir.mkdir(parents=True, exist_ok=True)
+        return FakeResult()
+
+    monkeypatch.setattr(module, 'export_patched_dataset', fake_export_patched_dataset)
+    monkeypatch.setattr(module, 'run_internal_step', lambda step_key, logs_dir, fn: fn())
+
+    result = module.run_step07b_train_patched_counterparts(paths=paths, dedup_mode='none')
+
+    params = captured['params']
+    assert params.run_dir == paths.run_dir
+    assert params.dataset_export_dir == paths.dataset_stage_dir
+    assert params.signature_output_dir == paths.train_patched_counterparts_signatures_dir
+    assert params.slice_output_dir == paths.train_patched_counterparts_slice_stage_dir
+    assert params.dedup_mode == 'none'
+    assert result['summary_json'] == str(paths.train_patched_counterparts_summary_json)

@@ -43,13 +43,13 @@ def parse_args_extract() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main_extract() -> int:
-    args = parse_args_extract()
+def extract_function_inventory(
+    *, input_xml: Path, output_csv: Path, output_summary: Path
+) -> dict[str, object]:
+    if not input_xml.exists():
+        raise FileNotFoundError(f'Input XML not found: {input_xml}')
 
-    if not args.input_xml.exists():
-        raise FileNotFoundError(f'Input XML not found: {args.input_xml}')
-
-    root = ET.parse(args.input_xml).getroot()
+    root = ET.parse(input_xml).getroot()
     counter: Counter[str] = Counter()
 
     total_comment_tags_seen = 0
@@ -69,8 +69,8 @@ def main_extract() -> int:
 
     sorted_rows = sorted(counter.items(), key=lambda item: (-item[1], item[0]))
 
-    args.output_csv.parent.mkdir(parents=True, exist_ok=True)
-    with args.output_csv.open('w', newline='', encoding='utf-8') as f:
+    output_csv.parent.mkdir(parents=True, exist_ok=True)
+    with output_csv.open('w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
         writer.writerow(['function_name', 'count'])
         writer.writerows(sorted_rows)
@@ -85,7 +85,7 @@ def main_extract() -> int:
     )
 
     summary = {
-        'input_xml': str(args.input_xml),
+        'input_xml': str(input_xml),
         'generated_at': datetime.now(timezone.utc).isoformat(),
         'total_comment_tags_seen': total_comment_tags_seen,
         'total_function_values': total_function_values,
@@ -101,23 +101,28 @@ def main_extract() -> int:
         ],
     }
 
-    args.output_summary.parent.mkdir(parents=True, exist_ok=True)
-    with args.output_summary.open('w', encoding='utf-8') as f:
+    output_summary.parent.mkdir(parents=True, exist_ok=True)
+    with output_summary.open('w', encoding='utf-8') as f:
         json.dump(summary, f, ensure_ascii=False, indent=2)
 
-    print(
-        json.dumps(
-            {
-                'output_csv': str(args.output_csv),
-                'output_summary': str(args.output_summary),
-                'total_comment_tags_seen': total_comment_tags_seen,
-                'total_function_values': total_function_values,
-                'unique_function_names': len(unique_names),
-                'missing_or_empty_function': missing_or_empty_function,
-            },
-            ensure_ascii=False,
-        )
+    return {
+        'output_csv': str(output_csv),
+        'output_summary': str(output_summary),
+        'total_comment_tags_seen': total_comment_tags_seen,
+        'total_function_values': total_function_values,
+        'unique_function_names': len(unique_names),
+        'missing_or_empty_function': missing_or_empty_function,
+    }
+
+
+def main_extract() -> int:
+    args = parse_args_extract()
+    payload = extract_function_inventory(
+        input_xml=args.input_xml,
+        output_csv=args.output_csv,
+        output_summary=args.output_summary,
     )
+    print(json.dumps(payload, ensure_ascii=False))
     return 0
 
 
@@ -566,40 +571,72 @@ def write_summary(summary: dict[str, object], output_summary: Path) -> None:
         json.dump(summary, f, ensure_ascii=False, indent=2)
 
 
-def main_categorize() -> int:
-    args = parse_args_categorize()
-    validate_categorize_inputs(args)
+def categorize_function_names(
+    *,
+    input_csv: Path,
+    manifest_xml: Path,
+    source_root: Path,
+    output_jsonl: Path,
+    output_nested_json: Path,
+    output_summary: Path,
+) -> dict[str, object]:
+    validate_categorize_inputs(
+        argparse.Namespace(
+            input_csv=input_csv,
+            manifest_xml=manifest_xml,
+            source_root=source_root,
+        )
+    )
 
-    source_index = build_source_index(args.source_root)
-    function_files = load_function_files(args.manifest_xml)
+    source_index = build_source_index(source_root)
+    function_files = load_function_files(manifest_xml)
     file_cache: dict[Path, str] = {}
-    raw_rows = load_input_rows(args.input_csv)
+    raw_rows = load_input_rows(input_csv)
     rows = categorize_rows(raw_rows, function_files, source_index, file_cache)
-    write_jsonl(rows, args.output_jsonl)
+    write_jsonl(rows, output_jsonl)
 
     family_groups, role_groups, variant_groups, family_role_groups, family_role_variant_groups = (
         build_group_maps(rows)
     )
     nested = build_nested_output(family_groups, family_role_groups, family_role_variant_groups)
-    write_nested_json(nested, args.output_nested_json)
+    write_nested_json(nested, output_nested_json)
 
     summary = build_summary(
-        args, rows, family_groups, role_groups, variant_groups, family_role_groups
+        argparse.Namespace(
+            input_csv=input_csv,
+            manifest_xml=manifest_xml,
+            source_root=source_root,
+            output_jsonl=output_jsonl,
+            output_nested_json=output_nested_json,
+        ),
+        rows,
+        family_groups,
+        role_groups,
+        variant_groups,
+        family_role_groups,
     )
-    write_summary(summary, args.output_summary)
+    write_summary(summary, output_summary)
 
-    print(
-        json.dumps(
-            {
-                'output_jsonl': str(args.output_jsonl),
-                'output_nested_json': str(args.output_nested_json),
-                'output_summary': str(args.output_summary),
-                'total_unique_function_names': len(rows),
-                'total_weighted_count': sum(r.count for r in rows),
-            },
-            ensure_ascii=False,
-        )
+    return {
+        'output_jsonl': str(output_jsonl),
+        'output_nested_json': str(output_nested_json),
+        'output_summary': str(output_summary),
+        'total_unique_function_names': len(rows),
+        'total_weighted_count': sum(r.count for r in rows),
+    }
+
+
+def main_categorize() -> int:
+    args = parse_args_categorize()
+    payload = categorize_function_names(
+        input_csv=args.input_csv,
+        manifest_xml=args.manifest_xml,
+        source_root=args.source_root,
+        output_jsonl=args.output_jsonl,
+        output_nested_json=args.output_nested_json,
+        output_summary=args.output_summary,
     )
+    print(json.dumps(payload, ensure_ascii=False))
     return 0
 
 
@@ -679,45 +716,20 @@ def indent(elem: ET.Element, level: int = 0) -> None:
         elem.tail = i
 
 
-def main_partition() -> int:
-    parser = argparse.ArgumentParser(description='Add per-testcase flow tags (b2b/b2g/g2b).')
-    parser.add_argument(
-        '--input-xml',
-        type=Path,
-        default=Path(
-            'experiments/epic001_manifest_comment_scan/outputs/manifest_with_comments.xml'
-        ),
-    )
-    parser.add_argument(
-        '--function-categories-jsonl',
-        type=Path,
-        default=Path(
-            'experiments/epic001b_function_inventory/outputs/function_names_categorized.jsonl'
-        ),
-    )
-    parser.add_argument(
-        '--output-xml',
-        type=Path,
-        default=Path(
-            'experiments/epic001c_testcase_flow_partition/outputs/manifest_with_testcase_flows.xml'
-        ),
-    )
-    parser.add_argument(
-        '--summary-json',
-        type=Path,
-        default=Path('experiments/epic001c_testcase_flow_partition/outputs/summary.json'),
-    )
-    args = parser.parse_args()
+def add_flow_tags_to_testcase(
+    *,
+    input_xml: Path,
+    function_categories_jsonl: Path,
+    output_xml: Path,
+    summary_json: Path,
+) -> dict[str, object]:
+    if not input_xml.exists():
+        raise FileNotFoundError(f'Input XML not found: {input_xml}')
+    if not function_categories_jsonl.exists():
+        raise FileNotFoundError(f'Function categories JSONL not found: {function_categories_jsonl}')
 
-    if not args.input_xml.exists():
-        raise FileNotFoundError(f'Input XML not found: {args.input_xml}')
-    if not args.function_categories_jsonl.exists():
-        raise FileNotFoundError(
-            f'Function categories JSONL not found: {args.function_categories_jsonl}'
-        )
-
-    fn_to_flow = load_function_flow_map(args.function_categories_jsonl)
-    tree = ET.parse(args.input_xml)
+    fn_to_flow = load_function_flow_map(function_categories_jsonl)
+    tree = ET.parse(input_xml)
     root = tree.getroot()
 
     per_flow_counts = Counter()
@@ -784,14 +796,14 @@ def main_partition() -> int:
                 flow_elem.append(item)
             testcase.append(flow_elem)
 
-    args.output_xml.parent.mkdir(parents=True, exist_ok=True)
+    output_xml.parent.mkdir(parents=True, exist_ok=True)
     indent(root)
-    tree.write(args.output_xml, encoding='utf-8', xml_declaration=True)
+    tree.write(output_xml, encoding='utf-8', xml_declaration=True)
 
     summary = {
-        'input_xml': str(args.input_xml),
-        'function_categories_jsonl': str(args.function_categories_jsonl),
-        'output_xml': str(args.output_xml),
+        'input_xml': str(input_xml),
+        'function_categories_jsonl': str(function_categories_jsonl),
+        'output_xml': str(output_xml),
         'testcases': testcase_count,
         'flow_tag_item_counts': dict(
             sorted(per_flow_counts.items(), key=lambda kv: _flow_sort_key(kv[0]))
@@ -800,17 +812,51 @@ def main_partition() -> int:
         'unresolved_comment_records': unresolved_comment,
         'unresolved_flaw_records': unresolved_flaw,
     }
-    args.summary_json.parent.mkdir(parents=True, exist_ok=True)
-    args.summary_json.write_text(
+    summary_json.parent.mkdir(parents=True, exist_ok=True)
+    summary_json.write_text(
         json.dumps(summary, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
     )
-    print(json.dumps(summary, ensure_ascii=False))
+    return summary
+
+
+def main_partition() -> int:
+    parser = argparse.ArgumentParser(description='Add per-testcase flow tags (b2b/b2g/g2b).')
+    parser.add_argument(
+        '--input-xml',
+        type=Path,
+        default=Path(
+            'experiments/epic001_manifest_comment_scan/outputs/manifest_with_comments.xml'
+        ),
+    )
+    parser.add_argument(
+        '--function-categories-jsonl',
+        type=Path,
+        default=Path(
+            'experiments/epic001b_function_inventory/outputs/function_names_categorized.jsonl'
+        ),
+    )
+    parser.add_argument(
+        '--output-xml',
+        type=Path,
+        default=Path(
+            'experiments/epic001c_testcase_flow_partition/outputs/manifest_with_testcase_flows.xml'
+        ),
+    )
+    parser.add_argument(
+        '--summary-json',
+        type=Path,
+        default=Path('experiments/epic001c_testcase_flow_partition/outputs/summary.json'),
+    )
+    args = parser.parse_args()
+
+    payload = add_flow_tags_to_testcase(
+        input_xml=args.input_xml,
+        function_categories_jsonl=args.function_categories_jsonl,
+        output_xml=args.output_xml,
+        summary_json=args.summary_json,
+    )
+    print(json.dumps(payload, ensure_ascii=False))
     return 0
-
-
-extract_function_inventory = main_extract
-categorize_function_names = main_categorize
-add_flow_tags_to_testcase = main_partition
 
 
 if __name__ == '__main__':
