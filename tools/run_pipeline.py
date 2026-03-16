@@ -390,6 +390,23 @@ def _require_exists(path: Path, error_message: str) -> None:
         raise RuntimeError(error_message)
 
 
+def _require_all(required_outputs: list[tuple[Path, str]]) -> None:
+    for output_path, error_message in required_outputs:
+        _require_exists(output_path, error_message)
+
+
+def _run_checked_internal_step(
+    *,
+    step_key: str,
+    logs_dir: Path,
+    fn: Callable[[], dict[str, object]],
+    required_outputs: list[tuple[Path, str]],
+) -> dict[str, object]:
+    result = run_internal_step(step_key, logs_dir=logs_dir, fn=fn)
+    _require_all(required_outputs)
+    return result
+
+
 def _select_taint_config(
     *,
     generated_taint_config: Path,
@@ -406,20 +423,21 @@ def run_step01_manifest_comment_scan(
     manifest: Path,
     source_root: Path,
 ) -> dict[str, object]:
-    result = run_internal_step(
-        '01_manifest_comment_scan',
+    return _run_checked_internal_step(
+        step_key='01_manifest_comment_scan',
         logs_dir=paths['logs_dir'],
         fn=lambda: _stage01_manifest.scan_manifest_comments(
             manifest=manifest,
             source_root=source_root,
             output_xml=paths['manifest_with_comments_xml'],
         ),
+        required_outputs=[
+            (
+                paths['manifest_with_comments_xml'],
+                f'Expected manifest_with_comments.xml not found: {paths["manifest_with_comments_xml"]}',
+            )
+        ],
     )
-    _require_exists(
-        paths['manifest_with_comments_xml'],
-        f'Expected manifest_with_comments.xml not found: {paths["manifest_with_comments_xml"]}',
-    )
-    return result
 
 
 def run_step02a_code_field_inventory(
@@ -427,8 +445,8 @@ def run_step02a_code_field_inventory(
     paths: dict[str, Path],
     source_root: Path,
 ) -> dict[str, object]:
-    result = run_internal_step(
-        '02a_code_field_inventory',
+    return _run_checked_internal_step(
+        step_key='02a_code_field_inventory',
         logs_dir=paths['logs_dir'],
         fn=lambda: _stage02a_taint.extract_unique_code_fields(
             input_xml=paths['manifest_with_comments_xml'],
@@ -436,12 +454,13 @@ def run_step02a_code_field_inventory(
             output_dir=paths['taint_dir'],
             pulse_taint_config_output=paths['generated_taint_config'],
         ),
+        required_outputs=[
+            (
+                paths['generated_taint_config'],
+                f'Expected generated taint config not found: {paths["generated_taint_config"]}',
+            )
+        ],
     )
-    _require_exists(
-        paths['generated_taint_config'],
-        f'Expected generated taint config not found: {paths["generated_taint_config"]}',
-    )
-    return result
 
 
 def run_step02b_flow_build(*, paths: dict[str, Path]) -> dict[str, dict[str, object]]:
@@ -540,9 +559,13 @@ def run_step03_infer_and_signature(
         ),
     )
 
-    _require_exists(
-        paths['infer_summary_json'],
-        f'Infer summary JSON not found: {paths["infer_summary_json"]}',
+    _require_all(
+        [
+            (
+                paths['infer_summary_json'],
+                f'Infer summary JSON not found: {paths["infer_summary_json"]}',
+            )
+        ]
     )
     infer_summary = json.loads(paths['infer_summary_json'].read_text(encoding='utf-8'))
 
@@ -555,9 +578,13 @@ def run_step03_infer_and_signature(
             raise RuntimeError('signature_output_dir not found in infer summary')
         signature_non_empty_dir = Path(signature_output_dir) / 'non_empty'
 
-    _require_exists(
-        signature_non_empty_dir,
-        f'Signature non_empty directory not found: {signature_non_empty_dir}',
+    _require_all(
+        [
+            (
+                signature_non_empty_dir,
+                f'Signature non_empty directory not found: {signature_non_empty_dir}',
+            )
+        ]
     )
 
     return result, infer_summary, signature_non_empty_dir
@@ -568,25 +595,26 @@ def run_step04_trace_flow(
     paths: dict[str, Path],
     signature_non_empty_dir: Path,
 ) -> dict[str, object]:
-    result = run_internal_step(
-        '04_trace_flow_filter',
+    return _run_checked_internal_step(
+        step_key='04_trace_flow_filter',
         logs_dir=paths['logs_dir'],
         fn=lambda: _stage04_trace_flow.filter_traces_by_flow(
             flow_xml=paths['manifest_with_testcase_flows_xml'],
             signatures_dir=signature_non_empty_dir,
             output_dir=paths['trace_dir'],
         ),
+        required_outputs=[
+            (
+                paths['trace_strict_jsonl'],
+                f'Expected strict trace output not found: {paths["trace_strict_jsonl"]}',
+            )
+        ],
     )
-    _require_exists(
-        paths['trace_strict_jsonl'],
-        f'Expected strict trace output not found: {paths["trace_strict_jsonl"]}',
-    )
-    return result
 
 
 def run_step05_pair_trace(*, paths: dict[str, Path]) -> dict[str, object]:
-    result = run_internal_step(
-        '05_pair_trace_dataset',
+    return _run_checked_internal_step(
+        step_key='05_pair_trace_dataset',
         logs_dir=paths['logs_dir'],
         fn=lambda: _stage05_pair_trace.build_paired_trace_dataset(
             trace_jsonl=paths['trace_strict_jsonl'],
@@ -594,24 +622,23 @@ def run_step05_pair_trace(*, paths: dict[str, Path]) -> dict[str, object]:
             overwrite=False,
             run_dir=paths['run_dir'],
         ),
+        required_outputs=[
+            (paths['pairs_jsonl'], f'Expected pairs output not found: {paths["pairs_jsonl"]}'),
+            (
+                paths['paired_signatures_dir'],
+                f'Expected paired signatures dir not found: {paths["paired_signatures_dir"]}',
+            ),
+            (
+                paths['paired_trace_summary_json'],
+                f'Expected paired trace summary not found: {paths["paired_trace_summary_json"]}',
+            ),
+        ],
     )
-    _require_exists(
-        paths['pairs_jsonl'], f'Expected pairs output not found: {paths["pairs_jsonl"]}'
-    )
-    _require_exists(
-        paths['paired_signatures_dir'],
-        f'Expected paired signatures dir not found: {paths["paired_signatures_dir"]}',
-    )
-    _require_exists(
-        paths['paired_trace_summary_json'],
-        f'Expected paired trace summary not found: {paths["paired_trace_summary_json"]}',
-    )
-    return result
 
 
 def run_step06_slices(*, paths: dict[str, Path]) -> dict[str, object]:
-    result = run_internal_step(
-        '06_generate_slices',
+    return _run_checked_internal_step(
+        step_key='06_generate_slices',
         logs_dir=paths['logs_dir'],
         fn=lambda: _stage06_slices.generate_slices(
             signature_db_dir=paths['paired_signatures_dir'],
@@ -619,13 +646,14 @@ def run_step06_slices(*, paths: dict[str, Path]) -> dict[str, object]:
             overwrite=False,
             run_dir=paths['run_dir'],
         ),
+        required_outputs=[
+            (paths['slice_dir'], f'Expected slice dir not found: {paths["slice_dir"]}'),
+            (
+                paths['slice_summary_json'],
+                f'Expected slice summary not found: {paths["slice_summary_json"]}',
+            ),
+        ],
     )
-    _require_exists(paths['slice_dir'], f'Expected slice dir not found: {paths["slice_dir"]}')
-    _require_exists(
-        paths['slice_summary_json'],
-        f'Expected slice summary not found: {paths["slice_summary_json"]}',
-    )
-    return result
 
 
 def run_step07_dataset_export(
@@ -635,8 +663,8 @@ def run_step07_dataset_export(
     pair_train_ratio: float,
     dedup_mode: str,
 ) -> dict[str, object]:
-    result = run_internal_step(
-        '07_dataset_export',
+    return _run_checked_internal_step(
+        step_key='07_dataset_export',
         logs_dir=paths['logs_dir'],
         fn=lambda: export_primary_dataset(
             PrimaryDatasetExportParams(
@@ -649,44 +677,39 @@ def run_step07_dataset_export(
                 dedup_mode=dedup_mode,
             )
         ).to_payload(),
+        required_outputs=[
+            (
+                paths['normalized_slices_dir'],
+                f'Expected normalized slices dir not found: {paths["normalized_slices_dir"]}',
+            ),
+            (
+                paths['real_vul_data_csv'],
+                f'Expected Real_Vul_data.csv not found: {paths["real_vul_data_csv"]}',
+            ),
+            (
+                paths['real_vul_data_dedup_dropped_csv'],
+                'Expected Real_Vul_data dedup dropped CSV not found: '
+                f'{paths["real_vul_data_dedup_dropped_csv"]}',
+            ),
+            (
+                paths['normalized_token_counts_csv'],
+                'Expected normalized token counts CSV not found: '
+                f'{paths["normalized_token_counts_csv"]}',
+            ),
+            (
+                paths['slice_token_distribution_png'],
+                f'Expected token distribution plot not found: {paths["slice_token_distribution_png"]}',
+            ),
+            (
+                paths['dataset_split_manifest_json'],
+                f'Expected dataset split manifest not found: {paths["dataset_split_manifest_json"]}',
+            ),
+            (
+                paths['dataset_summary_json'],
+                f'Expected dataset summary JSON not found: {paths["dataset_summary_json"]}',
+            ),
+        ],
     )
-
-    required_outputs = [
-        (
-            paths['normalized_slices_dir'],
-            f'Expected normalized slices dir not found: {paths["normalized_slices_dir"]}',
-        ),
-        (
-            paths['real_vul_data_csv'],
-            f'Expected Real_Vul_data.csv not found: {paths["real_vul_data_csv"]}',
-        ),
-        (
-            paths['real_vul_data_dedup_dropped_csv'],
-            'Expected Real_Vul_data dedup dropped CSV not found: '
-            f'{paths["real_vul_data_dedup_dropped_csv"]}',
-        ),
-        (
-            paths['normalized_token_counts_csv'],
-            'Expected normalized token counts CSV not found: '
-            f'{paths["normalized_token_counts_csv"]}',
-        ),
-        (
-            paths['slice_token_distribution_png'],
-            f'Expected token distribution plot not found: {paths["slice_token_distribution_png"]}',
-        ),
-        (
-            paths['dataset_split_manifest_json'],
-            f'Expected dataset split manifest not found: {paths["dataset_split_manifest_json"]}',
-        ),
-        (
-            paths['dataset_summary_json'],
-            f'Expected dataset summary JSON not found: {paths["dataset_summary_json"]}',
-        ),
-    ]
-    for output_path, error_message in required_outputs:
-        _require_exists(output_path, error_message)
-
-    return result
 
 
 def run_step07b_train_patched_counterparts(
@@ -694,8 +717,8 @@ def run_step07b_train_patched_counterparts(
     paths: dict[str, Path],
     dedup_mode: str,
 ) -> dict[str, object]:
-    result = run_internal_step(
-        '07b_train_patched_counterparts_export',
+    return _run_checked_internal_step(
+        step_key='07b_train_patched_counterparts_export',
         logs_dir=paths['logs_dir'],
         fn=lambda: export_patched_dataset(
             PatchedDatasetExportParams(
@@ -712,74 +735,69 @@ def run_step07b_train_patched_counterparts(
                 new_prefix=None,
             )
         ).to_payload(),
+        required_outputs=[
+            (
+                paths['train_patched_counterparts_pairs_jsonl'],
+                'Expected train_patched_counterparts pairs output not found: '
+                f'{paths["train_patched_counterparts_pairs_jsonl"]}',
+            ),
+            (
+                paths['train_patched_counterparts_signatures_dir'],
+                'Expected train_patched_counterparts signatures dir not found: '
+                f'{paths["train_patched_counterparts_signatures_dir"]}',
+            ),
+            (
+                paths['train_patched_counterparts_selection_summary_json'],
+                'Expected train_patched_counterparts selection summary not found: '
+                f'{paths["train_patched_counterparts_selection_summary_json"]}',
+            ),
+            (
+                paths['train_patched_counterparts_slice_dir'],
+                'Expected train_patched_counterparts slice dir not found: '
+                f'{paths["train_patched_counterparts_slice_dir"]}',
+            ),
+            (
+                paths['train_patched_counterparts_slice_summary_json'],
+                'Expected train_patched_counterparts slice summary not found: '
+                f'{paths["train_patched_counterparts_slice_summary_json"]}',
+            ),
+            (
+                paths['train_patched_counterparts_csv'],
+                'Expected train_patched_counterparts CSV not found: '
+                f'{paths["train_patched_counterparts_csv"]}',
+            ),
+            (
+                paths['train_patched_counterparts_dedup_dropped_csv'],
+                'Expected train_patched_counterparts dedup dropped CSV not found: '
+                f'{paths["train_patched_counterparts_dedup_dropped_csv"]}',
+            ),
+            (
+                paths['train_patched_counterparts_slices_dir'],
+                'Expected train_patched_counterparts slices dir not found: '
+                f'{paths["train_patched_counterparts_slices_dir"]}',
+            ),
+            (
+                paths['train_patched_counterparts_token_counts_csv'],
+                'Expected train_patched_counterparts token counts CSV not found: '
+                f'{paths["train_patched_counterparts_token_counts_csv"]}',
+            ),
+            (
+                paths['train_patched_counterparts_token_distribution_png'],
+                'Expected train_patched_counterparts token distribution plot not found: '
+                f'{paths["train_patched_counterparts_token_distribution_png"]}',
+            ),
+            (
+                paths['train_patched_counterparts_split_manifest_json'],
+                'Expected train_patched_counterparts split manifest not found: '
+                f'{paths["train_patched_counterparts_split_manifest_json"]}',
+            ),
+            (
+                paths['train_patched_counterparts_summary_json'],
+                'Expected train_patched_counterparts summary JSON not found: '
+                f'{paths["train_patched_counterparts_summary_json"]}',
+            ),
+        ],
     )
-
-    required_outputs = [
-        (
-            paths['train_patched_counterparts_pairs_jsonl'],
-            'Expected train_patched_counterparts pairs output not found: '
-            f'{paths["train_patched_counterparts_pairs_jsonl"]}',
-        ),
-        (
-            paths['train_patched_counterparts_signatures_dir'],
-            'Expected train_patched_counterparts signatures dir not found: '
-            f'{paths["train_patched_counterparts_signatures_dir"]}',
-        ),
-        (
-            paths['train_patched_counterparts_selection_summary_json'],
-            'Expected train_patched_counterparts selection summary not found: '
-            f'{paths["train_patched_counterparts_selection_summary_json"]}',
-        ),
-        (
-            paths['train_patched_counterparts_slice_dir'],
-            'Expected train_patched_counterparts slice dir not found: '
-            f'{paths["train_patched_counterparts_slice_dir"]}',
-        ),
-        (
-            paths['train_patched_counterparts_slice_summary_json'],
-            'Expected train_patched_counterparts slice summary not found: '
-            f'{paths["train_patched_counterparts_slice_summary_json"]}',
-        ),
-        (
-            paths['train_patched_counterparts_csv'],
-            'Expected train_patched_counterparts CSV not found: '
-            f'{paths["train_patched_counterparts_csv"]}',
-        ),
-        (
-            paths['train_patched_counterparts_dedup_dropped_csv'],
-            'Expected train_patched_counterparts dedup dropped CSV not found: '
-            f'{paths["train_patched_counterparts_dedup_dropped_csv"]}',
-        ),
-        (
-            paths['train_patched_counterparts_slices_dir'],
-            'Expected train_patched_counterparts slices dir not found: '
-            f'{paths["train_patched_counterparts_slices_dir"]}',
-        ),
-        (
-            paths['train_patched_counterparts_token_counts_csv'],
-            'Expected train_patched_counterparts token counts CSV not found: '
-            f'{paths["train_patched_counterparts_token_counts_csv"]}',
-        ),
-        (
-            paths['train_patched_counterparts_token_distribution_png'],
-            'Expected train_patched_counterparts token distribution plot not found: '
-            f'{paths["train_patched_counterparts_token_distribution_png"]}',
-        ),
-        (
-            paths['train_patched_counterparts_split_manifest_json'],
-            'Expected train_patched_counterparts split manifest not found: '
-            f'{paths["train_patched_counterparts_split_manifest_json"]}',
-        ),
-        (
-            paths['train_patched_counterparts_summary_json'],
-            'Expected train_patched_counterparts summary JSON not found: '
-            f'{paths["train_patched_counterparts_summary_json"]}',
-        ),
-    ]
-    for output_path, error_message in required_outputs:
-        _require_exists(output_path, error_message)
-
-    return result
 
 
 def _build_run_summary_payload(

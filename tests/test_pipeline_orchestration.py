@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from tests.helpers import REPO_ROOT, load_module_from_path, write_text
 
 
@@ -312,3 +314,36 @@ def test_run_step07b_train_patched_counterparts_uses_stage_api(tmp_path, monkeyp
     assert params.slice_output_dir == paths['train_patched_counterparts_slice_stage_dir']
     assert params.dedup_mode == 'none'
     assert result['summary_json'] == str(paths['train_patched_counterparts_summary_json'])
+
+
+def test_run_checked_internal_step_validates_required_outputs(tmp_path, monkeypatch):
+    module = load_module_from_path(
+        'test_pipeline_checked_step_helper',
+        REPO_ROOT / 'tools/run_pipeline.py',
+    )
+
+    output_path = tmp_path / 'out.txt'
+
+    monkeypatch.setattr(
+        module,
+        'run_internal_step',
+        lambda step_key, logs_dir, fn: fn(),
+    )
+    write_text(output_path, 'ok\n')
+
+    result = module._run_checked_internal_step(
+        step_key='demo',
+        logs_dir=tmp_path / 'logs',
+        fn=lambda: {'status': 'ok'},
+        required_outputs=[(output_path, 'missing output')],
+    )
+    assert result == {'status': 'ok'}
+    output_path.unlink()
+
+    with pytest.raises(RuntimeError, match='missing output'):
+        module._run_checked_internal_step(
+            step_key='demo',
+            logs_dir=tmp_path / 'logs',
+            fn=lambda: {'status': 'ok'},
+            required_outputs=[(output_path, 'missing output')],
+        )
