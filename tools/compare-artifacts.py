@@ -9,6 +9,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from shared.artifact_layout import (
+    TRAIN_PATCHED_COUNTERPARTS_BASENAME,
+    build_dataset_export_paths,
+    build_pair_trace_paths,
+    build_patched_pairing_paths,
+)
 from shared.jsonio import load_json, load_jsonl
 
 VOLATILE_KEYS = {
@@ -103,12 +109,13 @@ def detect_artifact_kind(path: Path) -> str:
     path = path.resolve()
     if not path.exists() or not path.is_dir():
         raise FileNotFoundError(f'Artifact path not found or not a directory: {path}')
+    primary_dataset_paths = build_dataset_export_paths(path)
     if (path / 'run_summary.json').exists():
         return 'pipeline_run'
     if (
-        (path / 'summary.json').exists()
-        and (path / 'split_manifest.json').exists()
-        and (path / 'Real_Vul_data.csv').exists()
+        primary_dataset_paths['summary_json'].exists()
+        and primary_dataset_paths['split_manifest_json'].exists()
+        and primary_dataset_paths['csv_path'].exists()
     ):
         return 'dataset_export'
     raise ValueError(
@@ -327,87 +334,71 @@ def report_leftovers_diff(reporter: Reporter, before_path: Path, after_path: Pat
 
 def compare_dataset_export(before_dir: Path, after_dir: Path, reporter: Reporter) -> None:
     reporter.section('Dataset Export')
-    report_json_diff(
-        reporter, 'summary.json', before_dir / 'summary.json', after_dir / 'summary.json'
-    )
-    report_json_diff(
-        reporter,
-        'split_manifest.json',
-        before_dir / 'split_manifest.json',
-        after_dir / 'split_manifest.json',
-    )
-    report_keyed_csv_diff(
-        reporter,
-        'Real_Vul_data.csv',
-        before_dir / 'Real_Vul_data.csv',
-        after_dir / 'Real_Vul_data.csv',
-        make_real_vul_key,
-    )
-    report_keyed_csv_diff(
-        reporter,
-        'Real_Vul_data_dedup_dropped.csv',
-        before_dir / 'Real_Vul_data_dedup_dropped.csv',
-        after_dir / 'Real_Vul_data_dedup_dropped.csv',
-        make_dedup_key,
-    )
-    report_keyed_csv_diff(
-        reporter,
-        'normalized_token_counts.csv',
-        before_dir / 'normalized_token_counts.csv',
-        after_dir / 'normalized_token_counts.csv',
-        make_token_count_key,
-    )
-    report_json_diff(
-        reporter,
-        'train_patched_counterparts_summary.json',
-        before_dir / 'train_patched_counterparts_summary.json',
-        after_dir / 'train_patched_counterparts_summary.json',
-    )
-    report_json_diff(
-        reporter,
-        'train_patched_counterparts_split_manifest.json',
-        before_dir / 'train_patched_counterparts_split_manifest.json',
-        after_dir / 'train_patched_counterparts_split_manifest.json',
-    )
-    report_keyed_csv_diff(
-        reporter,
-        'train_patched_counterparts.csv',
-        before_dir / 'train_patched_counterparts.csv',
-        after_dir / 'train_patched_counterparts.csv',
-        make_real_vul_key,
-    )
-    report_keyed_csv_diff(
-        reporter,
-        'train_patched_counterparts_dedup_dropped.csv',
-        before_dir / 'train_patched_counterparts_dedup_dropped.csv',
-        after_dir / 'train_patched_counterparts_dedup_dropped.csv',
-        make_dedup_key,
-    )
-    report_keyed_csv_diff(
-        reporter,
-        'train_patched_counterparts_token_counts.csv',
-        before_dir / 'train_patched_counterparts_token_counts.csv',
-        after_dir / 'train_patched_counterparts_token_counts.csv',
-        make_token_count_key,
-    )
+    for dataset_basename in (None, TRAIN_PATCHED_COUNTERPARTS_BASENAME):
+        before_paths = build_dataset_export_paths(before_dir, dataset_basename)
+        after_paths = build_dataset_export_paths(after_dir, dataset_basename)
+        report_json_diff(
+            reporter,
+            before_paths['summary_json'].name,
+            before_paths['summary_json'],
+            after_paths['summary_json'],
+        )
+        report_json_diff(
+            reporter,
+            before_paths['split_manifest_json'].name,
+            before_paths['split_manifest_json'],
+            after_paths['split_manifest_json'],
+        )
+        report_keyed_csv_diff(
+            reporter,
+            before_paths['csv_path'].name,
+            before_paths['csv_path'],
+            after_paths['csv_path'],
+            make_real_vul_key,
+        )
+        report_keyed_csv_diff(
+            reporter,
+            before_paths['dedup_dropped_csv'].name,
+            before_paths['dedup_dropped_csv'],
+            after_paths['dedup_dropped_csv'],
+            make_dedup_key,
+        )
+        report_keyed_csv_diff(
+            reporter,
+            before_paths['token_counts_csv'].name,
+            before_paths['token_counts_csv'],
+            after_paths['token_counts_csv'],
+            make_token_count_key,
+        )
 
 
 def compare_pair_trace(before_dir: Path, after_dir: Path, reporter: Reporter) -> None:
     reporter.section('Pair Trace Dataset')
+    before_paths = build_pair_trace_paths(before_dir)
+    after_paths = build_pair_trace_paths(after_dir)
+    before_patched_paths = build_patched_pairing_paths(before_dir)
+    after_patched_paths = build_patched_pairing_paths(after_dir)
     report_json_diff(
-        reporter, 'summary.json', before_dir / 'summary.json', after_dir / 'summary.json'
+        reporter,
+        before_paths['summary_json'].name,
+        before_paths['summary_json'],
+        after_paths['summary_json'],
     )
-    report_pairs_jsonl_diff(reporter, before_dir / 'pairs.jsonl', after_dir / 'pairs.jsonl')
+    report_pairs_jsonl_diff(
+        reporter,
+        before_paths['pairs_jsonl'],
+        after_paths['pairs_jsonl'],
+    )
     report_leftovers_diff(
         reporter,
-        before_dir / 'leftover_counterparts.jsonl',
-        after_dir / 'leftover_counterparts.jsonl',
+        before_paths['leftover_counterparts_jsonl'],
+        after_paths['leftover_counterparts_jsonl'],
     )
     report_json_diff(
         reporter,
-        'train_patched_counterparts_selection_summary.json',
-        before_dir / 'train_patched_counterparts_selection_summary.json',
-        after_dir / 'train_patched_counterparts_selection_summary.json',
+        before_patched_paths['selection_summary_json'].name,
+        before_patched_paths['selection_summary_json'],
+        after_patched_paths['selection_summary_json'],
     )
 
 

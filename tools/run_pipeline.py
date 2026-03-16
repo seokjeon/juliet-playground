@@ -13,6 +13,13 @@ from pathlib import Path
 from typing import Any, Callable, Optional
 
 from shared import dataset_dedup as _dataset_dedup
+from shared.artifact_layout import (
+    TRAIN_PATCHED_COUNTERPARTS_BASENAME,
+    build_dataset_export_paths,
+    build_pair_trace_paths,
+    build_patched_pairing_paths,
+    build_slice_stage_paths,
+)
 from shared.paths import PROJECT_HOME, PULSE_TAINT_CONFIG, RESULT_DIR
 from stage import stage01_manifest as _stage01_manifest
 from stage import stage02a_taint as _stage02a_taint
@@ -217,7 +224,21 @@ def _build_full_run_paths(*, run_dir: Path, source_root: Path) -> dict[str, Path
     slice_stage_dir = run_dir / '06_slices'
     dataset_stage_dir = run_dir / '07_dataset_export'
     logs_dir = run_dir / 'logs'
-    train_patched_counterparts_slice_stage_dir = slice_stage_dir / 'train_patched_counterparts'
+    train_patched_counterparts_slice_stage_dir = slice_stage_dir / TRAIN_PATCHED_COUNTERPARTS_BASENAME
+    pair_trace_paths = build_pair_trace_paths(pair_dir)
+    slice_stage_paths = build_slice_stage_paths(slice_stage_dir)
+    train_patched_slice_stage_paths = build_slice_stage_paths(
+        train_patched_counterparts_slice_stage_dir
+    )
+    primary_dataset_paths = build_dataset_export_paths(dataset_stage_dir)
+    train_patched_counterparts_paths = build_patched_pairing_paths(
+        pair_dir,
+        TRAIN_PATCHED_COUNTERPARTS_BASENAME,
+    )
+    train_patched_dataset_paths = build_dataset_export_paths(
+        dataset_stage_dir,
+        TRAIN_PATCHED_COUNTERPARTS_BASENAME,
+    )
 
     return {
         'run_dir': run_dir,
@@ -242,53 +263,48 @@ def _build_full_run_paths(*, run_dir: Path, source_root: Path) -> dict[str, Path
         'testcase_flow_summary_json': flow_dir / 'testcase_flow_summary.json',
         'infer_summary_json': run_dir / '03_infer_summary.json',
         'trace_strict_jsonl': trace_dir / 'trace_flow_match_strict.jsonl',
-        'pairs_jsonl': pair_dir / 'pairs.jsonl',
-        'leftover_counterparts_jsonl': pair_dir / 'leftover_counterparts.jsonl',
-        'paired_signatures_dir': pair_dir / 'paired_signatures',
-        'paired_trace_summary_json': pair_dir / 'summary.json',
-        'train_patched_counterparts_pairs_jsonl': (
-            pair_dir / 'train_patched_counterparts_pairs.jsonl'
-        ),
-        'train_patched_counterparts_signatures_dir': (
-            pair_dir / 'train_patched_counterparts_signatures'
-        ),
-        'train_patched_counterparts_selection_summary_json': (
-            pair_dir / 'train_patched_counterparts_selection_summary.json'
-        ),
-        'slice_dir': slice_stage_dir / 'slice',
-        'slice_summary_json': slice_stage_dir / 'summary.json',
+        'pairs_jsonl': pair_trace_paths['pairs_jsonl'],
+        'leftover_counterparts_jsonl': pair_trace_paths['leftover_counterparts_jsonl'],
+        'paired_signatures_dir': pair_trace_paths['paired_signatures_dir'],
+        'paired_trace_summary_json': pair_trace_paths['summary_json'],
+        'train_patched_counterparts_pairs_jsonl': train_patched_counterparts_paths['pairs_jsonl'],
+        'train_patched_counterparts_signatures_dir': train_patched_counterparts_paths[
+            'signatures_dir'
+        ],
+        'train_patched_counterparts_selection_summary_json': train_patched_counterparts_paths[
+            'selection_summary_json'
+        ],
+        'slice_dir': slice_stage_paths['slice_dir'],
+        'slice_summary_json': slice_stage_paths['summary_json'],
         'train_patched_counterparts_slice_stage_dir': train_patched_counterparts_slice_stage_dir,
-        'train_patched_counterparts_slice_dir': train_patched_counterparts_slice_stage_dir
-        / 'slice',
-        'train_patched_counterparts_slice_summary_json': (
-            train_patched_counterparts_slice_stage_dir / 'summary.json'
-        ),
-        'normalized_slices_dir': dataset_stage_dir / 'normalized_slices',
-        'real_vul_data_csv': dataset_stage_dir / 'Real_Vul_data.csv',
-        'real_vul_data_dedup_dropped_csv': dataset_stage_dir / 'Real_Vul_data_dedup_dropped.csv',
-        'normalized_token_counts_csv': dataset_stage_dir / 'normalized_token_counts.csv',
-        'slice_token_distribution_png': dataset_stage_dir / 'slice_token_distribution.png',
-        'dataset_split_manifest_json': dataset_stage_dir / 'split_manifest.json',
-        'dataset_summary_json': dataset_stage_dir / 'summary.json',
-        'train_patched_counterparts_csv': dataset_stage_dir / 'train_patched_counterparts.csv',
-        'train_patched_counterparts_dedup_dropped_csv': (
-            dataset_stage_dir / 'train_patched_counterparts_dedup_dropped.csv'
-        ),
-        'train_patched_counterparts_slices_dir': (
-            dataset_stage_dir / 'train_patched_counterparts_slices'
-        ),
-        'train_patched_counterparts_token_counts_csv': (
-            dataset_stage_dir / 'train_patched_counterparts_token_counts.csv'
-        ),
-        'train_patched_counterparts_token_distribution_png': (
-            dataset_stage_dir / 'train_patched_counterparts_token_distribution.png'
-        ),
-        'train_patched_counterparts_split_manifest_json': (
-            dataset_stage_dir / 'train_patched_counterparts_split_manifest.json'
-        ),
-        'train_patched_counterparts_summary_json': (
-            dataset_stage_dir / 'train_patched_counterparts_summary.json'
-        ),
+        'train_patched_counterparts_slice_dir': train_patched_slice_stage_paths['slice_dir'],
+        'train_patched_counterparts_slice_summary_json': train_patched_slice_stage_paths[
+            'summary_json'
+        ],
+        'normalized_slices_dir': primary_dataset_paths['normalized_slices_dir'],
+        'real_vul_data_csv': primary_dataset_paths['csv_path'],
+        'real_vul_data_dedup_dropped_csv': primary_dataset_paths['dedup_dropped_csv'],
+        'normalized_token_counts_csv': primary_dataset_paths['token_counts_csv'],
+        'slice_token_distribution_png': primary_dataset_paths['token_distribution_png'],
+        'dataset_split_manifest_json': primary_dataset_paths['split_manifest_json'],
+        'dataset_summary_json': primary_dataset_paths['summary_json'],
+        'train_patched_counterparts_csv': train_patched_dataset_paths['csv_path'],
+        'train_patched_counterparts_dedup_dropped_csv': train_patched_dataset_paths[
+            'dedup_dropped_csv'
+        ],
+        'train_patched_counterparts_slices_dir': train_patched_dataset_paths[
+            'normalized_slices_dir'
+        ],
+        'train_patched_counterparts_token_counts_csv': train_patched_dataset_paths[
+            'token_counts_csv'
+        ],
+        'train_patched_counterparts_token_distribution_png': train_patched_dataset_paths[
+            'token_distribution_png'
+        ],
+        'train_patched_counterparts_split_manifest_json': train_patched_dataset_paths[
+            'split_manifest_json'
+        ],
+        'train_patched_counterparts_summary_json': train_patched_dataset_paths['summary_json'],
         'run_summary_path': run_dir / 'run_summary.json',
         'source_testcases_root': source_root / 'testcases',
     }
@@ -1178,15 +1194,19 @@ def main() -> int:
             or slice_output_dir is None
         ):
             raise ValueError('Failed to resolve required stage07b paths.')
+        patched_pairing_paths = build_patched_pairing_paths(
+            pair_dir,
+            _stage07b_patched_export.DATASET_BASENAME,
+        )
         output_pairs_jsonl = (
             args.output_pairs_jsonl.resolve()
             if args.output_pairs_jsonl is not None
-            else pair_dir / f'{_stage07b_patched_export.DATASET_BASENAME}_pairs.jsonl'
+            else patched_pairing_paths['pairs_jsonl']
         )
         selection_summary_json = (
             args.selection_summary_json.resolve()
             if args.selection_summary_json is not None
-            else pair_dir / f'{_stage07b_patched_export.DATASET_BASENAME}_selection_summary.json'
+            else patched_pairing_paths['selection_summary_json']
         )
         return _print_result(
             _stage07b_patched_export.export_patched_dataset(

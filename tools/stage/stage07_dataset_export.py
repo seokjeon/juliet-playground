@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from shared.artifact_layout import build_dataset_export_paths
 from shared.dataset_export_core import run_step07_export_core, run_step07_export_wrapper
 from shared.dataset_sources import build_source_file_candidates, collect_defined_function_names
 from shared.jsonio import load_jsonl as _load_jsonl
@@ -82,6 +83,7 @@ def export_primary_dataset(params: PrimaryDatasetExportParams) -> PrimaryDataset
         raise ValueError(f'train_ratio must be between 0 and 1: {params.train_ratio}')
 
     pairs = load_pairs_jsonl(params.pairs_jsonl)
+    export_paths = build_dataset_export_paths(params.output_dir)
 
     export_result = run_step07_export_wrapper(
         pairs=pairs,
@@ -98,9 +100,9 @@ def export_primary_dataset(params: PrimaryDatasetExportParams) -> PrimaryDataset
             'paired_signatures_dir': str(params.paired_signatures_dir),
             'slice_dir': str(params.slice_dir),
             'output_dir': str(params.output_dir),
-            'real_vul_data_csv': str(params.output_dir / 'Real_Vul_data.csv'),
-            'normalized_token_counts_csv': str(params.output_dir / 'normalized_token_counts.csv'),
-            'slice_token_distribution_png': str(params.output_dir / 'slice_token_distribution.png'),
+            'real_vul_data_csv': str(export_paths['csv_path']),
+            'normalized_token_counts_csv': str(export_paths['token_counts_csv']),
+            'slice_token_distribution_png': str(export_paths['token_distribution_png']),
             'seed': params.split_seed,
             'train_ratio': params.train_ratio,
             'test_ratio': round(1.0 - params.train_ratio, 6),
