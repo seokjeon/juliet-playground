@@ -14,7 +14,6 @@ from __future__ import annotations
 import argparse
 import csv
 import json
-import shutil
 import sys
 from collections import Counter
 from pathlib import Path
@@ -24,7 +23,9 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import scienceplots  # noqa: F401
-from paths import RESULT_DIR
+from shared.fs import prepare_output_dir
+from shared.paths import RESULT_DIR
+from shared.pipeline_runs import find_latest_pipeline_run_dir
 from transformers import RobertaTokenizer
 
 ALLOWED_SUFFIXES = {'.c', '.cpp'}
@@ -74,16 +75,6 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def find_latest_pipeline_run_dir(pipeline_root: Path) -> Path:
-    if not pipeline_root.exists():
-        raise FileNotFoundError(f'Pipeline root not found: {pipeline_root}')
-    candidates = [p for p in pipeline_root.iterdir() if p.is_dir() and p.name.startswith('run-')]
-    latest = max(candidates, key=lambda p: p.stat().st_mtime, default=None)
-    if latest is None:
-        raise FileNotFoundError(f'No run-* directories found under: {pipeline_root}')
-    return latest
-
-
 def infer_run_dir_from_slice_dir(slice_dir: Path) -> Path | None:
     if slice_dir.name != 'slice':
         return None
@@ -117,20 +108,6 @@ def validate_inputs(slice_dir: Path) -> None:
         raise FileNotFoundError(f'Slice directory not found: {slice_dir}')
     if not slice_dir.is_dir():
         raise NotADirectoryError(f'Slice directory is not a directory: {slice_dir}')
-
-
-def prepare_output_dir(output_dir: Path, overwrite: bool) -> None:
-    if output_dir.exists():
-        if not overwrite:
-            existing = list(output_dir.iterdir())
-            if existing:
-                raise FileExistsError(
-                    f'Output directory already exists and is not empty: {output_dir}. '
-                    f'Re-run with --overwrite to replace its contents.'
-                )
-        else:
-            shutil.rmtree(output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
 
 
 def load_tokenizer(model_name: str) -> RobertaTokenizer:

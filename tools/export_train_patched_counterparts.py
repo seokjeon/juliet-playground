@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-from lib import patched_counterparts as _patched_counterparts
+from stage import patched_export as _patched_counterparts
 
 build_train_patched_counterparts = _patched_counterparts.build_train_patched_counterparts
 export_dataset = _patched_counterparts.export_dataset

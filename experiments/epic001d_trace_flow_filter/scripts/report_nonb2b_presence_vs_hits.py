@@ -3,20 +3,11 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
-import xml.etree.ElementTree as ET
 from collections import Counter, defaultdict
 from pathlib import Path
 
-TESTCASE_KEY_RE = re.compile(r"^(CWE\d+)_([A-Za-z0-9_]+)_(\d+)([a-zA-Z]?)$")
-
-
-def key_from_file_name(file_name: str) -> str | None:
-    m = TESTCASE_KEY_RE.match(Path(file_name).stem)
-    if not m:
-        return None
-    cwe, body, num, _ = m.groups()
-    return f"{cwe}_{num}-{cwe}_{body}"
+from shared.juliet_keys import derive_testcase_key_from_file_name as key_from_file_name
+import xml.etree.ElementTree as ET
 
 
 def load_flow_types(flow_xml: Path) -> dict[str, set[str]]:

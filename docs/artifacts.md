@@ -34,7 +34,7 @@ artifacts/
 
 `--global-result`를 주면 infer 결과 root는
 `artifacts/infer-results/` 대신 `/data/pattern/result/infer-results/`를 사용합니다.
-이 경로는 `tools/paths.py`의 환경 전제입니다.
+이 경로는 `tools/shared/paths.py`의 환경 전제입니다.
 
 ## 파이프라인 run 산출물
 

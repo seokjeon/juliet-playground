@@ -10,7 +10,7 @@ from tests.helpers import REPO_ROOT, load_module_from_path, run_module_main, wri
 def test_main_runs_both_steps_by_default_and_writes_metadata(tmp_path, monkeypatch):
     module = load_module_from_path(
         'test_rerun_step07_main_default',
-        REPO_ROOT / 'tools/lib/rerun_step07.py',
+        REPO_ROOT / 'tools/stage/rerun_step07.py',
     )
 
     run_dir = tmp_path / 'run'
@@ -52,7 +52,7 @@ def test_main_runs_both_steps_by_default_and_writes_metadata(tmp_path, monkeypat
 def test_main_only_07_skips_step07b(tmp_path, monkeypatch):
     module = load_module_from_path(
         'test_rerun_step07_only07',
-        REPO_ROOT / 'tools/lib/rerun_step07.py',
+        REPO_ROOT / 'tools/stage/rerun_step07.py',
     )
 
     run_dir = tmp_path / 'run'
@@ -81,7 +81,7 @@ def test_main_only_07_skips_step07b(tmp_path, monkeypatch):
 def test_main_only_07b_uses_existing_output_dir(tmp_path, monkeypatch):
     module = load_module_from_path(
         'test_rerun_step07_only07b',
-        REPO_ROOT / 'tools/lib/rerun_step07.py',
+        REPO_ROOT / 'tools/stage/rerun_step07.py',
     )
 
     run_dir = tmp_path / 'run'
@@ -116,7 +116,7 @@ def test_main_only_07b_uses_existing_output_dir(tmp_path, monkeypatch):
 def test_rerun_step07b_passes_prefix_args_and_overwrite_to_subprocess(tmp_path, monkeypatch):
     module = load_module_from_path(
         'test_rerun_step07_subprocess',
-        REPO_ROOT / 'tools/lib/rerun_step07.py',
+        REPO_ROOT / 'tools/stage/rerun_step07.py',
     )
 
     captured: dict[str, object] = {}
@@ -158,7 +158,7 @@ def test_rerun_step07b_passes_prefix_args_and_overwrite_to_subprocess(tmp_path, 
 def test_rerun_step07_raises_if_export_returns_non_dict(tmp_path, monkeypatch):
     module = load_module_from_path(
         'test_rerun_step07_non_dict',
-        REPO_ROOT / 'tools/lib/rerun_step07.py',
+        REPO_ROOT / 'tools/stage/rerun_step07.py',
     )
 
     run_dir = tmp_path / 'run'

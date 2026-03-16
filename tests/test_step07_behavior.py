@@ -53,7 +53,7 @@ def _make_pair(
 def test_export_dataset_from_pipeline_validates_inputs_and_options(tmp_path):
     module = load_module_from_path(
         'test_step07_behavior_validation',
-        REPO_ROOT / 'tools/lib/pipeline_run.py',
+        REPO_ROOT / 'tools/stage/pipeline.py',
     )
 
     paired_signatures_dir = tmp_path / 'paired'
@@ -102,7 +102,7 @@ def test_export_dataset_from_pipeline_validates_inputs_and_options(tmp_path):
 def test_export_dataset_from_pipeline_writes_split_and_dedup_outputs(tmp_path, monkeypatch):
     module = load_module_from_path(
         'test_step07_behavior_happy_path',
-        REPO_ROOT / 'tools/lib/pipeline_run.py',
+        REPO_ROOT / 'tools/stage/pipeline.py',
     )
 
     source_path = tmp_path / 'sources' / 'shared.c'
@@ -199,7 +199,7 @@ def test_export_dataset_from_pipeline_writes_split_and_dedup_outputs(tmp_path, m
 def test_export_dataset_from_pipeline_filters_over_limit_pairs(tmp_path, monkeypatch):
     module = load_module_from_path(
         'test_step07_behavior_over_limit',
-        REPO_ROOT / 'tools/lib/pipeline_run.py',
+        REPO_ROOT / 'tools/stage/pipeline.py',
     )
 
     root = tmp_path / 'inputs'

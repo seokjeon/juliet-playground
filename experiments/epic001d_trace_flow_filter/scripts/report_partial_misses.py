@@ -3,68 +3,11 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
-import xml.etree.ElementTree as ET
-from collections import Counter, defaultdict
-from dataclasses import dataclass
+from collections import Counter
 from pathlib import Path
 
-TESTCASE_KEY_RE = re.compile(r"^(CWE\d+)_([A-Za-z0-9_]+)_(\d+)([a-zA-Z]?)$")
-TARGET_TAGS = {"flaw", "comment_flaw", "comment_fix"}
-
-
-@dataclass(frozen=True)
-class FlowPoint:
-    file_name: str
-    line: int
-    tag: str
-
-
-def derive_testcase_key_from_file_name(file_name: str) -> str | None:
-    stem = Path(file_name).stem
-    m = TESTCASE_KEY_RE.match(stem)
-    if not m:
-        return None
-    cwe, body, num, _ = m.groups()
-    return f"{cwe}_{num}-{cwe}_{body}"
-
-
-def load_flow_index(flow_xml: Path) -> dict[str, dict[str, list[FlowPoint]]]:
-    root = ET.parse(flow_xml).getroot()
-    index: dict[str, dict[str, list[FlowPoint]]] = {}
-
-    for testcase in root.findall("testcase"):
-        per_flow: dict[str, list[FlowPoint]] = defaultdict(list)
-        keys: set[str] = set()
-
-        for file_elem in testcase.findall("file"):
-            k = derive_testcase_key_from_file_name(file_elem.attrib.get("path", ""))
-            if k:
-                keys.add(k)
-
-        for flow in testcase.findall("flow"):
-            flow_type = flow.attrib.get("type", "")
-            if not flow_type:
-                continue
-            for ch in list(flow):
-                if ch.tag not in TARGET_TAGS:
-                    continue
-                file_name = Path(ch.attrib.get("file", "")).name
-                line = int(ch.attrib.get("line", "0") or 0)
-                if not file_name or line <= 0:
-                    continue
-                per_flow[flow_type].append(FlowPoint(file_name=file_name, line=line, tag=ch.tag))
-                k = derive_testcase_key_from_file_name(file_name)
-                if k:
-                    keys.add(k)
-
-        if not per_flow:
-            continue
-        canonical = {ft: sorted(pts, key=lambda p: (p.file_name, p.line, p.tag)) for ft, pts in per_flow.items()}
-        for k in keys:
-            index.setdefault(k, canonical)
-
-    return index
+from shared.juliet_keys import derive_testcase_key_from_file_name
+from stage.trace_flow import FlowPoint, TARGET_TAGS, load_flow_index
 
 
 def load_trace_lines(trace_file: Path) -> set[tuple[str, int]]:

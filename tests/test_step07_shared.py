@@ -6,7 +6,7 @@ from tests.helpers import REPO_ROOT, load_module_from_path, write_jsonl
 def test_pipeline_run_uses_shared_step07_core(tmp_path, monkeypatch):
     module = load_module_from_path(
         'test_step07_shared_pipeline',
-        REPO_ROOT / 'tools/lib/pipeline_run.py',
+        REPO_ROOT / 'tools/stage/pipeline.py',
     )
 
     pairs_jsonl = tmp_path / 'pairs.jsonl'
@@ -60,7 +60,7 @@ def test_pipeline_run_uses_shared_step07_core(tmp_path, monkeypatch):
 def test_patched_counterparts_uses_shared_step07_core(tmp_path, monkeypatch):
     module = load_module_from_path(
         'test_step07_shared_patched',
-        REPO_ROOT / 'tools/lib/patched_counterparts.py',
+        REPO_ROOT / 'tools/stage/patched_export.py',
     )
 
     paired_signatures_dir = tmp_path / 'paired'
