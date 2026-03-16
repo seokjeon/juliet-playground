@@ -42,6 +42,18 @@ def write_json(
     path.write_text(text, encoding='utf-8')
 
 
+def write_summary_json(
+    path: Path,
+    payload: dict[str, Any],
+    *,
+    echo: bool = True,
+    ensure_ascii: bool = False,
+) -> None:
+    write_json(path, payload, ensure_ascii=ensure_ascii)
+    if echo:
+        print(json.dumps(payload, ensure_ascii=ensure_ascii))
+
+
 def write_jsonl(
     path: Path,
     rows: Iterable[dict[str, Any]],

@@ -6,7 +6,7 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 
-from shared.jsonio import write_json, write_jsonl
+from shared.jsonio import write_jsonl, write_summary_json
 from shared.juliet_keys import derive_testcase_key_from_file_name
 
 TARGET_TAGS = {'flaw', 'comment_flaw', 'comment_fix'}
@@ -223,6 +223,5 @@ def filter_traces_by_flow(
             'partial_or_strict': str(matched_path),
         },
     }
-    write_json(summary_path, summary)
-    print(json.dumps(summary, ensure_ascii=False))
+    write_summary_json(summary_path, summary)
     return summary

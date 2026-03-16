@@ -8,7 +8,7 @@ from typing import Any
 
 from shared.artifact_layout import build_pair_trace_paths
 from shared.fs import prepare_output_dir
-from shared.jsonio import write_json, write_jsonl
+from shared.jsonio import write_json, write_jsonl, write_summary_json
 from shared.pairing import (
     build_pairing_meta,
     build_signature_meta,
@@ -311,6 +311,5 @@ def build_paired_trace_dataset(
         'leftover_counterparts': len(leftovers),
         'selected_counterpart_flow_counts': dict(counterpart_flow_counter),
     }
-    write_json(summary_json, summary_payload)
-    print(json.dumps(summary_payload, ensure_ascii=False))
+    write_summary_json(summary_json, summary_payload)
     return summary_payload

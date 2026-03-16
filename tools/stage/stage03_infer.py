@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Dict, Generator, List, Optional, Set, Tuple
 
 from shared.csvio import write_csv_rows
-from shared.jsonio import write_json
+from shared.jsonio import write_summary_json
 from shared.paths import (
     GLOBAL_INFER_RESULTS_DIR,
     INFER_BIN,
@@ -427,6 +427,6 @@ def run_infer_and_signature(
 
     if summary_json is not None:
         summary_json = summary_json.resolve()
-        write_json(summary_json, summary_payload)
+        write_summary_json(summary_json, summary_payload, echo=False)
 
     return summary_payload
