@@ -277,18 +277,28 @@ def main() -> int:
         )
 
     if args.command == 'stage05':
-        trace_jsonl, output_dir, run_dir = _stage05_pair_trace.resolve_paths(args)
+        trace_jsonl, output_dir, run_dir = _stage05_pair_trace.resolve_paths(
+            trace_jsonl=args.trace_jsonl,
+            output_dir=args.output_dir,
+            pipeline_root=args.pipeline_root,
+            run_dir=args.run_dir,
+        )
         return _print_result(
             _stage05_pair_trace.build_paired_trace_dataset(
                 trace_jsonl=trace_jsonl,
                 output_dir=output_dir,
                 overwrite=args.overwrite,
-                run_dir=run_dir if args.run_dir is None else args.run_dir,
+                run_dir=run_dir,
             )
         )
 
     if args.command == 'stage06':
-        signature_db_dir, output_dir, _slice_dir, run_dir = _stage06_slices.resolve_paths(args)
+        signature_db_dir, output_dir, _slice_dir, run_dir = _stage06_slices.resolve_paths(
+            signature_db_dir=args.signature_db_dir,
+            output_dir=args.output_dir,
+            pipeline_root=args.pipeline_root,
+            run_dir=args.run_dir,
+        )
         return _print_result(
             _stage06_slices.generate_slices(
                 signature_db_dir=signature_db_dir,
@@ -296,7 +306,7 @@ def main() -> int:
                 old_prefix=args.old_prefix,
                 new_prefix=args.new_prefix,
                 overwrite=args.overwrite,
-                run_dir=run_dir if args.run_dir is None else args.run_dir,
+                run_dir=run_dir,
             )
         )
 
@@ -316,8 +326,20 @@ def main() -> int:
         )
 
     if args.command == 'stage07b':
-        paths = _stage07b_patched_export.resolve_paths(args)
-        _stage07b_patched_export.validate_args(args, paths)
+        paths = _stage07b_patched_export.resolve_paths(
+            run_dir=args.run_dir,
+            pair_dir=args.pair_dir,
+            dataset_export_dir=args.dataset_export_dir,
+            signature_output_dir=args.signature_output_dir,
+            slice_output_dir=args.slice_output_dir,
+            pipeline_root=args.pipeline_root,
+        )
+        _stage07b_patched_export.validate_args(
+            pair_dir=paths['pair_dir'],
+            dataset_export_dir=paths['dataset_export_dir'],
+            old_prefix=args.old_prefix,
+            new_prefix=args.new_prefix,
+        )
         run_dir = paths['run_dir']
         pair_dir = paths['pair_dir']
         dataset_export_dir = paths['dataset_export_dir']

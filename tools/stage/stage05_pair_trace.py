@@ -1,7 +1,5 @@
-#!/usr/bin/env python3
 from __future__ import annotations
 
-import argparse
 import hashlib
 import json
 from collections import Counter, defaultdict
@@ -36,49 +34,6 @@ class StrictTraceRecord:
     raw: dict[str, Any]
 
 
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description=(
-            'Build paired b2b/counterpart trace selections and export '
-            'signature-style testcase directories from strict trace matches.'
-        )
-    )
-    parser.add_argument(
-        '--trace-jsonl',
-        type=Path,
-        default=None,
-        help=(
-            'Path to trace_flow_match_strict.jsonl. If omitted, use the latest '
-            'pipeline run under --pipeline-root.'
-        ),
-    )
-    parser.add_argument(
-        '--output-dir',
-        type=Path,
-        default=None,
-        help=(
-            'Output directory for pairs metadata and paired_signatures/. '
-            'If omitted and --trace-jsonl points inside a pipeline run, '
-            'defaults to <run_dir>/05_pair_trace_ds.'
-        ),
-    )
-    parser.add_argument(
-        '--pipeline-root',
-        type=Path,
-        default=Path(RESULT_DIR) / 'pipeline-runs',
-        help=(
-            'Root directory containing run-* pipeline outputs. Used only when '
-            '--trace-jsonl is omitted.'
-        ),
-    )
-    parser.add_argument(
-        '--overwrite',
-        action='store_true',
-        help='Overwrite output-dir contents if they already exist',
-    )
-    return parser.parse_args()
-
-
 def infer_run_dir_from_trace_jsonl(trace_jsonl: Path) -> Path | None:
     if trace_jsonl.name != 'trace_flow_match_strict.jsonl':
         return None
@@ -87,26 +42,35 @@ def infer_run_dir_from_trace_jsonl(trace_jsonl: Path) -> Path | None:
     return trace_jsonl.parent.parent
 
 
-def resolve_paths(args: argparse.Namespace) -> tuple[Path, Path, Path | None]:
-    if args.trace_jsonl is None:
-        latest_run_dir = find_latest_pipeline_run_dir(args.pipeline_root.resolve())
-        trace_jsonl = latest_run_dir / '04_trace_flow' / 'trace_flow_match_strict.jsonl'
-        run_dir = latest_run_dir
-    else:
-        trace_jsonl = args.trace_jsonl.resolve()
-        run_dir = infer_run_dir_from_trace_jsonl(trace_jsonl)
+def resolve_paths(
+    *,
+    trace_jsonl: Path | None = None,
+    output_dir: Path | None = None,
+    pipeline_root: Path = Path(RESULT_DIR) / 'pipeline-runs',
+    run_dir: Path | None = None,
+) -> tuple[Path, Path, Path | None]:
+    resolved_run_dir = run_dir.resolve() if run_dir is not None else None
 
-    if args.output_dir is None:
-        if run_dir is None:
+    if trace_jsonl is None:
+        if resolved_run_dir is None:
+            resolved_run_dir = find_latest_pipeline_run_dir(pipeline_root.resolve())
+        resolved_trace_jsonl = resolved_run_dir / '04_trace_flow' / 'trace_flow_match_strict.jsonl'
+    else:
+        resolved_trace_jsonl = trace_jsonl.resolve()
+        if resolved_run_dir is None:
+            resolved_run_dir = infer_run_dir_from_trace_jsonl(resolved_trace_jsonl)
+
+    if output_dir is None:
+        if resolved_run_dir is None:
             raise ValueError(
                 '--output-dir is required when --trace-jsonl is outside the standard '
                 'pipeline run layout.'
             )
-        output_dir = run_dir / '05_pair_trace_ds'
+        resolved_output_dir = resolved_run_dir / '05_pair_trace_ds'
     else:
-        output_dir = args.output_dir.resolve()
+        resolved_output_dir = output_dir.resolve()
 
-    return trace_jsonl, output_dir, run_dir
+    return resolved_trace_jsonl, resolved_output_dir, resolved_run_dir
 
 
 def validate_args(trace_jsonl: Path) -> None:
@@ -363,19 +327,3 @@ def build_paired_trace_dataset(
     )
     print(json.dumps(summary_payload, ensure_ascii=False))
     return summary_payload
-
-
-def main() -> int:
-    args = parse_args()
-    trace_jsonl, output_dir, run_dir = resolve_paths(args)
-    build_paired_trace_dataset(
-        trace_jsonl=trace_jsonl,
-        output_dir=output_dir,
-        overwrite=args.overwrite,
-        run_dir=run_dir,
-    )
-    return 0
-
-
-if __name__ == '__main__':
-    raise SystemExit(main())

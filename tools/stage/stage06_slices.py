@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Signature-style JSON 디렉터리로부터 bug_trace를 읽어 슬라이스 파일을 생성한다.
 
@@ -14,7 +13,6 @@ Signature-style JSON 디렉터리로부터 bug_trace를 읽어 슬라이스 파�
 
 from __future__ import annotations
 
-import argparse
 import json
 from collections import Counter
 from pathlib import Path
@@ -28,54 +26,6 @@ from shared.traces import extract_std_bug_trace
 CPP_SUFFIXES = {'.cpp', '.cc', '.cxx', '.c++'}
 
 
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description='Generate source slices from paired signature JSON files.'
-    )
-    parser.add_argument(
-        '--signature-db-dir',
-        type=Path,
-        default=None,
-        help=(
-            'Input directory containing testcase subdirectories with JSON files. '
-            "If omitted, use the latest pipeline run's 05_pair_trace_ds/paired_signatures."
-        ),
-    )
-    parser.add_argument(
-        '--output-dir',
-        type=Path,
-        default=None,
-        help=(
-            'Output stage directory. If omitted and the input dir is inside a pipeline run, '
-            'defaults to <run_dir>/06_slices.'
-        ),
-    )
-    parser.add_argument(
-        '--pipeline-root',
-        type=Path,
-        default=Path(RESULT_DIR) / 'pipeline-runs',
-        help='Root directory containing run-* pipeline outputs.',
-    )
-    parser.add_argument(
-        '--old-prefix',
-        type=str,
-        default=None,
-        help='Optional old path prefix to rewrite inside bug_trace filenames.',
-    )
-    parser.add_argument(
-        '--new-prefix',
-        type=str,
-        default=None,
-        help='Optional new path prefix used with --old-prefix.',
-    )
-    parser.add_argument(
-        '--overwrite',
-        action='store_true',
-        help='Overwrite output-dir if it already exists and is non-empty.',
-    )
-    return parser.parse_args()
-
-
 def infer_run_dir_from_signature_db_dir(signature_db_dir: Path) -> Path | None:
     if signature_db_dir.name != 'paired_signatures':
         return None
@@ -84,33 +34,48 @@ def infer_run_dir_from_signature_db_dir(signature_db_dir: Path) -> Path | None:
     return signature_db_dir.parent.parent
 
 
-def resolve_paths(args: argparse.Namespace) -> tuple[Path, Path, Path, Path | None]:
-    if args.signature_db_dir is None:
-        run_dir = find_latest_pipeline_run_dir(args.pipeline_root.resolve())
-        signature_db_dir = run_dir / '05_pair_trace_ds' / 'paired_signatures'
-    else:
-        signature_db_dir = args.signature_db_dir.resolve()
-        run_dir = infer_run_dir_from_signature_db_dir(signature_db_dir)
+def resolve_paths(
+    *,
+    signature_db_dir: Path | None = None,
+    output_dir: Path | None = None,
+    pipeline_root: Path = Path(RESULT_DIR) / 'pipeline-runs',
+    run_dir: Path | None = None,
+) -> tuple[Path, Path, Path, Path | None]:
+    resolved_run_dir = run_dir.resolve() if run_dir is not None else None
 
-    if args.output_dir is None:
-        if run_dir is None:
+    if signature_db_dir is None:
+        if resolved_run_dir is None:
+            resolved_run_dir = find_latest_pipeline_run_dir(pipeline_root.resolve())
+        resolved_signature_db_dir = resolved_run_dir / '05_pair_trace_ds' / 'paired_signatures'
+    else:
+        resolved_signature_db_dir = signature_db_dir.resolve()
+        if resolved_run_dir is None:
+            resolved_run_dir = infer_run_dir_from_signature_db_dir(resolved_signature_db_dir)
+
+    if output_dir is None:
+        if resolved_run_dir is None:
             raise ValueError(
                 '--output-dir is required when --signature-db-dir is outside the standard pipeline layout.'
             )
-        output_dir = run_dir / '06_slices'
+        resolved_output_dir = resolved_run_dir / '06_slices'
     else:
-        output_dir = args.output_dir.resolve()
+        resolved_output_dir = output_dir.resolve()
 
-    slice_dir = output_dir / 'slice'
-    return signature_db_dir, output_dir, slice_dir, run_dir
+    slice_dir = resolved_output_dir / 'slice'
+    return resolved_signature_db_dir, resolved_output_dir, slice_dir, resolved_run_dir
 
 
-def validate_args(args: argparse.Namespace, signature_db_dir: Path) -> None:
+def validate_args(
+    signature_db_dir: Path,
+    *,
+    old_prefix: str | None = None,
+    new_prefix: str | None = None,
+) -> None:
     if not signature_db_dir.exists():
         raise FileNotFoundError(f'Signature DB dir not found: {signature_db_dir}')
     if not signature_db_dir.is_dir():
         raise NotADirectoryError(f'Signature DB dir is not a directory: {signature_db_dir}')
-    if bool(args.old_prefix) != bool(args.new_prefix):
+    if bool(old_prefix) != bool(new_prefix):
         raise ValueError('--old-prefix and --new-prefix must be provided together.')
 
 
@@ -245,9 +210,7 @@ def generate_slices(
     overwrite: bool = False,
     run_dir: Path | None = None,
 ) -> dict[str, Any]:
-    validate_args(
-        argparse.Namespace(old_prefix=old_prefix, new_prefix=new_prefix), signature_db_dir
-    )
+    validate_args(signature_db_dir, old_prefix=old_prefix, new_prefix=new_prefix)
     prepare_output_dir(output_dir, overwrite)
     slice_dir = output_dir / 'slice'
 
@@ -273,21 +236,3 @@ def generate_slices(
     )
     print(json.dumps(summary_payload, ensure_ascii=False))
     return summary_payload
-
-
-def main() -> int:
-    args = parse_args()
-    signature_db_dir, output_dir, slice_dir, run_dir = resolve_paths(args)
-    generate_slices(
-        signature_db_dir=signature_db_dir,
-        output_dir=output_dir,
-        old_prefix=args.old_prefix,
-        new_prefix=args.new_prefix,
-        overwrite=args.overwrite,
-        run_dir=run_dir,
-    )
-    return 0
-
-
-if __name__ == '__main__':
-    raise SystemExit(main())

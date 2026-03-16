@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.helpers import REPO_ROOT, load_module_from_path, run_module_main, write_json, write_jsonl
+from tests.helpers import REPO_ROOT, load_module_from_path, write_json, write_jsonl
 
 
 def test_build_train_patched_counterparts_tracks_selection_and_skip_reasons(tmp_path):
@@ -214,9 +214,9 @@ def test_export_patched_dataset_runs_selection_slice_and_export(tmp_path, monkey
     assert result.slice_summary_json == tmp_path / 'slice-out' / 'summary.json'
 
 
-def test_main_calls_export_patched_dataset(tmp_path, monkeypatch):
+def test_resolve_paths_and_validate_args_use_explicit_inputs(tmp_path):
     module = load_module_from_path(
-        'test_step07b_behavior_main',
+        'test_step07b_behavior_paths',
         REPO_ROOT / 'tools/stage/stage07b_patched_export.py',
     )
 
@@ -226,55 +226,25 @@ def test_main_calls_export_patched_dataset(tmp_path, monkeypatch):
     pair_dir.mkdir(parents=True)
     dataset_export_dir.mkdir(parents=True)
 
-    captured: dict[str, object] = {}
+    paths = module.resolve_paths(run_dir=run_dir)
 
-    def fake_export_patched_dataset(params):
-        captured['params'] = params
-        return module.PatchedDatasetExportResult(
-            dataset_basename='train_patched_counterparts',
-            run_dir=params.run_dir,
-            pair_dir=params.pair_dir,
-            dataset_export_dir=params.dataset_export_dir,
-            signature_output_dir=params.signature_output_dir,
-            slice_output_dir=params.slice_output_dir,
-            slice_dir=params.slice_output_dir / 'slice',
-            slice_summary_json=params.slice_output_dir / 'summary.json',
-            selection_summary_json=params.selection_summary_json,
-            pairs_jsonl=params.output_pairs_jsonl,
-            csv_path=params.dataset_export_dir / 'train_patched_counterparts.csv',
-            dedup_dropped_csv=params.dataset_export_dir
-            / 'train_patched_counterparts_dedup_dropped.csv',
-            normalized_slices_dir=params.dataset_export_dir / 'train_patched_counterparts_slices',
-            token_counts_csv=params.dataset_export_dir
-            / 'train_patched_counterparts_token_counts.csv',
-            token_distribution_png=params.dataset_export_dir
-            / 'train_patched_counterparts_token_distribution.png',
-            split_manifest_json=params.dataset_export_dir
-            / 'train_patched_counterparts_split_manifest.json',
-            dedup_mode=params.dedup_mode,
-            summary_json=params.dataset_export_dir / 'train_patched_counterparts_summary.json',
-        )
+    assert paths['run_dir'] == run_dir
+    assert paths['pair_dir'] == pair_dir
+    assert paths['dataset_export_dir'] == dataset_export_dir
+    assert paths['signature_output_dir'] == pair_dir / 'train_patched_counterparts_signatures'
+    assert paths['slice_output_dir'] == run_dir / '06_slices' / 'train_patched_counterparts'
 
-    monkeypatch.setattr(module, 'export_patched_dataset', fake_export_patched_dataset)
-
-    assert (
-        run_module_main(
-            module,
-            [
-                '--run-dir',
-                str(run_dir),
-                '--dedup-mode',
-                'none',
-                '--signature-output-dir',
-                str(tmp_path / 'sig-out'),
-                '--slice-output-dir',
-                str(tmp_path / 'slice-out'),
-            ],
-        )
-        == 0
+    module.validate_args(
+        pair_dir=paths['pair_dir'],
+        dataset_export_dir=paths['dataset_export_dir'],
+        old_prefix='old',
+        new_prefix='new',
     )
 
-    params = captured['params']
-    assert params.pair_dir == pair_dir
-    assert params.dataset_export_dir == dataset_export_dir
-    assert params.dedup_mode == 'none'
+    with pytest.raises(ValueError, match='--old-prefix and --new-prefix'):
+        module.validate_args(
+            pair_dir=paths['pair_dir'],
+            dataset_export_dir=paths['dataset_export_dir'],
+            old_prefix='old',
+            new_prefix=None,
+        )

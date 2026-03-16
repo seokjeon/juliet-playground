@@ -132,7 +132,7 @@ def test_stage05_subcommand_uses_wrapper_style_path_resolution(monkeypatch, tmp_
     monkeypatch.setattr(
         module._stage05_pair_trace,
         'resolve_paths',
-        lambda args: (
+        lambda *, trace_jsonl, output_dir, pipeline_root, run_dir: (
             tmp_path / 'trace.jsonl',
             tmp_path / '05_pair_trace_ds',
             tmp_path / 'run',
@@ -165,7 +165,7 @@ def test_stage06_subcommand_uses_wrapper_style_path_resolution(monkeypatch, tmp_
     monkeypatch.setattr(
         module._stage06_slices,
         'resolve_paths',
-        lambda args: (
+        lambda *, signature_db_dir, output_dir, pipeline_root, run_dir: (
             tmp_path / 'paired_signatures',
             tmp_path / '06_slices',
             tmp_path / '06_slices' / 'slice',
@@ -252,7 +252,7 @@ def test_stage07b_subcommand_delegates(monkeypatch, tmp_path):
     monkeypatch.setattr(
         module._stage07b_patched_export,
         'resolve_paths',
-        lambda args: {
+        lambda **kwargs: {
             'run_dir': tmp_path / 'run',
             'pair_dir': tmp_path / 'pair',
             'dataset_export_dir': tmp_path / 'dataset',
@@ -260,7 +260,11 @@ def test_stage07b_subcommand_delegates(monkeypatch, tmp_path):
             'slice_output_dir': tmp_path / 'slices',
         },
     )
-    monkeypatch.setattr(module._stage07b_patched_export, 'validate_args', lambda args, paths: None)
+    monkeypatch.setattr(
+        module._stage07b_patched_export,
+        'validate_args',
+        lambda **kwargs: None,
+    )
 
     result = run_module_main(
         module,

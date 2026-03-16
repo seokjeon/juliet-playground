@@ -53,7 +53,7 @@ def test_stage03_infer_and_signature_contract(monkeypatch, tmp_path):
     monkeypatch.setattr(module, 'run_infer_for_files', fake_run_infer_for_files)
     monkeypatch.setattr(module, 'generate_signatures', fake_generate_signatures)
 
-    result = module.main(
+    result = module.run_infer_and_signature(
         cwes=None,
         global_result=False,
         all_cwes=False,
@@ -64,7 +64,7 @@ def test_stage03_infer_and_signature_contract(monkeypatch, tmp_path):
         summary_json=summary_json,
     )
 
-    assert result is None
+    assert result['signature_output_dir']
     assert summary_json.exists()
 
     summary = json.loads(summary_json.read_text(encoding='utf-8'))

@@ -1,7 +1,5 @@
-#!/usr/bin/env python3
 from __future__ import annotations
 
-import argparse
 import hashlib
 import json
 from collections import Counter, defaultdict
@@ -83,139 +81,70 @@ class PatchedDatasetExportResult:
         }
 
 
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description=(
-            'Export a train-only evaluation dataset that pairs the original train_val b2b sample '
-            'with the top leftover patched counterpart for the same testcase.'
-        )
-    )
-    parser.add_argument(
-        '--run-dir',
-        type=Path,
-        default=None,
-        help='Pipeline run directory. If omitted, use the latest run under --pipeline-root.',
-    )
-    parser.add_argument(
-        '--pair-dir',
-        type=Path,
-        default=None,
-        help='Override 05_pair_trace_ds directory. If provided, infer run-dir when possible.',
-    )
-    parser.add_argument(
-        '--dataset-export-dir',
-        type=Path,
-        default=None,
-        help='Directory containing 07_dataset_export outputs; defaults to <run-dir>/07_dataset_export.',
-    )
-    parser.add_argument(
-        '--signature-output-dir',
-        type=Path,
-        default=None,
-        help='Output directory for materialized train_patched_counterparts signature JSONs.',
-    )
-    parser.add_argument(
-        '--slice-output-dir',
-        type=Path,
-        default=None,
-        help='Output stage directory for generated slices; defaults to <run-dir>/06_slices/train_patched_counterparts.',
-    )
-    parser.add_argument(
-        '--output-pairs-jsonl',
-        type=Path,
-        default=None,
-        help='Output JSONL path for selected train_patched_counterparts pairs.',
-    )
-    parser.add_argument(
-        '--selection-summary-json',
-        type=Path,
-        default=None,
-        help='Output summary JSON path for train_patched_counterparts pair selection.',
-    )
-    parser.add_argument(
-        '--pipeline-root',
-        type=Path,
-        default=Path(RESULT_DIR) / 'pipeline-runs',
-        help='Root directory containing run-* pipeline outputs.',
-    )
-    parser.add_argument(
-        '--old-prefix',
-        type=str,
-        default=None,
-        help='Optional old path prefix to rewrite inside bug_trace filenames.',
-    )
-    parser.add_argument(
-        '--new-prefix',
-        type=str,
-        default=None,
-        help='Optional new path prefix used with --old-prefix.',
-    )
-    parser.add_argument(
-        '--overwrite',
-        action='store_true',
-        help='Overwrite train_patched_counterparts outputs if they already exist.',
-    )
-    parser.add_argument(
-        '--dedup-mode',
-        choices=['none', 'row'],
-        default='row',
-        help='Normalized-slice dedup mode before export.',
-    )
-    return parser.parse_args()
-
-
 def infer_run_dir_from_pair_dir(pair_dir: Path) -> Path | None:
     if pair_dir.name != '05_pair_trace_ds':
         return None
     return pair_dir.parent
 
 
-def resolve_paths(args: argparse.Namespace) -> dict[str, Path | None]:
-    run_dir: Path | None
-    if args.run_dir is not None:
-        run_dir = args.run_dir.resolve()
-        pair_dir = (
-            args.pair_dir.resolve() if args.pair_dir is not None else run_dir / '05_pair_trace_ds'
+def resolve_paths(
+    *,
+    run_dir: Path | None = None,
+    pair_dir: Path | None = None,
+    dataset_export_dir: Path | None = None,
+    signature_output_dir: Path | None = None,
+    slice_output_dir: Path | None = None,
+    pipeline_root: Path = Path(RESULT_DIR) / 'pipeline-runs',
+) -> dict[str, Path | None]:
+    resolved_run_dir: Path | None
+    if run_dir is not None:
+        resolved_run_dir = run_dir.resolve()
+        resolved_pair_dir = (
+            pair_dir.resolve() if pair_dir is not None else resolved_run_dir / '05_pair_trace_ds'
         )
-    elif args.pair_dir is not None:
-        pair_dir = args.pair_dir.resolve()
-        run_dir = infer_run_dir_from_pair_dir(pair_dir)
+    elif pair_dir is not None:
+        resolved_pair_dir = pair_dir.resolve()
+        resolved_run_dir = infer_run_dir_from_pair_dir(resolved_pair_dir)
     else:
-        run_dir = find_latest_pipeline_run_dir(args.pipeline_root.resolve())
-        pair_dir = run_dir / '05_pair_trace_ds'
+        resolved_run_dir = find_latest_pipeline_run_dir(pipeline_root.resolve())
+        resolved_pair_dir = resolved_run_dir / '05_pair_trace_ds'
 
-    if args.dataset_export_dir is None:
-        if run_dir is None:
+    if dataset_export_dir is None:
+        if resolved_run_dir is None:
             raise ValueError('--dataset-export-dir is required when run-dir cannot be inferred.')
-        dataset_export_dir = run_dir / '07_dataset_export'
+        resolved_dataset_export_dir = resolved_run_dir / '07_dataset_export'
     else:
-        dataset_export_dir = args.dataset_export_dir.resolve()
+        resolved_dataset_export_dir = dataset_export_dir.resolve()
 
-    if args.signature_output_dir is None:
-        signature_output_dir = pair_dir / f'{DATASET_BASENAME}_signatures'
+    if signature_output_dir is None:
+        resolved_signature_output_dir = resolved_pair_dir / f'{DATASET_BASENAME}_signatures'
     else:
-        signature_output_dir = args.signature_output_dir.resolve()
+        resolved_signature_output_dir = signature_output_dir.resolve()
 
-    if args.slice_output_dir is None:
-        if run_dir is None:
+    if slice_output_dir is None:
+        if resolved_run_dir is None:
             raise ValueError('--slice-output-dir is required when run-dir cannot be inferred.')
-        slice_output_dir = run_dir / '06_slices' / DATASET_BASENAME
+        resolved_slice_output_dir = resolved_run_dir / '06_slices' / DATASET_BASENAME
     else:
-        slice_output_dir = args.slice_output_dir.resolve()
+        resolved_slice_output_dir = slice_output_dir.resolve()
 
     paths: dict[str, Path | None] = {
-        'run_dir': run_dir,
-        'pair_dir': pair_dir,
-        'dataset_export_dir': dataset_export_dir,
-        'signature_output_dir': signature_output_dir,
-        'slice_output_dir': slice_output_dir,
+        'run_dir': resolved_run_dir,
+        'pair_dir': resolved_pair_dir,
+        'dataset_export_dir': resolved_dataset_export_dir,
+        'signature_output_dir': resolved_signature_output_dir,
+        'slice_output_dir': resolved_slice_output_dir,
     }
     return paths
 
 
-def validate_args(args: argparse.Namespace, paths: dict[str, Path | None]) -> None:
-    pair_dir = paths['pair_dir']
-    dataset_export_dir = paths['dataset_export_dir']
+def validate_args(
+    *,
+    pair_dir: Path | None,
+    dataset_export_dir: Path | None,
+    old_prefix: str | None = None,
+    new_prefix: str | None = None,
+) -> None:
     if pair_dir is None or dataset_export_dir is None:
         raise ValueError('Resolved pair_dir and dataset_export_dir are required.')
     if not pair_dir.exists():
@@ -226,7 +155,7 @@ def validate_args(args: argparse.Namespace, paths: dict[str, Path | None]) -> No
         raise FileNotFoundError(f'Dataset export dir not found: {dataset_export_dir}')
     if not dataset_export_dir.is_dir():
         raise NotADirectoryError(f'Dataset export dir is not a directory: {dataset_export_dir}')
-    if bool(args.old_prefix) != bool(args.new_prefix):
+    if bool(old_prefix) != bool(new_prefix):
         raise ValueError('--old-prefix and --new-prefix must be provided together.')
 
 
@@ -591,56 +520,3 @@ def export_patched_dataset(params: PatchedDatasetExportParams) -> PatchedDataset
         dedup_mode=params.dedup_mode,
         summary_json=Path(export_result['summary_json']),
     )
-
-
-def main() -> int:
-    args = parse_args()
-    paths = resolve_paths(args)
-    validate_args(args, paths)
-
-    run_dir = paths['run_dir']
-    pair_dir = paths['pair_dir']
-    dataset_export_dir = paths['dataset_export_dir']
-    signature_output_dir = paths['signature_output_dir']
-    slice_output_dir = paths['slice_output_dir']
-    if (
-        run_dir is None
-        or pair_dir is None
-        or dataset_export_dir is None
-        or signature_output_dir is None
-        or slice_output_dir is None
-    ):
-        raise ValueError('Failed to resolve required paths.')
-
-    output_pairs_jsonl = (
-        args.output_pairs_jsonl.resolve()
-        if args.output_pairs_jsonl is not None
-        else pair_dir / f'{DATASET_BASENAME}_pairs.jsonl'
-    )
-    selection_summary_json = (
-        args.selection_summary_json.resolve()
-        if args.selection_summary_json is not None
-        else pair_dir / f'{DATASET_BASENAME}_selection_summary.json'
-    )
-
-    result = export_patched_dataset(
-        PatchedDatasetExportParams(
-            run_dir=run_dir,
-            pair_dir=pair_dir,
-            dataset_export_dir=dataset_export_dir,
-            signature_output_dir=signature_output_dir,
-            slice_output_dir=slice_output_dir,
-            output_pairs_jsonl=output_pairs_jsonl,
-            selection_summary_json=selection_summary_json,
-            dedup_mode=args.dedup_mode,
-            overwrite=args.overwrite,
-            old_prefix=args.old_prefix,
-            new_prefix=args.new_prefix,
-        )
-    )
-    print(json.dumps(result.to_payload(), ensure_ascii=False))
-    return 0
-
-
-if __name__ == '__main__':
-    raise SystemExit(main())

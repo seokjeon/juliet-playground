@@ -10,18 +10,24 @@ import time
 from pathlib import Path
 from typing import Dict, Generator, List, Optional, Set, Tuple
 
-import typer
 from shared.paths import (
     GLOBAL_INFER_RESULTS_DIR,
     INFER_BIN,
     INFER_RESULTS_DIR,
     JULIET_TESTCASE_DIR,
     PROJECT_HOME,
-    PULSE_TAINT_CONFIG,
-    RESULT_DIR,
+)
+from shared.paths import (
+    PULSE_TAINT_CONFIG as SHARED_PULSE_TAINT_CONFIG,
+)
+from shared.paths import (
+    RESULT_DIR as SHARED_RESULT_DIR,
 )
 
 from stage.stage03_signature import generate_signatures
+
+PULSE_TAINT_CONFIG = SHARED_PULSE_TAINT_CONFIG
+RESULT_DIR = SHARED_RESULT_DIR
 
 TOTAL_CORES = os.cpu_count() or 4
 # Conservative memory-aware parallelization to prevent OOM
@@ -241,28 +247,28 @@ def run_infer_for_files(
     for file_path in files:
         abs_file = os.path.abspath(file_path)
         if not os.path.isfile(abs_file):
-            raise typer.BadParameter(f'File not found: {file_path}')
+            raise FileNotFoundError(f'File not found: {file_path}')
 
         filename = os.path.basename(abs_file)
         if '.' not in filename:
-            raise typer.BadParameter(f'Invalid file (no extension): {file_path}')
+            raise ValueError(f'Invalid file (no extension): {file_path}')
 
         name_without_ext, extension = filename.rsplit('.', 1)
         if extension not in VALID_EXTENSIONS:
-            raise typer.BadParameter(f'Unsupported extension for file: {file_path}')
+            raise ValueError(f'Unsupported extension for file: {file_path}')
 
         parsed = parse_case_group(abs_file)
         if parsed is not None:
             group_key, cwe_num, filename_head, filename_num, parsed_extension = parsed
             if parsed_extension != extension:
-                raise typer.BadParameter(f'Extension mismatch in parsed testcase: {file_path}')
+                raise ValueError(f'Extension mismatch in parsed testcase: {file_path}')
             target_key = ('group',) + group_key
             if target_key in processed_targets:
                 continue
             processed_targets.add(target_key)
             target_files = find_group_files(group_key)
             if not target_files:
-                raise typer.BadParameter(f'No grouped testcase files found for: {file_path}')
+                raise ValueError(f'No grouped testcase files found for: {file_path}')
             result_name = f'{cwe_num}_{filename_num}-{filename_head}'
         else:
             target_key = ('single', abs_file)
@@ -346,7 +352,7 @@ def run_infer_and_signature(
 ) -> dict[str, object]:
     pulse_taint_config = pulse_taint_config.resolve()
     if not pulse_taint_config.exists():
-        raise typer.BadParameter(f'Pulse taint config not found: {pulse_taint_config}')
+        raise FileNotFoundError(f'Pulse taint config not found: {pulse_taint_config}')
 
     if infer_results_root is None:
         infer_results_root = (
@@ -376,7 +382,7 @@ def run_infer_and_signature(
             )
     else:
         if not cwes:
-            raise typer.BadParameter('Provide cwes, use --all, or use --files')
+            raise ValueError('Provide cwes, use --all, or use --files')
         for cwe_number in cwes:
             cwe_dir = find_cwe_dir(cwe_number)
             if cwe_dir is None:
@@ -425,45 +431,3 @@ def run_infer_and_signature(
         )
 
     return summary_payload
-
-
-def main(
-    cwes: Optional[List[int]] = typer.Argument(None),
-    global_result: bool = typer.Option(False),
-    all_cwes: bool = typer.Option(False, '--all', help='Run all CWEs in the testcase directory'),
-    files: List[str] = typer.Option(
-        [], '--files', help='Run infer for specific files (repeatable)'
-    ),
-    pulse_taint_config: Path = typer.Option(
-        Path(PULSE_TAINT_CONFIG),
-        '--pulse-taint-config',
-        help='Pulse taint config path to pass to infer',
-    ),
-    infer_results_root: Optional[Path] = typer.Option(
-        None, '--infer-results-root', help='Output root for infer-* run directories'
-    ),
-    signatures_root: Path = typer.Option(
-        Path(RESULT_DIR) / 'signatures',
-        '--signatures-root',
-        help='Output root for signature directories',
-    ),
-    summary_json: Optional[Path] = typer.Option(
-        None, '--summary-json', help='Optional JSON summary output path'
-    ),
-):
-    summary_payload = run_infer_and_signature(
-        cwes=cwes,
-        global_result=global_result,
-        all_cwes=all_cwes,
-        files=files,
-        pulse_taint_config=pulse_taint_config,
-        infer_results_root=infer_results_root,
-        signatures_root=signatures_root,
-        summary_json=summary_json,
-    )
-    print(f'Signatures generated at: {summary_payload["signature_output_dir"]}')
-    print(json.dumps(summary_payload, ensure_ascii=False))
-
-
-if __name__ == '__main__':
-    typer.run(main)
