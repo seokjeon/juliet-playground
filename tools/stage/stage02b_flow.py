@@ -373,13 +373,13 @@ def derive_source_sink_variant_from_body(
     return 'both_func_excluded'
 
 
-def validate_categorize_inputs(args: argparse.Namespace) -> None:
-    if not args.input_csv.exists():
-        raise FileNotFoundError(f'Input CSV not found: {args.input_csv}')
-    if not args.manifest_xml.exists():
-        raise FileNotFoundError(f'Manifest XML not found: {args.manifest_xml}')
-    if not args.source_root.exists():
-        raise FileNotFoundError(f'Source root not found: {args.source_root}')
+def validate_categorize_inputs(*, input_csv: Path, manifest_xml: Path, source_root: Path) -> None:
+    if not input_csv.exists():
+        raise FileNotFoundError(f'Input CSV not found: {input_csv}')
+    if not manifest_xml.exists():
+        raise FileNotFoundError(f'Manifest XML not found: {manifest_xml}')
+    if not source_root.exists():
+        raise FileNotFoundError(f'Source root not found: {source_root}')
 
 
 def load_input_rows(input_csv: Path) -> list[tuple[str, int]]:
@@ -424,10 +424,6 @@ def categorize_rows(
             )
         )
     return rows
-
-
-def write_jsonl(rows: list[FunctionRow], output_jsonl: Path) -> None:
-    _write_jsonl(output_jsonl, (row.to_jsonl_record() for row in rows))
 
 
 def build_group_maps(
@@ -524,12 +520,13 @@ def build_nested_output(
     return nested
 
 
-def write_nested_json(nested: dict[str, object], output_nested_json: Path) -> None:
-    write_json(output_nested_json, nested, trailing_newline=False)
-
-
 def build_summary(
-    args: argparse.Namespace,
+    *,
+    input_csv: Path,
+    manifest_xml: Path,
+    source_root: Path,
+    output_jsonl: Path,
+    output_nested_json: Path,
     rows: list[FunctionRow],
     family_groups: dict[str, list[FunctionRow]],
     role_groups: dict[str, list[FunctionRow]],
@@ -537,11 +534,11 @@ def build_summary(
     family_role_groups: dict[str, dict[str, list[FunctionRow]]],
 ) -> dict[str, object]:
     return {
-        'input_csv': str(args.input_csv),
-        'manifest_xml': str(args.manifest_xml),
-        'source_root': str(args.source_root),
-        'output_jsonl': str(args.output_jsonl),
-        'output_nested_json': str(args.output_nested_json),
+        'input_csv': str(input_csv),
+        'manifest_xml': str(manifest_xml),
+        'source_root': str(source_root),
+        'output_jsonl': str(output_jsonl),
+        'output_nested_json': str(output_nested_json),
         'generated_at': datetime.now(timezone.utc).isoformat(),
         'total_unique_function_names': len(rows),
         'total_weighted_count': sum(r.count for r in rows),
@@ -553,10 +550,6 @@ def build_summary(
             for ff in sorted(family_role_groups)
         },
     }
-
-
-def write_summary(summary: dict[str, object], output_summary: Path) -> None:
-    write_json(output_summary, summary, trailing_newline=False)
 
 
 def build_stage02b_output_paths(output_dir: Path) -> dict[str, Path]:
@@ -581,11 +574,9 @@ def categorize_function_names(
     output_summary: Path,
 ) -> dict[str, object]:
     validate_categorize_inputs(
-        argparse.Namespace(
-            input_csv=input_csv,
-            manifest_xml=manifest_xml,
-            source_root=source_root,
-        )
+        input_csv=input_csv,
+        manifest_xml=manifest_xml,
+        source_root=source_root,
     )
 
     source_index = build_manifest_source_index(
@@ -597,29 +588,27 @@ def categorize_function_names(
     file_cache: dict[Path, str] = {}
     raw_rows = load_input_rows(input_csv)
     rows = categorize_rows(raw_rows, function_files, source_index, file_cache)
-    write_jsonl(rows, output_jsonl)
+    _write_jsonl(output_jsonl, (row.to_jsonl_record() for row in rows))
 
     family_groups, role_groups, variant_groups, family_role_groups, family_role_variant_groups = (
         build_group_maps(rows)
     )
     nested = build_nested_output(family_groups, family_role_groups, family_role_variant_groups)
-    write_nested_json(nested, output_nested_json)
+    write_json(output_nested_json, nested, trailing_newline=False)
 
     summary = build_summary(
-        argparse.Namespace(
-            input_csv=input_csv,
-            manifest_xml=manifest_xml,
-            source_root=source_root,
-            output_jsonl=output_jsonl,
-            output_nested_json=output_nested_json,
-        ),
-        rows,
-        family_groups,
-        role_groups,
-        variant_groups,
-        family_role_groups,
+        input_csv=input_csv,
+        manifest_xml=manifest_xml,
+        source_root=source_root,
+        output_jsonl=output_jsonl,
+        output_nested_json=output_nested_json,
+        rows=rows,
+        family_groups=family_groups,
+        role_groups=role_groups,
+        variant_groups=variant_groups,
+        family_role_groups=family_role_groups,
     )
-    write_summary(summary, output_summary)
+    write_json(output_summary, summary, trailing_newline=False)
 
     return {
         'output_jsonl': str(output_jsonl),

@@ -206,10 +206,20 @@ def _run_tasks(tasks: List[Tuple[str, str, str]], summary: Dict[str, object]) ->
         _collect_results(futures, summary)
 
 
+def _new_infer_summary() -> Dict[str, object]:
+    return {'issue': 0, 'no_issue': 0, 'error': 0, 'no_issue_files': []}
+
+
+def _run_infer_task_batch(tasks: List[Tuple[str, str, str]]) -> Dict[str, object]:
+    summary = _new_infer_summary()
+    start_time = time.time()
+    _run_tasks(tasks, summary)
+    summary['time'] = time.time() - start_time
+    return summary
+
+
 def run_infer_all(cwe_dir: str, result_dir: str, pulse_taint_config: str) -> Dict[str, object]:
     processed_groups = set()
-    summary: Dict[str, object] = {'issue': 0, 'no_issue': 0, 'error': 0, 'no_issue_files': []}
-    start_time = time.time()
     target_dir = os.path.join(JULIET_TESTCASE_DIR, cwe_dir)
 
     tasks: List[Tuple[str, str, str]] = []
@@ -230,17 +240,12 @@ def run_infer_all(cwe_dir: str, result_dir: str, pulse_taint_config: str) -> Dic
         infer_cmd = build_infer_command(target_files, extension, pulse_taint_config)
         tasks.append((result_path, infer_cmd, file_path))
 
-    _run_tasks(tasks, summary)
-
-    summary['time'] = time.time() - start_time
-    return summary
+    return _run_infer_task_batch(tasks)
 
 
 def run_infer_for_files(
     files: List[str], result_dir: str, pulse_taint_config: str
 ) -> Dict[str, object]:
-    summary: Dict[str, object] = {'issue': 0, 'no_issue': 0, 'error': 0, 'no_issue_files': []}
-    start_time = time.time()
     processed_targets: Set[Tuple[str, ...]] = set()
 
     tasks: List[Tuple[str, str, str]] = []
@@ -282,10 +287,7 @@ def run_infer_for_files(
         infer_cmd = build_infer_command(target_files, extension, pulse_taint_config)
         tasks.append((result_path, infer_cmd, abs_file))
 
-    _run_tasks(tasks, summary)
-
-    summary['time'] = time.time() - start_time
-    return summary
+    return _run_infer_task_batch(tasks)
 
 
 def generate_result_csv(result_map: Dict[object, Dict[str, object]], result_dir: str) -> Path:
