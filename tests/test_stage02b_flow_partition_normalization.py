@@ -35,6 +35,7 @@ def test_add_flow_tags_normalizes_tags_unifies_function_and_dedups_manifest_flaw
         input_xml=input_xml,
         output_xml=output_xml,
         summary_json=summary_json,
+        prune_single_child_flows=False,
     )
 
     root = ET.parse(output_xml).getroot()
@@ -95,6 +96,7 @@ def test_add_flow_tags_drops_same_line_mismatched_manifest_flaw_when_matching_fl
         input_xml=input_xml,
         output_xml=output_xml,
         summary_json=None,
+        prune_single_child_flows=False,
     )
 
     root = ET.parse(output_xml).getroot()
@@ -140,6 +142,7 @@ def test_add_flow_tags_keeps_mismatch_only_manifest_flaw_when_no_matching_manife
         input_xml=input_xml,
         output_xml=output_xml,
         summary_json=None,
+        prune_single_child_flows=False,
     )
 
     root = ET.parse(output_xml).getroot()
@@ -192,6 +195,7 @@ def test_add_flow_tags_groups_numbered_vasink_variants_into_numbered_flows(tmp_p
         input_xml=input_xml,
         output_xml=output_xml,
         summary_json=None,
+        prune_single_child_flows=False,
     )
 
     root = ET.parse(output_xml).getroot()
@@ -220,3 +224,78 @@ def test_add_flow_tags_groups_numbered_vasink_variants_into_numbered_flows(tmp_p
     }
     assert flows['g2b1'] == {('flaw', 'goodG2B1VaSinkB')}
     assert flows['g2b2'] == {('flaw', 'goodG2B2VaSinkB')}
+
+
+def test_add_flow_tags_prunes_single_child_flow_by_default(tmp_path):
+    module = load_module_from_path(
+        'test_stage02b_flow_partition_single_child_default_prune',
+        REPO_ROOT / 'tools/stage/stage02b_flow.py',
+    )
+
+    input_xml = tmp_path / 'manifest_with_comments.xml'
+    output_xml = tmp_path / 'manifest_with_testcase_flows.xml'
+    write_text(
+        input_xml,
+        """<?xml version='1.0' encoding='utf-8'?>
+<container>
+  <testcase>
+    <file path="sample.c">
+      <flaw line="10" name="CWE-X: synthetic flaw" />
+      <comment_flaw line="10" function="bad" code="bad_stmt();" />
+    </file>
+  </testcase>
+</container>
+""",
+    )
+
+    module.add_flow_tags_to_testcase(
+        input_xml=input_xml,
+        output_xml=output_xml,
+        summary_json=None,
+    )
+
+    root = ET.parse(output_xml).getroot()
+    testcase = root.find('testcase')
+    assert testcase is not None
+    assert testcase.findall('flow') == []
+
+
+def test_add_flow_tags_keeps_non_singleton_flow_when_single_child_pruning_is_enabled(tmp_path):
+    module = load_module_from_path(
+        'test_stage02b_flow_partition_non_singleton_survives_default_prune',
+        REPO_ROOT / 'tools/stage/stage02b_flow.py',
+    )
+
+    input_xml = tmp_path / 'manifest_with_comments.xml'
+    output_xml = tmp_path / 'manifest_with_testcase_flows.xml'
+    write_text(
+        input_xml,
+        """<?xml version='1.0' encoding='utf-8'?>
+<container>
+  <testcase>
+    <file path="sample.c">
+      <comment_fix line="20" function="goodG2B" code="fixed_stmt();" />
+      <comment_flaw line="20" function="goodG2B" code="same_line_flaw_stmt();" />
+    </file>
+  </testcase>
+</container>
+""",
+    )
+
+    module.add_flow_tags_to_testcase(
+        input_xml=input_xml,
+        output_xml=output_xml,
+        summary_json=None,
+    )
+
+    root = ET.parse(output_xml).getroot()
+    testcase = root.find('testcase')
+    assert testcase is not None
+    flows = {flow.attrib['type']: list(flow) for flow in testcase.findall('flow')}
+
+    assert {
+        (item.tag, item.attrib['origin'], item.attrib['function']) for item in flows['g2b']
+    } == {
+        ('fix', 'comment_fix', 'goodG2B'),
+        ('flaw', 'comment_flaw', 'goodG2B'),
+    }

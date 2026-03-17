@@ -39,6 +39,13 @@ def parse_args() -> argparse.Namespace:
         action='store_true',
         help='Replace an existing non-empty retrace output directory.',
     )
+    parser.add_argument(
+        '--keep-single-child-flows',
+        dest='prune_single_child_flows',
+        action='store_false',
+        help='Keep flow tags that have exactly one child after Stage 02b dedup.',
+    )
+    parser.set_defaults(prune_single_child_flows=True)
     return parser.parse_args()
 
 
@@ -132,6 +139,7 @@ def run_retrace_strict_trace(
     pipeline_root: Path,
     output_name: str | None = None,
     overwrite: bool = False,
+    prune_single_child_flows: bool = True,
 ) -> dict[str, Any]:
     source_run_dir = resolve_source_run_dir(source_run, pipeline_root)
     manifest_with_comments_xml = resolve_source_manifest(source_run_dir)
@@ -147,6 +155,7 @@ def run_retrace_strict_trace(
     stage02b_result = _stage02b_flow.run_stage02b_flow(
         input_xml=manifest_with_comments_xml,
         output_dir=paths['stage02b']['output_dir'],
+        prune_single_child_flows=prune_single_child_flows,
     )
     stage04_result = _stage04_trace_flow.filter_traces_by_flow(
         flow_xml=paths['stage02b']['manifest_with_testcase_flows_xml'],
@@ -191,6 +200,7 @@ def main() -> int:
             pipeline_root=args.pipeline_root,
             output_name=args.output_name,
             overwrite=args.overwrite,
+            prune_single_child_flows=args.prune_single_child_flows,
         )
     except (FileNotFoundError, NotADirectoryError, ValueError) as exc:
         print(str(exc), file=sys.stderr)

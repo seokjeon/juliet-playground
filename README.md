@@ -132,6 +132,9 @@ source .venv/bin/activate && python tools/run_pipeline.py full --all
   `origin="manifest_flaw"` 인 원본 `flaw` 를 남기고 comment 유래 `flaw` 는 제거합니다.
 - 같은 `(file, line)` 에 원래 manifest 유래 `flaw` 가 여러 개 있을 때, file명의 CWE prefix와
   `name` 의 CWE prefix가 모두 비교 가능하고 그중 일치하는 항목이 있으면 불일치 항목은 flow에서 제거합니다.
+- Stage 02b는 기본적으로 dedup 후 child가 1개뿐인 `<flow>` 는 생성하지 않습니다.
+  이전 동작이 필요하면 `--keep-single-child-flows` 또는 Python API의
+  `prune_single_child_flows=False` 를 사용합니다.
 - flow XML에서는 `origin` 속성으로 항목 출처를 구분할 수 있습니다.
 
 ## 결과 위치 (요약)

@@ -46,12 +46,37 @@ def test_run_stage02b_flow_uses_shared_output_paths(tmp_path, monkeypatch):
     )
 
     assert captured['partition']['output_xml'] == expected_paths['manifest_with_testcase_flows_xml']
+    assert captured['partition']['prune_single_child_flows'] is True
     assert captured['partition']['summary_json'] is None
     assert result['artifacts']['manifest_with_testcase_flows_xml'] == str(
         expected_paths['manifest_with_testcase_flows_xml']
     )
     assert result['artifacts']['summary_json'] == str(expected_paths['summary_json'])
     assert result['stats'] == {'testcases': 1}
+
+
+def test_run_stage02b_flow_can_keep_single_child_flows_when_requested(tmp_path, monkeypatch):
+    module = load_module_from_path(
+        'test_stage02b_run_stage_flow_module_keep_single_child',
+        REPO_ROOT / 'tools/stage/stage02b_flow.py',
+    )
+
+    captured: dict[str, object] = {}
+
+    def fake_add_flow_tags_to_testcase(**kwargs):
+        captured['partition'] = kwargs
+        write_text(kwargs['output_xml'], '<root />\n')
+        return {'testcases': 1}
+
+    monkeypatch.setattr(module, 'add_flow_tags_to_testcase', fake_add_flow_tags_to_testcase)
+
+    module.run_stage02b_flow(
+        input_xml=tmp_path / 'manifest.xml',
+        output_dir=tmp_path / '02b_flow',
+        prune_single_child_flows=False,
+    )
+
+    assert captured['partition']['prune_single_child_flows'] is False
 
 
 def test_run_stage02b_flow_matches_existing_flow_golden(tmp_path):

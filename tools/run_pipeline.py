@@ -57,6 +57,7 @@ class FullRunConfig:
     pair_train_ratio: float
     dedup_mode: str
     enable_pair: bool
+    prune_single_child_flows: bool
 
 
 def parse_args() -> argparse.Namespace:
@@ -98,7 +99,13 @@ def parse_args() -> argparse.Namespace:
     pair_mode = full.add_mutually_exclusive_group()
     pair_mode.add_argument('--enable-pair', dest='enable_pair', action='store_true')
     pair_mode.add_argument('--disable-pair', dest='enable_pair', action='store_false')
-    full.set_defaults(enable_pair=True)
+    full.add_argument(
+        '--keep-single-child-flows',
+        dest='prune_single_child_flows',
+        action='store_false',
+        help='Keep flow tags that have exactly one child after Stage 02b dedup.',
+    )
+    full.set_defaults(enable_pair=True, prune_single_child_flows=True)
 
     return parser.parse_args()
 
@@ -182,6 +189,7 @@ def _normalize_full_run_config(config: FullRunConfig) -> FullRunConfig:
         pair_train_ratio=config.pair_train_ratio,
         dedup_mode=config.dedup_mode,
         enable_pair=config.enable_pair,
+        prune_single_child_flows=config.prune_single_child_flows,
     )
 
 
@@ -231,10 +239,15 @@ def run_step02a_code_field_inventory(
     return result
 
 
-def run_step02b_flow_build(*, paths: dict[str, object]) -> dict[str, object]:
+def run_step02b_flow_build(
+    *,
+    paths: dict[str, object],
+    prune_single_child_flows: bool = True,
+) -> dict[str, object]:
     result = _stage02b_flow.run_stage02b_flow(
         input_xml=paths['manifest_with_comments_xml'],
         output_dir=paths['flow_dir'],
+        prune_single_child_flows=prune_single_child_flows,
     )
     _require_exists(
         paths['stage02b']['manifest_with_testcase_flows_xml'], 'manifest_with_testcase_flows_xml'
@@ -423,7 +436,10 @@ def run_full_pipeline(config: FullRunConfig) -> int:
             paths=paths,
             source_root=config.source_root,
         )
-        run_step02b_flow_build(paths=paths)
+        run_step02b_flow_build(
+            paths=paths,
+            prune_single_child_flows=config.prune_single_child_flows,
+        )
 
         selected_taint_config, _ = _select_taint_config(
             generated_taint_config=paths['generated_taint_config'],
@@ -486,6 +502,7 @@ def main() -> int:
                 pair_train_ratio=args.pair_train_ratio,
                 dedup_mode=args.dedup_mode,
                 enable_pair=args.enable_pair,
+                prune_single_child_flows=args.prune_single_child_flows,
             )
         )
     except ValueError as exc:

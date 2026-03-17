@@ -437,3 +437,41 @@ def test_removed_subcommands_are_rejected():
     ]:
         with pytest.raises(SystemExit):
             run_module_main(module, [command])
+
+
+def test_full_subcommand_defaults_to_pruning_single_child_flows(monkeypatch):
+    module = load_module_from_path(
+        'test_run_pipeline_default_single_child_prune_flag',
+        REPO_ROOT / 'tools/run_pipeline.py',
+    )
+    captured: dict[str, object] = {}
+
+    def fake_run_full_pipeline(config):
+        captured['config'] = config
+        return 0
+
+    monkeypatch.setattr(module, 'run_full_pipeline', fake_run_full_pipeline)
+
+    result = run_module_main(module, ['full', '121'])
+
+    assert result == 0
+    assert captured['config'].prune_single_child_flows is True
+
+
+def test_full_subcommand_keep_single_child_flows_disables_pruning(monkeypatch):
+    module = load_module_from_path(
+        'test_run_pipeline_keep_single_child_flag',
+        REPO_ROOT / 'tools/run_pipeline.py',
+    )
+    captured: dict[str, object] = {}
+
+    def fake_run_full_pipeline(config):
+        captured['config'] = config
+        return 0
+
+    monkeypatch.setattr(module, 'run_full_pipeline', fake_run_full_pipeline)
+
+    result = run_module_main(module, ['full', '121', '--keep-single-child-flows'])
+
+    assert result == 0
+    assert captured['config'].prune_single_child_flows is False

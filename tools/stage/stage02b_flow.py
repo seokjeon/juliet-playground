@@ -216,6 +216,7 @@ def _add_flow_tags_to_tree(
     fn_to_flow: dict[str, str],
     output_xml: Path,
     summary_json: Path | None = None,
+    prune_single_child_flows: bool = True,
 ) -> dict[str, object]:
     root = tree.getroot()
     per_flow_counts = Counter()
@@ -271,6 +272,8 @@ def _add_flow_tags_to_tree(
             dedup_removed_comment_flaw += removed
             if not items:
                 continue
+            if prune_single_child_flows and len(items) == 1:
+                continue
 
             flow_elem = ET.Element('flow', {'type': flow_type})
             for item in items:
@@ -308,6 +311,7 @@ def add_flow_tags_to_testcase(
     input_xml: Path,
     output_xml: Path,
     summary_json: Path | None = None,
+    prune_single_child_flows: bool = True,
 ) -> dict[str, object]:
     if not input_xml.exists():
         raise FileNotFoundError(f'Input XML not found: {input_xml}')
@@ -318,6 +322,7 @@ def add_flow_tags_to_testcase(
         fn_to_flow=build_function_flow_map_from_manifest_comments(input_xml),
         output_xml=output_xml,
         summary_json=summary_json,
+        prune_single_child_flows=prune_single_child_flows,
     )
 
 
@@ -325,12 +330,14 @@ def run_stage02b_flow(
     *,
     input_xml: Path,
     output_dir: Path,
+    prune_single_child_flows: bool = True,
 ) -> dict[str, object]:
     output_paths = build_stage02b_output_paths(output_dir)
     partition_result = add_flow_tags_to_testcase(
         input_xml=input_xml,
         output_xml=output_paths['manifest_with_testcase_flows_xml'],
         summary_json=None,
+        prune_single_child_flows=prune_single_child_flows,
     )
     artifacts = path_strings(output_paths)
     stats = {'testcases': int(partition_result['testcases'])}

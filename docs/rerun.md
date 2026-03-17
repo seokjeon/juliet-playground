@@ -99,4 +99,8 @@ python tools/retrace_strict_trace.py run-2026.03.17-15:11:12 \
 # 기존 retrace 출력이 있으면 덮어쓰기
 python tools/retrace_strict_trace.py run-2026.03.17-15:11:12 \
   --overwrite
+
+# Stage 02b의 single-child flow pruning을 끄기
+python tools/retrace_strict_trace.py run-2026.03.17-15:11:12 \
+  --keep-single-child-flows
 ```

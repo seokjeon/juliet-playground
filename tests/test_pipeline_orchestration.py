@@ -127,7 +127,40 @@ def test_run_step02b_flow_build_returns_compact_stage_result(tmp_path, monkeypat
 
     assert called['input_xml'] == paths['manifest_with_comments_xml']
     assert called['output_dir'] == paths['flow_dir']
+    assert called['prune_single_child_flows'] is True
     assert result['artifacts']['summary_json'] == str(paths['stage02b']['summary_json'])
+
+
+def test_run_step02b_flow_build_can_keep_single_child_flows_when_requested(tmp_path, monkeypatch):
+    module = load_module_from_path(
+        'test_pipeline_step02b_helpers_keep_single_child',
+        REPO_ROOT / 'tools/run_pipeline.py',
+    )
+
+    paths = module._build_full_run_paths(
+        run_dir=tmp_path / 'run', source_root=tmp_path / 'juliet' / 'C'
+    )
+    called: dict[str, object] = {}
+
+    def fake_run_stage02b_flow(**kwargs):
+        called.update(kwargs)
+        write_text(paths['stage02b']['manifest_with_testcase_flows_xml'], '<root />\n')
+        write_text(paths['stage02b']['summary_json'], '{}\n')
+        return {
+            'artifacts': {
+                'manifest_with_testcase_flows_xml': str(
+                    paths['stage02b']['manifest_with_testcase_flows_xml']
+                ),
+                'summary_json': str(paths['stage02b']['summary_json']),
+            },
+            'stats': {'testcases': 1},
+        }
+
+    monkeypatch.setattr(module._stage02b_flow, 'run_stage02b_flow', fake_run_stage02b_flow)
+
+    module.run_step02b_flow_build(paths=paths, prune_single_child_flows=False)
+
+    assert called['prune_single_child_flows'] is False
 
 
 def test_run_step07_dataset_export_uses_primary_dataset_api(tmp_path, monkeypatch):
