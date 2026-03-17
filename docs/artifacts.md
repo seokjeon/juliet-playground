@@ -52,14 +52,7 @@ artifacts/pipeline-runs/run-YYYY.MM.DD-HH:MM:SS/
 ├── 01_manifest/
 │   └── manifest_with_comments.xml
 ├── 02a_taint/
-│   ├── code_unique.txt
-│   ├── code_frequency.csv
-│   ├── source_sink_candidate_map.json
-│   ├── function_name_frequency.csv
-│   ├── function_name_unique.txt
 │   ├── function_name_macro_resolution.csv
-│   ├── global_macro_definitions_by_name.json
-│   ├── global_macro_definitions_by_name.jsonl
 │   ├── pulse-taint-config.json
 │   └── summary.json
 ├── 02b_flow/

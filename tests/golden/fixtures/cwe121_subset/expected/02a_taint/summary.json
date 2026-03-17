@@ -1,17 +1,17 @@
 {
   "artifacts": {
     "pulse_taint_config": "expected/02a_taint/pulse-taint-config.json",
-    "source_sink_candidate_map": "expected/02a_taint/source_sink_candidate_map.json",
+    "function_name_macro_resolution_csv": "expected/02a_taint/function_name_macro_resolution.csv",
     "summary_json": "expected/02a_taint/summary.json"
   },
   "stats": {
+    "total_code_entries": 32,
     "candidate_map_keys": 12,
+    "keys_with_calls": 6,
+    "unique_function_names": 9,
     "duplicate_key_skipped": 26,
     "flaw_records_processed": 6,
-    "keys_with_calls": 6,
-    "pulse_sink_procedures": 9,
     "pulse_source_procedures": 9,
-    "total_code_entries": 32,
-    "unique_function_names": 9
+    "pulse_sink_procedures": 9
   }
 }

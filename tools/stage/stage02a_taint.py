@@ -8,7 +8,7 @@ from pathlib import Path
 
 from shared.csvio import write_csv_rows
 from shared.dataset_sources import load_tree_sitter_parsers
-from shared.jsonio import write_json, write_jsonl, write_stage_summary
+from shared.jsonio import write_json, write_stage_summary
 from shared.juliet_manifest import build_manifest_source_index
 from shared.source_parsing import PARSER_LANG_BY_SUFFIX, SOURCE_EXTS, node_first_line_text
 
@@ -52,14 +52,15 @@ class ResolutionResult:
 
 
 @dataclass(frozen=True)
-class TaintExtractionOutputs:
-    output_dir: Path
+class TaintInventoryCore:
     all_comment_codes: list[str]
     counts: Counter[str]
     candidate_map: dict[str, list[dict[str, int | str]]]
+    function_name_counts: Counter[str]
     duplicate_key_skipped: int
     flaw_records_processed: int
-    extra_stats: dict[str, int]
+    macro_defs: dict[str, list[MacroDefinition]]
+    resolution_map: dict[str, ResolutionResult]
 
 
 def _build_line_nodes(root_node) -> dict[int, list[object]]:
@@ -192,42 +193,6 @@ def _collect_macro_definitions(source_root: Path) -> dict[str, list[MacroDefinit
             if PP_ENDIF_RE.match(line):
                 depth = max(0, depth - 1)
     return macro_defs
-
-
-def _write_global_macro_dump(
-    output_dir: Path, macro_defs: dict[str, list[MacroDefinition]]
-) -> dict[str, int]:
-    json_path = output_dir / 'global_macro_definitions_by_name.json'
-    jsonl_path = output_dir / 'global_macro_definitions_by_name.jsonl'
-
-    by_name: dict[str, list[str]] = {}
-    for name in sorted(macro_defs):
-        bodies = sorted(
-            {(d.body or '').strip() for d in macro_defs[name] if (d.body or '').strip()}
-        )
-        by_name[name] = bodies
-
-    write_json(json_path, by_name)
-    write_jsonl(
-        jsonl_path,
-        ({'name': name, 'bodies': bodies} for name, bodies in by_name.items()),
-    )
-
-    rows = sum(len(v) for v in by_name.values())
-    return {
-        'global_macro_definition_rows': rows,
-        'global_macro_unique_names': len(macro_defs),
-    }
-
-
-def _build_global_macro_dump_stats(macro_defs: dict[str, list[MacroDefinition]]) -> dict[str, int]:
-    rows = 0
-    for defs in macro_defs.values():
-        rows += len({(d.body or '').strip() for d in defs if (d.body or '').strip()})
-    return {
-        'global_macro_definition_rows': rows,
-        'global_macro_unique_names': len(macro_defs),
-    }
 
 
 def _extract_replacement_identifier(body: str) -> str | None:
@@ -392,47 +357,7 @@ def _write_pulse_taint_config(
     }
 
 
-def write_outputs(outputs: TaintExtractionOutputs) -> Counter[str]:
-    outputs.output_dir.mkdir(parents=True, exist_ok=True)
-
-    unique_codes = sorted(outputs.counts)
-    (outputs.output_dir / 'code_unique.txt').write_text(
-        '\n'.join(unique_codes) + ('\n' if unique_codes else ''), encoding='utf-8'
-    )
-
-    write_csv_rows(
-        outputs.output_dir / 'code_frequency.csv',
-        ['count', 'code'],
-        ([cnt, code] for code, cnt in sorted(outputs.counts.items(), key=lambda x: (-x[1], x[0]))),
-    )
-
-    write_json(outputs.output_dir / 'source_sink_candidate_map.json', outputs.candidate_map)
-
-    function_name_counts = _count_function_names(outputs.candidate_map)
-    write_csv_rows(
-        outputs.output_dir / 'function_name_frequency.csv',
-        ['count', 'function_name'],
-        (
-            [cnt, name]
-            for name, cnt in sorted(function_name_counts.items(), key=lambda x: (-x[1], x[0]))
-        ),
-    )
-
-    (outputs.output_dir / 'function_name_unique.txt').write_text(
-        '\n'.join(sorted(function_name_counts)) + ('\n' if function_name_counts else ''),
-        encoding='utf-8',
-    )
-
-    return function_name_counts
-
-
-def extract_unique_code_fields(
-    *,
-    input_xml: Path,
-    source_root: Path,
-    output_dir: Path,
-    pulse_taint_config_output: Path | None = None,
-) -> dict[str, object]:
+def build_taint_inventory_core(*, input_xml: Path, source_root: Path) -> TaintInventoryCore:
     if not input_xml.exists():
         raise FileNotFoundError(f'Input XML not found: {input_xml}')
     if not source_root.exists():
@@ -501,40 +426,47 @@ def extract_unique_code_fields(
     resolution_map = _build_resolution_map(raw_function_names, macro_defs)
     candidate_map = _apply_resolution_to_candidate_map(candidate_map_raw, resolution_map)
 
-    output_dir.mkdir(parents=True, exist_ok=True)
-    macro_dump_stats = _build_global_macro_dump_stats(macro_defs)
-    macro_stats = _build_macro_resolution_stats(resolution_map)
-    _write_global_macro_dump(output_dir, macro_defs)
-    _write_macro_resolution_csv(output_dir, resolution_map)
-    extra_stats = {**macro_dump_stats, **macro_stats}
-
-    function_name_counts = write_outputs(
-        TaintExtractionOutputs(
-            output_dir=output_dir,
-            all_comment_codes=all_comment_codes,
-            counts=counts,
-            candidate_map=candidate_map,
-            duplicate_key_skipped=duplicate_key_skipped,
-            flaw_records_processed=flaw_records_processed,
-            extra_stats=extra_stats,
-        )
+    return TaintInventoryCore(
+        all_comment_codes=all_comment_codes,
+        counts=counts,
+        candidate_map=candidate_map,
+        function_name_counts=_count_function_names(candidate_map),
+        duplicate_key_skipped=duplicate_key_skipped,
+        flaw_records_processed=flaw_records_processed,
+        macro_defs=macro_defs,
+        resolution_map=resolution_map,
     )
 
+
+def extract_unique_code_fields(
+    *,
+    input_xml: Path,
+    source_root: Path,
+    output_dir: Path,
+    pulse_taint_config_output: Path | None = None,
+) -> dict[str, object]:
+    core = build_taint_inventory_core(input_xml=input_xml, source_root=source_root)
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    _write_macro_resolution_csv(output_dir, core.resolution_map)
+
     pulse_output_path = pulse_taint_config_output or (output_dir / DEFAULT_PULSE_TAINT_CONFIG_NAME)
-    pulse_stats = _write_pulse_taint_config(pulse_output_path, function_name_counts)
+    pulse_stats = _write_pulse_taint_config(pulse_output_path, core.function_name_counts)
 
     artifacts = {
         'pulse_taint_config': str(pulse_output_path),
-        'source_sink_candidate_map': str(output_dir / 'source_sink_candidate_map.json'),
+        'function_name_macro_resolution_csv': str(
+            output_dir / 'function_name_macro_resolution.csv'
+        ),
         'summary_json': str(output_dir / 'summary.json'),
     }
     stats = {
-        'total_code_entries': len(all_comment_codes),
-        'candidate_map_keys': len(candidate_map),
-        'keys_with_calls': sum(1 for v in candidate_map.values() if v),
-        'unique_function_names': len(function_name_counts),
-        'duplicate_key_skipped': duplicate_key_skipped,
-        'flaw_records_processed': flaw_records_processed,
+        'total_code_entries': len(core.all_comment_codes),
+        'candidate_map_keys': len(core.candidate_map),
+        'keys_with_calls': sum(1 for value in core.candidate_map.values() if value),
+        'unique_function_names': len(core.function_name_counts),
+        'duplicate_key_skipped': core.duplicate_key_skipped,
+        'flaw_records_processed': core.flaw_records_processed,
         **pulse_stats,
     }
     write_stage_summary(output_dir / 'summary.json', artifacts=artifacts, stats=stats, echo=False)

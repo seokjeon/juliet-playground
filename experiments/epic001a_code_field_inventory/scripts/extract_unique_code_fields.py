@@ -5,7 +5,7 @@ import argparse
 import json
 from pathlib import Path
 
-from stage import stage02a_taint as _stage02a_taint
+from inventory_lib import extract_unique_code_fields
 
 
 def main() -> int:
@@ -28,7 +28,7 @@ def main() -> int:
     parser.add_argument('--pulse-taint-config-output', type=Path, default=None)
     args = parser.parse_args()
 
-    payload = _stage02a_taint.extract_unique_code_fields(
+    payload = extract_unique_code_fields(
         input_xml=args.input_xml,
         source_root=args.source_root,
         output_dir=args.output_dir,

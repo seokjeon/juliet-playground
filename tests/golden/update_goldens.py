@@ -181,26 +181,26 @@ def run_stage01(source_root: Path, temp_root: Path, manifest_subset: Path) -> No
 def run_stage02a(source_root: Path, temp_root: Path) -> None:
     module = load_module_from_path(
         'golden_stage02a_inventory',
-        REPO_ROOT
-        / 'experiments/epic001a_code_field_inventory/scripts/extract_unique_code_fields.py',
+        REPO_ROOT / 'tools/stage/stage02a_taint.py',
     )
     output_dir = temp_root / 'expected/02a_taint'
     ensure_clean_dir(output_dir)
-    result = run_module_main(
-        module,
-        [
-            '--input-xml',
-            str(temp_root / 'expected/01_manifest/manifest_with_comments.xml'),
-            '--source-root',
-            str(source_root),
-            '--output-dir',
-            str(output_dir),
-            '--pulse-taint-config-output',
-            str(output_dir / 'pulse-taint-config.json'),
-        ],
+    module.extract_unique_code_fields(
+        input_xml=temp_root / 'expected/01_manifest/manifest_with_comments.xml',
+        source_root=source_root,
+        output_dir=output_dir,
+        pulse_taint_config_output=output_dir / 'pulse-taint-config.json',
     )
-    if result != 0:
-        raise RuntimeError(f'Stage 02a failed: {result}')
+    summary_path = output_dir / 'summary.json'
+    summary = json.loads(summary_path.read_text(encoding='utf-8'))
+    summary['artifacts'] = {
+        'pulse_taint_config': 'expected/02a_taint/pulse-taint-config.json',
+        'function_name_macro_resolution_csv': 'expected/02a_taint/function_name_macro_resolution.csv',
+        'summary_json': 'expected/02a_taint/summary.json',
+    }
+    summary_path.write_text(
+        json.dumps(summary, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
+    )
 
 
 def run_stage02c(temp_root: Path) -> None:

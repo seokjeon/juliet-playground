@@ -1,64 +1,22 @@
 # epic001a_code_field_inventory
 
-`manifest_with_comments.xml`에서 코드 인벤토리(고유값/빈도)를 만들고,
-`code(or flaw-derived code) -> 함수호출 후보` 맵을 생성합니다.
+이 스크립트는 `manifest_with_comments.xml`로부터 code / candidate-map / macro resolution 보고서를 생성하는
+**experiments 전용 리포트 생성기**입니다.
 
-## 대상 태그
-- `comment_flaw`, `comment_fix`: `code` 속성 사용
-- `flaw`: `code`가 없으므로 `file+line` 기준 파싱으로 code-like key 생성
+파이프라인 Stage 02a의 핵심 책임은 `pulse-taint-config.json` 생성이며,
+아래 inventory 산출물은 이 experiments 스크립트에서만 보장됩니다.
 
 ## 출력
 - `outputs/code_unique.txt`: `comment_*` 기준 정렬된 unique code 목록
-- `outputs/code_frequency.csv`: `comment_*` 기준 `count,code` (빈도 내림차순)
+- `outputs/code_frequency.csv`: `comment_*` 기준 `count,code`
 - `outputs/source_sink_candidate_map.json`: `code -> [{"name","argc"}, ...]`
-  - 함수 호출은 선택된 코드 라인 노드의 서브트리에서 찾되, **시작 라인이 해당 line과 같은 호출만** 저장
-- `outputs/function_name_frequency.csv`: `count,function_name` (candidate map 기준 빈도 내림차순)
+- `outputs/function_name_frequency.csv`: `count,function_name`
 - `outputs/function_name_unique.txt`: candidate map에서 추출된 함수명 unique 목록
-- `outputs/global_macro_definitions_by_name.json`: `name -> [unique bodies...]` 형태 전역 `#define` 덤프
-- `outputs/global_macro_definitions_by_name.jsonl`: `{"name": ..., "bodies": [...]}` 레코드(JSONL) 덤프
-- `outputs/function_name_macro_resolution.csv`: 원본 함수명 → 매크로 치환 결과 및 상태
-  - `resolved_names` 컬럼은 다중 body 치환 시 `|`로 연결된 여러 후보를 포함
+- `outputs/global_macro_definitions_by_name.json`: 전역 `#define` 덤프
+- `outputs/global_macro_definitions_by_name.jsonl`: 전역 `#define` 덤프(JSONL)
+- `outputs/function_name_macro_resolution.csv`: 원본 함수명 → 매크로 해석 결과
 - `outputs/pulse-taint-config.from_juliet.json`: unique 함수명 기반 Infer pulse taint config
-- `outputs/summary.json`:
-  - `total_code_entries`, `unique_code_entries`, `max_frequency`
-  - `candidate_map_keys`, `keys_with_calls`
-  - `unique_function_names`, `total_function_name_occurrences`
-  - `global_macro_definition_rows`, `global_macro_unique_names`
-  - `macro_names_detected`, `macro_resolved_count`, `macro_ambiguous_count`, `macro_unresolved_count`, `rand_alias_applied_count`
-  - `duplicate_key_skipped`, `flaw_records_processed`
-
-## 매크로 치환 규칙
-- 입력 manifest에서 실제로 resolve된 Juliet source/header 파일들만 대상으로 `#define`를 수집합니다.
-- `RAND32`, `RAND64`는 항상 `rand`로 치환됩니다.
-- 매크로 body에서 replacement identifier를 추출해 함수명을 해석합니다.
-- 같은 원본 함수명에 대해 여러 replacement identifier가 발견되면
-  `function_name_macro_resolution.csv`에서 `resolved_multi`로 기록되고,
-  `resolved_names` 컬럼에 `|`로 연결된 여러 후보가 보존됩니다.
-- replacement identifier를 찾지 못하면 원본 함수명을 유지하고
-  `unresolved_no_identifier` 상태로 기록합니다.
-- `source_sink_candidate_map.json`에는 해석된 이름이 `(name, argc)` 기준으로 중복 제거되어 반영됩니다.
-
-## pulse-taint config 생성 (옵션)
-`function_name_unique` 기준(동일한 unique 함수명 집합)으로 Infer용 `pulse-taint-config.json` 형태 파일을 생성합니다.
-
-```bash
-python experiments/epic001a_code_field_inventory/scripts/extract_unique_code_fields.py
-```
-
-- 기본 출력 경로: `experiments/epic001a_code_field_inventory/outputs/pulse-taint-config.from_juliet.json`
-- 모든 함수가 source/sink 모두에 포함됩니다.
-  - source: 각 procedure마다 `ReturnValue`, `AllArguments` 2개 객체
-  - sink: 각 procedure마다 `AllArguments` 1개 객체
-- 출력 스키마는 `config/legacy/pulse-taint-config.from_tracer.json`과 동일한
-  `pulse-taint-sources`, `pulse-taint-sinks`를 사용합니다.
-- 통합 파이프라인에서는 이 기본 경로 대신
-  `run-.../02a_taint/pulse-taint-config.json`으로 출력 경로를 명시적으로 넘깁니다.
-
-원하면 출력 경로를 변경할 수 있습니다.
-```bash
-python experiments/epic001a_code_field_inventory/scripts/extract_unique_code_fields.py \
-  --pulse-taint-config-output experiments/epic001a_code_field_inventory/outputs/pulse-taint-config.custom.json
-```
+- `outputs/summary.json`
 
 ## 실행
 ```bash
@@ -67,8 +25,5 @@ python experiments/epic001a_code_field_inventory/scripts/extract_unique_code_fie
 
 옵션:
 ```bash
-python experiments/epic001a_code_field_inventory/scripts/extract_unique_code_fields.py \
-  --input-xml experiments/epic001_manifest_comment_scan/outputs/manifest_with_comments.xml \
-  --source-root juliet-test-suite-v1.3/C \
-  --output-dir experiments/epic001a_code_field_inventory/outputs
+python experiments/epic001a_code_field_inventory/scripts/extract_unique_code_fields.py       --input-xml experiments/epic001_manifest_comment_scan/outputs/manifest_with_comments.xml       --source-root juliet-test-suite-v1.3/C       --output-dir experiments/epic001a_code_field_inventory/outputs
 ```
