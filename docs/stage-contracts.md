@@ -274,6 +274,8 @@ Stage 01 테스트는 아래 두 층으로 나누는 것이 좋습니다.
 - `02a_taint/pulse-taint-config.json`
 - `02a_taint/function_name_macro_resolution.csv`
 - `02a_taint/summary.json`
+- flow-aware 입력일 때 추가:
+  - `02a_taint/source_sink_classified_with_code.xml`
 
 ### 다음 단계로 넘기는 핵심 출력
 - `02a_taint/pulse-taint-config.json` (생성되면 사용)
@@ -288,9 +290,11 @@ Stage 01 테스트는 아래 두 층으로 나누는 것이 좋습니다.
 - 이후 `tools/run_pipeline.py` 내부 분기에서 `generated_taint_config.exists()` 를 확인합니다.
 
 ### downstream이 실제로 쓰는 출력
-현재 파이프라인에서 직접 쓰는 것은 아래 하나입니다.
+현재 파이프라인에서 직접 쓰는 것은 아래입니다.
 
 - `02a_taint/pulse-taint-config.json`
+- flow-aware 입력일 때:
+  - `02a_taint/source_sink_classified_with_code.xml`
 
 ### 현재 코드상 생성 규칙
 - 입력 XML에서 `<file>` 하위 태그 중 아래만 처리합니다.
@@ -301,6 +305,11 @@ Stage 01 테스트는 아래 두 층으로 나누는 것이 좋습니다.
   - `code` 가 없으면 해당 레코드는 skip 합니다.
 - `flaw` 는 `line` 기준으로 code-like key를 유도합니다.
   - source context가 없으면 `WARNING_FLAW_CODE_NOT_FOUND`
+- flow-aware 입력(`flow/fix|flaw` + `role=source|sink`)인 경우:
+  - `02a_taint/source_sink_classified_with_code.xml` 을 추가로 생성합니다.
+  - role이 붙은 `fix` / `flaw` 중 `code` 가 비어 있으면 source line 기반으로 backfill 합니다.
+  - backfill 실패 시 XML에는 `code=""` 를 기록합니다.
+  - warn 상세는 XML이 아니라 `summary.json` 에 남깁니다.
 - macro 해석 후 unique function name 집합으로 pulse taint config를 생성합니다.
 - `function_name_macro_resolution.csv` 는 매크로 해석 결과를 남기는 debug artifact입니다.
 
@@ -310,6 +319,8 @@ Stage 01 테스트는 아래 두 층으로 나누는 것이 좋습니다.
   - `pulse-taint-config.json`
   - `function_name_macro_resolution.csv`
   - `summary.json`
+- flow-aware 입력이면 추가로 아래 파일이 생성된다.
+  - `source_sink_classified_with_code.xml`
 - `pulse-taint-config.json` 은 JSON object이다.
 - `pulse-taint-config.json` 은 아래 top-level key를 가진다.
   - `pulse-taint-sources`
@@ -751,7 +762,9 @@ Stage 01 테스트는 아래 두 층으로 나누는 것이 좋습니다.
 - `experiments/epic001d_trace_flow_filter/scripts/filter_traces_by_flow.py`
 
 ### 입력
-- `--flow-xml 02b_flow/manifest_with_testcase_flows.xml`
+- 기본:
+  - `--flow-xml 02b_flow/manifest_with_testcase_flows.xml`
+- `02a_taint/source_sink_classified_with_code.xml` 이 있으면 파이프라인은 그 파일을 우선 사용합니다.
 - `--signatures-dir <signature_non_empty_dir>`
 - `--output-dir 04_trace_flow/`
 
@@ -766,6 +779,8 @@ Stage 01 테스트는 아래 두 층으로 나누는 것이 좋습니다.
 - testcase flow XML과 signature trace를 비교합니다.
 - 모든 trace에 대해 내부적으로 best flow를 계산하지만, on-disk 출력은 strict match JSONL만 저장합니다.
 - 다음 단계는 strict 결과만 사용합니다.
+- 현재 구현은 `flow@type`, child tag(`flaw`/`fix`), `file`, `line` 을 사용합니다.
+- `code` 속성은 입력 XML에 있어도 현재 판정 로직에서는 직접 사용하지 않습니다.
 
 ### 현재 코드가 실제로 검사하는 것
 - `04_trace_flow/trace_flow_match_strict.jsonl`
@@ -1296,6 +1311,7 @@ Stage 01 테스트는 아래 두 층으로 나누는 것이 좋습니다.
   - `manifest_with_comments.xml`
 - `02a_code_field_inventory`
   - `manifest_with_comments.xml` → `pulse-taint-config.json`
+  - flow-aware 입력이면 `source_sink_classified.xml` → `source_sink_classified_with_code.xml`
 - `02b_testcase_flow_partition`
   - `manifest_with_comments.xml` → `manifest_with_testcase_flows.xml`
 - taint config 선택
@@ -1303,7 +1319,9 @@ Stage 01 테스트는 아래 두 층으로 나누는 것이 좋습니다.
 - `03_infer_and_signature`
   - `selected_taint_config` → `03_infer_summary.json` + `signature_non_empty_dir`
 - `04_trace_flow_filter`
-  - `manifest_with_testcase_flows.xml` + `signature_non_empty_dir` → `trace_flow_match_strict.jsonl`
+  - `source_sink_classified_with_code.xml` 이 있으면 그것 + `signature_non_empty_dir`
+  - 없으면 `manifest_with_testcase_flows.xml` + `signature_non_empty_dir`
+  - 결과: `trace_flow_match_strict.jsonl`
 - `05_pair_trace_dataset`
   - `trace_flow_match_strict.jsonl` → `pairs.jsonl` + `paired_signatures/`
 - `06_generate_slices`
