@@ -73,28 +73,38 @@ artifacts/pipeline-runs/run-YYYY.MM.DD-HH:MM:SS/
 ├── 04_trace_flow/
 │   ├── trace_flow_match_strict.jsonl
 │   └── summary.json
-├── 05_pair_trace_ds/
+├── 05_pair_trace_ds/                      # 기본 pair 모드
 │   ├── pairs.jsonl
 │   ├── leftover_counterparts.jsonl
 │   ├── paired_signatures/<testcase_key>/{b2b.json,g2b.json,...}
 │   ├── summary.json
 │   ├── train_patched_counterparts_pairs.jsonl
 │   └── train_patched_counterparts_signatures/<testcase_key>/{b2b.json,g2b.json,...}
-├── 06_slices/
+├── 05_trace_ds/                           # --disable-pair 모드
+│   ├── traces.jsonl
+│   └── summary.json
+├── 06_slices/                             # 기본 pair 모드
 │   ├── slice/*.c|*.cpp
 │   ├── summary.json
 │   └── train_patched_counterparts/
 │       ├── slice/*.c|*.cpp
 │       └── summary.json
+├── 06_trace_slices/                       # --disable-pair 모드
+│   ├── slice/*.c|*.cpp
+│   └── summary.json
 └── 07_dataset_export/
     ├── normalized_slices/*.c|*.cpp
     ├── Real_Vul_data.csv
     ├── split_manifest.json
     ├── summary.json
+    ├── trace_dedup_dropped.jsonl       # --disable-pair 모드
     ├── train_patched_counterparts.csv
     ├── train_patched_counterparts_slices/*.c|*.cpp
     ├── train_patched_counterparts_split_manifest.json
-    └── train_patched_counterparts_summary.json
+    ├── train_patched_counterparts_summary.json
+    └── vuln_patch/
+        ├── Real_Vul_data.csv
+        └── summary.json
 ```
 
 ## 핵심 summary 파일
@@ -111,22 +121,35 @@ artifacts/pipeline-runs/run-YYYY.MM.DD-HH:MM:SS/
   - strict trace JSONL 경로와 strict match 집계
 - `05_pair_trace_ds/summary.json`
   - pair/leftover/signature 경로와 testcase 집계
+- `05_trace_ds/summary.json`
+  - trace-first dataset JSONL 경로와 flow/label 집계
 - `06_slices/summary.json`
   - slice dir 경로와 generated/skipped/errors 집계
+- `06_trace_slices/summary.json`
+  - trace-first slice dir 경로와 generated/skipped/errors 집계
 - `07_dataset_export/summary.json`
   - dataset artifact 경로와 dedup/filter/split 집계
+  - `--disable-pair` 모드에서는 trace dedup audit JSONL과 `vuln_patch` holdout 경로도 포함
 - `07_dataset_export/train_patched_counterparts_summary.json`
   - patched dataset artifact 경로와 dedup/filter/split 집계
   - 추가로 `stats.selection` 에 patched counterpart selection 집계를 포함
+- `07_dataset_export/vuln_patch/summary.json`
+  - trace-first holdout dataset 선택 결과와 CSV 경로를 포함
 
 ## 디버깅 팁
 
 - 03 이후 흐름 확인 순서:
   - `03_infer_summary.json`
   - `04_trace_flow/summary.json`
-  - `05_pair_trace_ds/summary.json`
-  - `06_slices/summary.json`
-  - `07_dataset_export/summary.json`
-  - `07_dataset_export/train_patched_counterparts_summary.json`
+  - pair 모드:
+    - `05_pair_trace_ds/summary.json`
+    - `06_slices/summary.json`
+    - `07_dataset_export/summary.json`
+    - `07_dataset_export/train_patched_counterparts_summary.json`
+  - `--disable-pair` 모드:
+    - `05_trace_ds/summary.json`
+    - `06_trace_slices/summary.json`
+    - `07_dataset_export/summary.json`
+    - `07_dataset_export/vuln_patch/summary.json`
 - legacy verbose summary, dedup audit CSV, token count CSV, token plot PNG 는 기본 계약에서 제거되었습니다.
 - 현재 코드 기준 source of truth 는 `tools/stage/*.py` 와 `tests/` 입니다.

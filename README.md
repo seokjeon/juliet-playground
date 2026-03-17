@@ -7,7 +7,7 @@ paired trace → slice → dataset export까지 이어지는 실험 저장소입
 
 - 운영 문서 인덱스:
   [`docs/pipeline-runbook.md`](docs/pipeline-runbook.md)
-- 산출물 구조 / summary JSON / 로그 위치:
+- 산출물 구조 / summary JSON:
   [`docs/artifacts.md`](docs/artifacts.md)
 - 재실행 / `--overwrite` / 경로 이식 / 재현성 옵션:
   [`docs/rerun.md`](docs/rerun.md)
@@ -80,13 +80,11 @@ source .venv/bin/activate && ruff format .
 커밋할 때는 `pre-commit` hook이 자동으로 실행됩니다.
 개발 확인이 끝나면 아래의 Infer / 파이프라인 실행 명령을 사용하면 됩니다.
 
-### 2) 단일 Infer + Signature 실행
+현재 공식 CLI는 `python tools/run_pipeline.py full ...` 입니다.
+stage 단위 재실행이나 실험은 `tools/stage/*.py` 의 importable 함수나
+별도 스크립트(`tools/retrace_strict_trace.py`, `tools/run_linevul.py` 등)를 사용합니다.
 
-```bash
-source .venv/bin/activate && python tools/run_pipeline.py stage03 78
-```
-
-### 3) 통합 파이프라인 실행
+### 2) 통합 파이프라인 실행
 
 ```bash
 source .venv/bin/activate && python tools/run_pipeline.py full 78
@@ -110,18 +108,33 @@ source .venv/bin/activate && python tools/run_pipeline.py full --all
 
 ## 파이프라인 개요
 
-`tools/run_pipeline.py full`은 아래 단계를 순서대로 실행합니다.
+`tools/run_pipeline.py full`은 아래 순서로 실행됩니다.
 
-1. `01_manifest`: manifest에 Juliet 주석 매핑
-2. `02a_taint`: code inventory / 함수 후보 추출 / pulse taint config 생성
-3. `02b_flow`: 함수 inventory 분류 + testcase별 flow XML 생성
-4. `03_infer-results`, `03_signatures`: Infer 실행과 signature 생성
-5. `04_trace_flow`: trace와 testcase flow 매칭
-6. `05_pair_trace_ds` 또는 `05_trace_ds`: strict trace에서 pair 선택 또는 trace-first dataset 준비
-7. `06_slices` 또는 `06_trace_slices`: pair signature 또는 trace bug trace를 소스 slice로 변환
-8. `07_dataset_export`: normalize / dedup / token filtering / split / CSV export
-9. `07b`: pair 모드에서만 train patched counterpart 평가용 export 추가 생성
-10. `vuln_patch`: disable-pair 모드에서만 메인 CSV에서 분리된 평가용 vuln/patch holdout CSV 생성
+- 기본 pair 모드:
+  1. `01_manifest`
+  2. `02b_flow`
+  3. `02b_flow/epic002`
+  4. `02a_taint`
+  5. `03_infer-results`, `03_signatures`
+  6. `04_trace_flow`
+  7. `05_pair_trace_ds`
+  8. `06_slices`
+  9. `07_dataset_export`
+  10. `07_dataset_export/train_patched_counterparts_*`
+- `--disable-pair` 사용 시:
+  1. `01_manifest`
+  2. `02b_flow`
+  3. `02b_flow/epic002`
+  4. `02a_taint`
+  5. `03_infer-results`, `03_signatures`
+  6. `04_trace_flow`
+  7. `05_trace_ds`
+  8. `06_trace_slices`
+  9. `07_dataset_export`
+  10. `07_dataset_export/vuln_patch/`
+
+`--disable-epic002-for-02a` 를 주면 Stage 02a는
+`01_manifest/manifest_with_comments.xml` 을 직접 입력으로 사용합니다.
 
 ### Flow XML note
 
@@ -158,10 +171,11 @@ artifacts/
         ├── 03_signatures/
         ├── 04_trace_flow/
         ├── 05_pair_trace_ds/
+        ├── 05_trace_ds/            # --disable-pair 시
         ├── 06_slices/
+        ├── 06_trace_slices/        # --disable-pair 시
         ├── 07_dataset_export/
-        ├── logs/
-        └── run_summary.json
+        └── ...
 ```
 
 전체 산출물 트리와 각 파일 의미는
@@ -170,33 +184,21 @@ artifacts/
 ## 대표 명령어
 
 ```bash
-# Infer + signature만 빠르게 실행
-python tools/run_pipeline.py stage03 78
-
-# 특정 파일(해당 flow variant 그룹)만 실행
-python tools/run_pipeline.py stage03 --files juliet-test-suite-v1.3/C/testcases/CWE78_OS_Command_Injection/s01/CWE78_OS_Command_Injection__char_console_execlp_52a.c
-
-# 기존 infer 결과에서 signature만 생성
-python tools/run_pipeline.py stage03-signature --input-dir artifacts/infer-results/infer-2026.03.08-18:04:18
-
 # 통합 파이프라인
 python tools/run_pipeline.py full 78 89
 
-# strict trace 결과에서 paired trace dataset만 생성
-python tools/run_pipeline.py stage05
+# 특정 파일(해당 flow variant 그룹)만 실행
+python tools/run_pipeline.py full \
+  --files juliet-test-suite-v1.3/C/testcases/CWE78_OS_Command_Injection/s01/CWE78_OS_Command_Injection__char_console_execlp_52a.c
 
-# 기존 run의 Step 07 재생성
-RUN_DIR=artifacts/pipeline-runs/run-2026.03.10-00:49:21
-python tools/run_pipeline.py stage07 \
-  --pairs-jsonl "$RUN_DIR/05_pair_trace_ds/pairs.jsonl" \
-  --paired-signatures-dir "$RUN_DIR/05_pair_trace_ds/paired_signatures" \
-  --slice-dir "$RUN_DIR/06_slices/slice" \
-  --output-dir "$RUN_DIR/07_dataset_export"
+# trace-first dataset export
+python tools/run_pipeline.py full 78 --disable-pair
 
-# 기존 run의 Step 07b 재생성
-python tools/run_pipeline.py stage07b \
-  --run-dir "$RUN_DIR" \
-  --overwrite
+# Stage 02a를 01_manifest 출력으로 직접 돌리기
+python tools/run_pipeline.py full 78 --disable-epic002-for-02a
+
+# 기존 run 기준으로 strict trace만 다시 생성
+python tools/retrace_strict_trace.py run-2026.03.17-15:11:12
 
 # 최신 pipeline run의 Real_Vul_data.csv 를 VP-Bench linevul 컨테이너로 넘겨
 # prepare -> train -> test 실행
@@ -242,12 +244,9 @@ python tools/compare-artifacts.py \
 
 ## 메모
 
-- `tools/run_pipeline.py stage03-signature`는 `infer-out/report.json`의 모든 이슈를 저장하지 않습니다.
-  `bug_type == TAINT_ERROR`이면서 `bug_trace`가 non-empty인 레코드만 signature로 저장합니다.
+- `tools/run_pipeline.py` 의 현재 공식 subcommand는 `full` 뿐입니다.
 - `--files` 사용 시 `cwes` / `--all`은 무시됩니다.
 - `--all` 사용 시 positional `cwes` 인자는 무시됩니다.
 - `.cpp`는 `clang++`, `.c`는 `clang`을 사용합니다.
-- `run_pipeline.py stage03 --global-result`를 쓰면 infer 결과 root가
-  로컬 `artifacts/infer-results/` 대신 `/data/pattern/result/infer-results/`로 바뀝니다.
 - CodeBERT tokenizer 캐시, `--overwrite`, `--old-prefix/--new-prefix`,
   stage별 재실행 패턴과 재현성 옵션은 [`docs/rerun.md`](docs/rerun.md)를 참고하세요.

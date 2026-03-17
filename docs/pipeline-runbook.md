@@ -5,7 +5,7 @@
 
 ## 문서 맵
 
-- 산출물 구조 / summary JSON / 로그 위치:
+- 산출물 구조 / summary JSON:
   [`artifacts.md`](artifacts.md)
 - 재실행 / `--overwrite` / 경로 이식 / 재현성 옵션:
   [`rerun.md`](rerun.md)

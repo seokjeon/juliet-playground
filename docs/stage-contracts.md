@@ -56,20 +56,38 @@
 
 ## 전체 실행 순서
 
-현재 구현의 실제 실행 순서는 아래와 같습니다.
+현재 공개 CLI인 `tools/run_pipeline.py full` 의 실제 실행 순서는 아래와 같습니다.
 
-1. `01_manifest_comment_scan`
-2. `02a_code_field_inventory`
-3. `02b_function_inventory_extract`
-4. `02b_function_inventory_categorize`
-5. `02b_testcase_flow_partition`
-6. taint config 선택 (`tools/run_pipeline.py` 내부 분기)
-7. `03_infer_and_signature`
-8. `04_trace_flow_filter`
-9. `05_pair_trace_dataset`
-10. `06_generate_slices`
-11. `07_dataset_export`
-12. `07b_train_patched_counterparts_export`
+- 기본 pair 모드:
+  1. `01_manifest_comment_scan`
+  2. `02b_testcase_flow_partition`
+  3. `02b_epic002_classification`
+  4. `02a_code_field_inventory`
+  5. taint config 선택 (`tools/run_pipeline.py` 내부 분기)
+  6. `03_infer_and_signature`
+  7. `04_trace_flow_filter`
+  8. `05_pair_trace_dataset`
+  9. `06_generate_slices`
+  10. `07_dataset_export`
+  11. `07b_train_patched_counterparts_export`
+- `--disable-pair` 모드:
+  1. `01_manifest_comment_scan`
+  2. `02b_testcase_flow_partition`
+  3. `02b_epic002_classification`
+  4. `02a_code_field_inventory`
+  5. taint config 선택 (`tools/run_pipeline.py` 내부 분기)
+  6. `03_infer_and_signature`
+  7. `04_trace_flow_filter`
+  8. `05_trace_dataset`
+  9. `06_trace_slices`
+  10. `07_trace_dataset_export`
+
+`--disable-epic002-for-02a` 를 사용하면 Stage 02a는 기본값과 달리
+`01_manifest/manifest_with_comments.xml` 을 직접 입력으로 사용합니다.
+
+아래의 `02b_function_inventory_extract`, `02b_function_inventory_categorize` 섹션은
+여전히 실험/참조 스크립트 문맥에서는 유효하지만, 현재 `full` CLI가 직접 호출하는
+물리 단계는 아닙니다.
 
 ---
 
@@ -86,6 +104,9 @@
 - `--pair-split-seed`
 - `--pair-train-ratio`
 - `--dedup-mode`
+- `--enable-pair` / `--disable-pair`
+- `--keep-single-child-flows`
+- `--disable-epic002-for-02a`
 
 기본 run 디렉터리는 다음 구조를 사용합니다.
 
@@ -95,11 +116,9 @@
 - `03_infer-results/`
 - `03_signatures/`
 - `04_trace_flow/`
-- `05_pair_trace_ds/`
-- `06_slices/`
+- `05_pair_trace_ds/` 또는 `05_trace_ds/`
+- `06_slices/` 또는 `06_trace_slices/`
 - `07_dataset_export/`
-- `logs/`
-- `run_summary.json`
 
 ---
 
@@ -633,7 +652,7 @@ Stage 01 테스트는 아래 두 층으로 나누는 것이 좋습니다.
 - Step 03 실행 시 `--pulse-taint-config <selected_taint_config>` 로 전달된다.
 
 #### B. golden regression 테스트
-- `run_summary.json` 내 경로 문자열 전체
+- 선택된 taint config reason과 downstream 전달 여부
 
 ### 테스트에서 계약으로 보기 어려운 것
 - `selected_taint_config` 경로 문자열의 절대/상대 표현 방식
@@ -642,14 +661,15 @@ Stage 01 테스트는 아래 두 층으로 나누는 것이 좋습니다.
 
 ## 7. `03_infer_and_signature`
 
-### 실행 스크립트
-- `tools/run_pipeline.py stage03`
+### 실행 위치
+- `tools/run_pipeline.py full` 내부 함수 호출
+- 구현 함수: `run_infer_and_signature()`
 
 ### 입력
-- `--pulse-taint-config <selected_taint_config>`
-- `--infer-results-root 03_infer-results/`
-- `--signatures-root 03_signatures/`
-- `--summary-json 03_infer_summary.json`
+- `selected_taint_config`
+- `03_infer-results/` root
+- `03_signatures/` root
+- `03_infer_summary.json`
 - 대상 선택:
   - `cwes`
   - 또는 `--all`
@@ -666,18 +686,16 @@ Stage 01 테스트는 아래 두 층으로 나누는 것이 좋습니다.
 
 ### 현재 코드가 실제로 하는 일
 - Infer 실행과 signature 생성을 한 번에 수행합니다.
-- 실행 후 `03_infer_summary.json` 을 읽어 downstream에 사용할 `signature_non_empty_dir` 를 해석합니다.
-  - summary에 `signature_non_empty_dir` 가 있으면 그것을 사용
-  - 없으면 `signature_output_dir/non_empty` 로 계산
+- 실행 후 반환값과 `03_infer_summary.json` 의 `artifacts.signature_non_empty_dir` 를 통해
+  downstream에 사용할 signature dir를 전달합니다.
 
 ### 현재 코드가 실제로 검사하는 것
 - `03_infer_summary.json`
-- summary에서 해석한 `signature_non_empty_dir`
+- `artifacts.signature_non_empty_dir`
 
 ### downstream이 실제로 쓰는 출력
 다음 단계(`04_trace_flow_filter`)가 직접 쓰는 것은 아래입니다.
 
-- `03_infer_summary.json`
 - `signature_non_empty_dir`
 
 그중 핵심은 실제 signature JSON들이 들어 있는 `signature_non_empty_dir` 입니다.
@@ -685,52 +703,40 @@ Stage 01 테스트는 아래 두 층으로 나누는 것이 좋습니다.
 ### 현재 코드상 생성 규칙
 - Infer run 결과는 `03_infer-results/infer-<timestamp>/` 아래에 생성됩니다.
 - signature 결과는 `03_signatures/infer-<timestamp>/signature-<timestamp>/` 아래에 생성됩니다.
-- `03_infer_summary.json` 은 현재 코드상 최소한 아래 정보를 담습니다.
-  - `pulse_taint_config`
-  - `infer_results_root`
+- `03_infer_summary.json` 은 top-level `artifacts`, `stats` 를 사용합니다.
+- `artifacts` 는 최소한 아래 key를 가집니다.
   - `infer_run_dir`
-  - `infer_run_name`
-  - `signatures_root`
   - `signature_output_dir`
   - `signature_non_empty_dir`
-  - `analysis_result_csv`
-  - `analysis_no_issue_files`
-  - `result_by_target`
-  - `totals`
+- `stats` 는 최소한 아래 key를 가집니다.
+  - `issue`
+  - `no_issue`
+  - `error`
+  - `total_cases`
+  - `elapsed_seconds`
+  - `targets_analyzed`
 - `signature_non_empty_dir` 는 downstream이 읽을 수 있는 existing directory 여야 합니다.
 
 ### 테스트 작성용 계약 체크리스트
 #### A. 계약 체크 테스트
 - `03_infer_summary.json` 이 생성된다.
 - summary 는 JSON object 이다.
-- summary 는 최소한 아래 key를 가진다.
+- summary 는 top-level `artifacts`, `stats` 를 가진다.
+- `summary["artifacts"]` 는 최소한 아래 key를 가진다.
   - `infer_run_dir`
   - `signature_output_dir`
   - `signature_non_empty_dir`
-  - `analysis_result_csv`
-  - `analysis_no_issue_files`
-  - `result_by_target`
-  - `totals`
-- `signature_non_empty_dir` 경로가 실제로 존재한다.
-- `analysis_result_csv` 경로가 실제로 존재한다.
-- `analysis_no_issue_files` 경로가 실제로 존재한다.
-- `totals` 는 JSON object 이고 최소한 아래 key를 가진다.
+- `summary["stats"]` 는 최소한 아래 key를 가진다.
   - `issue`
   - `no_issue`
   - `error`
   - `total_cases`
   - `elapsed_seconds`
-- `result_by_target` 는 JSON object 이다.
-- 각 target summary는 최소한
-  - `issue`
-  - `no_issue`
-  - `error`
-  - `total_cases`
-  - `time`
-  를 가진다.
+  - `targets_analyzed`
+- `signature_non_empty_dir` 경로가 실제로 존재한다.
 
 #### B. golden regression 테스트
-- summary 안의 정확한 target별 숫자
+- summary 안의 정확한 compact stats 숫자
 - 특정 fixture에서 생성되는 signature 파일 목록 전체
 
 ### 테스트에서 계약으로 보기 어려운 것
@@ -750,16 +756,15 @@ Stage 01 테스트는 아래 두 층으로 나누는 것이 좋습니다.
 - `--output-dir 04_trace_flow/`
 
 ### 출력 경로
-- `04_trace_flow/trace_flow_match_all.jsonl`
 - `04_trace_flow/trace_flow_match_strict.jsonl`
-- `04_trace_flow/trace_flow_match_partial_or_strict.jsonl`
 - `04_trace_flow/summary.json`
 
 ### 다음 단계로 넘기는 핵심 출력
 - `04_trace_flow/trace_flow_match_strict.jsonl`
 
 ### 현재 코드가 실제로 하는 일
-- testcase flow XML과 signature trace를 비교해 strict / partial match 결과를 만듭니다.
+- testcase flow XML과 signature trace를 비교합니다.
+- 모든 trace에 대해 내부적으로 best flow를 계산하지만, on-disk 출력은 strict match JSONL만 저장합니다.
 - 다음 단계는 strict 결과만 사용합니다.
 
 ### 현재 코드가 실제로 검사하는 것
@@ -769,12 +774,7 @@ Stage 01 테스트는 아래 두 층으로 나누는 것이 좋습니다.
 다음 단계(`05_pair_trace_dataset`)는 아래 파일만 직접 사용합니다.
 
 - `04_trace_flow/trace_flow_match_strict.jsonl`
-
-하지만 테스트 관점에서는 아래 파일들도 함께 보는 것이 유익합니다.
-
-- `trace_flow_match_all.jsonl`
-- `trace_flow_match_partial_or_strict.jsonl`
-- `summary.json`
+- `summary.json` 은 운영/디버깅용 compact summary 입니다.
 
 ### 현재 코드상 생성 규칙
 - signature dir 아래 testcase 디렉터리별로 JSON trace를 순회합니다.
@@ -788,24 +788,17 @@ Stage 01 테스트는 아래 두 층으로 나누는 것이 좋습니다.
 - `flow_match[*].hit_tag_counts` 는 현재 `flaw` / `fix` 태그 기준으로 집계됩니다.
 - trace에 flow hit가 없으면
   - `status = "no_flow_hit"`
-- flow index가 없으면
-  - `status = "no_flow_index"`
 - best flow가 strict면
   - `status = "strict_match"`
 - best flow가 partial이면
   - `status = "partial_match"`
+- flow index가 없는 trace는 strict JSONL에 기록되지 않고 summary 집계에만 반영됩니다.
 - strict output에는 `status == "strict_match"` 인 record만 들어갑니다.
-- partial_or_strict output에는
-  - `strict_match`
-  - `partial_match`
-  가 들어갑니다.
 
 ### 테스트 작성용 계약 체크리스트
 #### A. 계약 체크 테스트
 - 출력 파일이 생성된다.
-  - `trace_flow_match_all.jsonl`
   - `trace_flow_match_strict.jsonl`
-  - `trace_flow_match_partial_or_strict.jsonl`
   - `summary.json`
 - `trace_flow_match_strict.jsonl` 의 각 record는 JSON object 이다.
 - strict record는 최소한 아래 key를 가진다.
@@ -819,16 +812,17 @@ Stage 01 테스트는 아래 두 층으로 나누는 것이 좋습니다.
 - strict output의 모든 record는 `best_flow_type` 이 비어 있지 않다.
 - `best_flow_meta.strict_match` 는 `true` 여야 한다.
 - `trace_file` 경로 문자열은 비어 있지 않다.
-- `summary.json` 은 최소한 아래 정보를 담는다.
-  - `flow_index`
-  - `trace_stats`
+- `summary.json` 은 top-level `artifacts`, `stats` 를 가진다.
+- `summary.json["artifacts"]` 는 `trace_flow_match_strict_jsonl` 을 가진다.
+- `summary.json["stats"]` 는 최소한 아래 key를 가진다.
+  - `traces_total`
+  - `traces_strict_match`
   - `matched_best_flow_counts`
-  - `output_files`
 
 #### B. golden regression 테스트
 - 각 trace의 `best_flow_type` 정확한 값
 - `hit_points`, `coverage`, `hit_tag_counts` 정확한 값
-- strict/partial 분류 수치
+- strict 분류 수치와 best-flow 집계
 
 ### 테스트에서 계약으로 보기 어려운 것
 - JSONL 레코드 순서 자체
@@ -839,12 +833,14 @@ Stage 01 테스트는 아래 두 층으로 나누는 것이 좋습니다.
 
 ## 9. `05_pair_trace_dataset`
 
-### 실행 스크립트
-- `tools/run_pipeline.py stage05`
+### 실행 위치
+- `tools/run_pipeline.py full` 내부 함수 호출
+- pair 모드에서만 실행됩니다.
+- 구현 함수: `build_paired_trace_dataset()`
 
 ### 입력
-- `--trace-jsonl 04_trace_flow/trace_flow_match_strict.jsonl`
-- `--output-dir 05_pair_trace_ds/`
+- `04_trace_flow/trace_flow_match_strict.jsonl`
+- `05_pair_trace_ds/` 출력 디렉터리
 
 ### 출력 경로
 - `05_pair_trace_ds/pairs.jsonl`
@@ -887,30 +883,17 @@ Stage 01 테스트는 아래 두 층으로 나누는 것이 좋습니다.
   - `best_flow_type == "b2b"` 인 record 중 하나
   - counterpart flow(`g2b*`, `b2g*`) 중 하나
   를 선택합니다.
-- 선택 기준은 현재 코드상 `record_sort_key` 이고, 실질적으로
-  - `bug_trace_length` 내림차순
-  - trace path
-  - flow type
-  - procedure
-  순입니다.
+- 선택 기준은 현재 코드상 `record_sort_key` 입니다.
 - `pairs.jsonl` 의 각 record는 현재 코드상 최소한 아래를 가집니다.
   - `pair_id`
   - `testcase_key`
-  - `selection_reason`
-  - `b2b_flow_type`
-  - `b2b_trace_file`
-  - `b2b_bug_trace_length`
-  - `b2b_signature`
   - `counterpart_flow_type`
-  - `counterpart_trace_file`
-  - `counterpart_bug_trace_length`
-  - `counterpart_signature`
-  - `output_files`
+  - `b2b_path`
+  - `counterpart_path`
 - `paired_signatures/<testcase_key>/` 아래에는 현재 코드상
   - `b2b.json`
   - `<counterpart_flow_type>.json`
   가 생성됩니다.
-- 각 exported signature JSON에는 `pairing_meta` 가 추가됩니다.
 - 선택되지 않은 counterpart는 `leftover_counterparts.jsonl` 로 기록됩니다.
 
 ### 테스트 작성용 계약 체크리스트
@@ -924,19 +907,15 @@ Stage 01 테스트는 아래 두 층으로 나누는 것이 좋습니다.
 - 각 pair record는 최소한 아래 key를 가진다.
   - `pair_id`
   - `testcase_key`
-  - `b2b_flow_type`
   - `counterpart_flow_type`
-  - `output_files`
+  - `b2b_path`
+  - `counterpart_path`
 - `pair_id` 는 비어 있지 않다.
-- `b2b_flow_type == "b2b"` 여야 한다.
 - `counterpart_flow_type` 은 비어 있지 않고 `b2b` 가 아니어야 한다.
-- `output_files["b2b"]` 경로가 존재한다.
-- `output_files[<counterpart_flow_type>]` 경로가 존재한다.
-- exported signature JSON은 `pairing_meta` 를 가진다.
-- `pairing_meta.pair_id` 는 pair record의 `pair_id` 와 일치한다.
+- `b2b_path` 경로가 존재한다.
+- `counterpart_path` 경로가 존재한다.
 - `summary.json` 은 최소한 아래 정보를 담는다.
   - `records_total`
-  - `summary_counts`
   - `paired_testcases`
   - `leftover_counterparts`
 
@@ -955,12 +934,14 @@ Stage 01 테스트는 아래 두 층으로 나누는 것이 좋습니다.
 
 ## 10. `06_generate_slices`
 
-### 실행 스크립트
-- `tools/run_pipeline.py stage06`
+### 실행 위치
+- `tools/run_pipeline.py full` 내부 함수 호출
+- pair 모드에서만 실행됩니다.
+- 구현 함수: `generate_slices()`
 
 ### 입력
-- `--signature-db-dir 05_pair_trace_ds/paired_signatures/`
-- `--output-dir 06_slices/`
+- `05_pair_trace_ds/paired_signatures/`
+- `06_slices/` 출력 디렉터리
 
 ### 출력 경로
 - `06_slices/slice/`
@@ -1004,15 +985,20 @@ Stage 01 테스트는 아래 두 층으로 나누는 것이 좋습니다.
 - 출력 디렉터리/파일이 생성된다.
   - `06_slices/slice/`
   - `06_slices/summary.json`
-- `summary.json` 은 최소한 아래 정보를 담는다.
-  - `signature_db_dir`
+- `summary.json` 은 top-level `artifacts`, `stats` 를 가진다.
+- `summary.json["artifacts"]` 는 최소한 아래 key를 가진다.
   - `output_dir`
   - `slice_dir`
+  - `summary_json`
+- `summary.json["stats"]` 는 최소한 아래 key를 가진다.
   - `total_slices`
+  - `generated`
+  - `skipped`
+  - `errors`
   - `counts`
 - 생성된 slice 파일은 `.c` 또는 `.cpp` 확장자를 가진다.
 - 생성된 slice 파일 내용은 비어 있지 않다.
-- `summary.counts.generated` 는 실제 생성된 slice 파일 수와 모순되지 않아야 한다.
+- `summary.stats.generated` 는 실제 생성된 slice 파일 수와 모순되지 않아야 한다.
 - skip이 발생할 수 있으므로, 입력 JSON 수와 생성 slice 수가 꼭 같을 필요는 없다.
 
 #### B. golden regression 테스트
@@ -1044,9 +1030,6 @@ Stage 01 테스트는 아래 두 층으로 나누는 것이 좋습니다.
 ### 출력 경로
 - `07_dataset_export/normalized_slices/`
 - `07_dataset_export/Real_Vul_data.csv`
-- `07_dataset_export/Real_Vul_data_dedup_dropped.csv`
-- `07_dataset_export/normalized_token_counts.csv`
-- `07_dataset_export/slice_token_distribution.png`
 - `07_dataset_export/split_manifest.json`
 - `07_dataset_export/summary.json`
 
@@ -1062,9 +1045,6 @@ Stage 01 테스트는 아래 두 층으로 나누는 것이 좋습니다.
 ### 현재 코드가 실제로 검사하는 것
 - `07_dataset_export/normalized_slices/`
 - `07_dataset_export/Real_Vul_data.csv`
-- `07_dataset_export/Real_Vul_data_dedup_dropped.csv`
-- `07_dataset_export/normalized_token_counts.csv`
-- `07_dataset_export/slice_token_distribution.png`
 - `07_dataset_export/split_manifest.json`
 - `07_dataset_export/summary.json`
 
@@ -1092,20 +1072,15 @@ Stage 01 테스트는 아래 두 층으로 나누는 것이 좋습니다.
   - `dataset_type`
   - `processed_func`
 - `split_manifest.json` 은 현재 코드상 최소한 아래를 포함합니다.
-  - split metadata
-  - `normalized_slices_dir`
-  - `dedup_dropped_csv`
-  - `dedup`
   - `counts`
   - `pair_ids`
 - `pair_ids` 는 현재 코드상
   - `train_val`
   - `test`
   key를 사용합니다.
-- `summary.json` 은 최소한 아래 성격의 정보를 포함합니다.
+- `summary.json` 은 top-level `artifacts`, `stats` 를 가지며 최소한 아래 성격의 정보를 포함합니다.
   - output paths
   - dedup summary
-  - token stats
   - filtered pair reasons
   - counts
 
@@ -1114,9 +1089,6 @@ Stage 01 테스트는 아래 두 층으로 나누는 것이 좋습니다.
 - 출력 파일/디렉터리가 생성된다.
   - `normalized_slices/`
   - `Real_Vul_data.csv`
-  - `Real_Vul_data_dedup_dropped.csv`
-  - `normalized_token_counts.csv`
-  - `slice_token_distribution.png`
   - `split_manifest.json`
   - `summary.json`
 - `Real_Vul_data.csv` header 는 현재 구현과 일치해야 한다.
@@ -1124,47 +1096,110 @@ Stage 01 테스트는 아래 두 층으로 나누는 것이 좋습니다.
 - `split_manifest.json` 은 최소한 아래 key를 가진다.
   - `counts`
   - `pair_ids`
-  - `normalized_slices_dir`
-  - `dedup_dropped_csv`
 - `split_manifest.json["pair_ids"]` 는 최소한
   - `train_val`
   - `test`
   를 가진다.
 - `summary.json` 은 JSON object 이다.
-- `summary.json` 은 최소한 아래 key를 가진다.
+- `summary.json` 은 top-level `artifacts`, `stats` 를 가진다.
+- `summary.json["artifacts"]` 는 최소한 아래 key를 가진다.
+  - `csv_path`
   - `normalized_slices_dir`
-  - `dedup_dropped_csv`
   - `split_manifest_json`
+  - `summary_json`
+- `summary.json["stats"]` 는 최소한 아래 key를 가진다.
   - `dedup`
-  - `token_stats`
   - `filtered_pair_reasons`
   - `counts`
 - `normalized_slices/` 의 파일 수는 CSV row 수와 모순되지 않아야 한다.
-- `summary.counts.train_val_pairs` 는 `split_manifest.pair_ids.train_val` 길이와 일치해야 한다.
-- `summary.counts.test_pairs` 는 `split_manifest.pair_ids.test` 길이와 일치해야 한다.
+- `summary.stats.counts.train_val_pairs` 는 `split_manifest.pair_ids.train_val` 길이와 일치해야 한다.
+- `summary.stats.counts.test_pairs` 는 `split_manifest.pair_ids.test` 길이와 일치해야 한다.
 
 #### B. golden regression 테스트
 - 최종 CSV row 전체
-- dedup dropped CSV row 전체
-- normalized token counts 값
 - split 결과의 정확한 pair_id 목록
 - summary의 세부 통계값
 
 ### 테스트에서 계약으로 보기 어려운 것
 - normalized slice 파일명 번호 자체
-- plot 이미지의 픽셀 단위 차이
 - tokenizer 내부 버전에 따른 미세한 통계 차이
+
+---
+
+## 11a. `07_trace_dataset_export` (`--disable-pair` 모드)
+
+### 실행 위치
+- `tools/run_pipeline.py full --disable-pair` 내부 함수 호출
+- 구현 함수: `export_trace_dataset_from_pipeline()`
+
+### 입력
+- `05_trace_ds/traces.jsonl`
+- `06_trace_slices/slice/`
+- `pair_split_seed`
+- `pair_train_ratio`
+- `dedup_mode`
+
+### 출력 경로
+- `07_dataset_export/normalized_slices/`
+- `07_dataset_export/Real_Vul_data.csv`
+- `07_dataset_export/split_manifest.json`
+- `07_dataset_export/summary.json`
+- `07_dataset_export/trace_dedup_dropped.jsonl`
+- `07_dataset_export/vuln_patch/Real_Vul_data.csv`
+- `07_dataset_export/vuln_patch/summary.json`
+
+### 현재 코드가 실제로 하는 일
+- trace 단위 후보 row를 만들고 row dedup 및 multi-b2b pruning을 수행합니다.
+- testcase 단위 split을 계산해 main dataset CSV를 생성합니다.
+- 같은 단계 안에서 `vuln_patch/` holdout CSV와 summary를 함께 생성합니다.
+
+### 테스트 작성용 계약 체크리스트
+#### A. 계약 체크 테스트
+- 위 출력 파일/디렉터리가 생성된다.
+- `split_manifest.json` 은 최소한 아래 key를 가진다.
+  - `counts`
+  - `trace_ids`
+  - `testcase_keys`
+- `summary.json` 은 top-level `artifacts`, `stats` 를 가진다.
+- `summary.json["artifacts"]` 는 최소한 아래 key를 가진다.
+  - `csv_path`
+  - `normalized_slices_dir`
+  - `split_manifest_json`
+  - `summary_json`
+  - `trace_dedup_dropped_jsonl`
+  - `vuln_patch_csv_path`
+  - `vuln_patch_summary_json`
+- `summary.json["stats"]` 는 최소한 아래 key를 가진다.
+  - `mode`
+  - `dedup`
+  - `structural_pruning`
+  - `filtered_trace_reasons`
+  - `vuln_patch_holdout`
+  - `counts`
+- `vuln_patch/Real_Vul_data.csv` 의 모든 row는 `dataset_type == "test"` 여야 한다.
+
+#### B. golden regression 테스트
+- 최종 CSV row 전체
+- `vuln_patch` CSV row 전체
+- split의 정확한 testcase/trace id 목록
+- summary의 dedup / pruning / holdout 집계
+
+### 테스트에서 계약으로 보기 어려운 것
+- trace dedup audit JSONL 레코드 순서
+- normalized slice 파일명 번호 자체
 
 ---
 
 ## 12. `07b_train_patched_counterparts_export`
 
-### 실행 스크립트
-- `tools/run_pipeline.py stage07b`
+### 실행 위치
+- `tools/run_pipeline.py full` 내부 함수 호출
+- pair 모드에서만 실행됩니다.
+- 구현 함수: `export_patched_dataset()`
 
 ### 입력
-- `--run-dir <run_dir>`
-- `--dedup-mode <dedup_mode>`
+- `run_dir`
+- `dedup_mode`
 
 기본적으로 내부에서 아래 산출물을 다시 읽습니다.
 
@@ -1174,15 +1209,11 @@ Stage 01 테스트는 아래 두 층으로 나누는 것이 좋습니다.
 
 ### 출력 경로
 - `05_pair_trace_ds/train_patched_counterparts_pairs.jsonl`
-- `05_pair_trace_ds/train_patched_counterparts_selection_summary.json`
 - `05_pair_trace_ds/train_patched_counterparts_signatures/`
 - `06_slices/train_patched_counterparts/slice/`
 - `06_slices/train_patched_counterparts/summary.json`
 - `07_dataset_export/train_patched_counterparts.csv`
-- `07_dataset_export/train_patched_counterparts_dedup_dropped.csv`
 - `07_dataset_export/train_patched_counterparts_slices/`
-- `07_dataset_export/train_patched_counterparts_token_counts.csv`
-- `07_dataset_export/train_patched_counterparts_token_distribution.png`
 - `07_dataset_export/train_patched_counterparts_split_manifest.json`
 - `07_dataset_export/train_patched_counterparts_summary.json`
 
@@ -1196,14 +1227,10 @@ Stage 01 테스트는 아래 두 층으로 나누는 것이 좋습니다.
 ### 현재 코드가 실제로 검사하는 것
 - `05_pair_trace_ds/train_patched_counterparts_pairs.jsonl`
 - `05_pair_trace_ds/train_patched_counterparts_signatures/`
-- `05_pair_trace_ds/train_patched_counterparts_selection_summary.json`
 - `06_slices/train_patched_counterparts/slice/`
 - `06_slices/train_patched_counterparts/summary.json`
 - `07_dataset_export/train_patched_counterparts.csv`
-- `07_dataset_export/train_patched_counterparts_dedup_dropped.csv`
 - `07_dataset_export/train_patched_counterparts_slices/`
-- `07_dataset_export/train_patched_counterparts_token_counts.csv`
-- `07_dataset_export/train_patched_counterparts_token_distribution.png`
 - `07_dataset_export/train_patched_counterparts_split_manifest.json`
 - `07_dataset_export/train_patched_counterparts_summary.json`
 
@@ -1219,26 +1246,20 @@ Stage 01 테스트는 아래 두 층으로 나누는 것이 좋습니다.
   - `b2b.json`
   - `<counterpart_flow_type>.json`
   가 생성됩니다.
-- 각 exported signature JSON에는 `pairing_meta` 가 추가됩니다.
-  - `selection_reason`
-  - `source_primary_pair_id`
-  등 추가 메타가 포함됩니다.
 - 이후 별도 slice 생성과 dataset export를 다시 수행합니다.
 - 최종 export 파일 이름은 `train_patched_counterparts_*` 접두를 사용합니다.
+- selection 집계는 별도 파일이 아니라
+  `07_dataset_export/train_patched_counterparts_summary.json` 의 `stats.selection` 에 병합됩니다.
 
 ### 테스트 작성용 계약 체크리스트
 #### A. 계약 체크 테스트
 - 출력 파일/디렉터리가 생성된다.
   - `train_patched_counterparts_pairs.jsonl`
   - `train_patched_counterparts_signatures/`
-  - `train_patched_counterparts_selection_summary.json`
   - `06_slices/train_patched_counterparts/slice/`
   - `06_slices/train_patched_counterparts/summary.json`
   - `07_dataset_export/train_patched_counterparts.csv`
-  - `07_dataset_export/train_patched_counterparts_dedup_dropped.csv`
   - `07_dataset_export/train_patched_counterparts_slices/`
-  - `07_dataset_export/train_patched_counterparts_token_counts.csv`
-  - `07_dataset_export/train_patched_counterparts_token_distribution.png`
   - `07_dataset_export/train_patched_counterparts_split_manifest.json`
   - `07_dataset_export/train_patched_counterparts_summary.json`
 - `train_patched_counterparts_pairs.jsonl` 의 각 record는 JSON object 이다.
@@ -1246,16 +1267,13 @@ Stage 01 테스트는 아래 두 층으로 나누는 것이 좋습니다.
   - `pair_id`
   - `testcase_key`
   - `source_primary_pair_id`
-  - `b2b_flow_type`
   - `counterpart_flow_type`
-  - `output_files`
-- selection summary는 최소한 아래를 담는다.
-  - `source_split_manifest_json`
-  - `output_pairs_jsonl`
-  - `counts`
-  - `selected_testcases`
+  - `b2b_path`
+  - `counterpart_path`
 - patched export CSV / split manifest / summary 는 기본 Step 07 산출물과 같은 계열의 구조를 유지해야 한다.
 - patched split manifest 는 최소한 `pair_ids` 와 `counts` 를 가져야 한다.
+- patched summary 는 최소한 `artifacts`, `stats` 를 가지며
+  `stats.selection`, `stats.dedup`, `stats.filtered_pair_reasons`, `stats.counts` 를 포함해야 한다.
 
 #### B. golden regression 테스트
 - 어떤 train_val pair가 선택되었는지
@@ -1267,7 +1285,6 @@ Stage 01 테스트는 아래 두 층으로 나누는 것이 좋습니다.
 ### 테스트에서 계약으로 보기 어려운 것
 - `leftover_rank` 같은 보조 메타의 세부 값 전부
 - signature JSON pretty formatting
-- plot 이미지의 픽셀 단위 차이
 
 ---
 
@@ -1305,7 +1322,8 @@ Stage 01 테스트는 아래 두 층으로 나누는 것이 좋습니다.
   현재 오케스트레이션에서는 **한 번의 실행 단계**입니다.
 - `06` 과 `07` 도 개념적으로 묶을 수 있지만 현재 코드는
   **서로 다른 산출물 존재 여부를 따로 검사**합니다.
-- `07b` 는 기본 파이프라인의 마지막 단계로 항상 실행됩니다.
+- `07b` 는 pair 모드에서만 실행됩니다.
+- `--disable-pair` 모드에서는 `07_trace_dataset_export` 가 `vuln_patch/` holdout까지 함께 생성합니다.
 - `selected_taint_config` 는 파일명이 아니라 `tools/run_pipeline.py` 내부에서 결정되는 값입니다.
 
 ---
