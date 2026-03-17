@@ -1,39 +1,39 @@
 {
   "artifacts": {
-    "output_dir": "expected/07_dataset_export",
     "csv_path": "expected/07_dataset_export/Real_Vul_data.csv",
     "normalized_slices_dir": "expected/07_dataset_export/normalized_slices",
+    "output_dir": "expected/07_dataset_export",
     "split_manifest_json": "expected/07_dataset_export/split_manifest.json",
     "summary_json": "expected/07_dataset_export/summary.json"
   },
   "stats": {
+    "counts": {
+      "pairs_filtered_out": 2,
+      "pairs_survived": 3,
+      "pairs_total": 5,
+      "rows_written": 6,
+      "test_pairs": 1,
+      "train_val_pairs": 2
+    },
     "dedup": {
-      "mode": "row",
-      "selection_order": "input_pair_order",
-      "row_hash_method": "md5(compact_whitespace(normalized_code))",
-      "pairs_before": 5,
-      "pairs_after": 3,
-      "pairs_dropped_duplicate": 2,
-      "pairs_dropped_collision": 0,
-      "rows_before": 10,
-      "rows_after": 6,
-      "rows_removed": 4,
-      "row_hashes_unique": 6,
+      "collision_hash_groups": 0,
+      "collision_row_occurrences": 0,
       "duplicate_hash_groups": 4,
       "duplicate_row_occurrences": 4,
-      "collision_hash_groups": 0,
-      "collision_row_occurrences": 0
+      "mode": "row",
+      "pairs_after": 3,
+      "pairs_before": 5,
+      "pairs_dropped_collision": 0,
+      "pairs_dropped_duplicate": 2,
+      "row_hash_method": "md5(compact_whitespace(normalized_code))",
+      "row_hashes_unique": 6,
+      "rows_after": 6,
+      "rows_before": 10,
+      "rows_removed": 4,
+      "selection_order": "input_pair_order"
     },
     "filtered_pair_reasons": {
       "dedup_duplicate_normalized_slice": 2
-    },
-    "counts": {
-      "pairs_total": 5,
-      "pairs_survived": 3,
-      "pairs_filtered_out": 2,
-      "rows_written": 6,
-      "train_val_pairs": 2,
-      "test_pairs": 1
     }
   }
 }

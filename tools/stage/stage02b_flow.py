@@ -22,8 +22,8 @@ FAMILY_TO_FLOW = {
     'g2b_family': 'g2b',
 }
 FLOW_NUM_SUFFIX = {
-    'b2g': re.compile(r'b2g(\d+)$', re.IGNORECASE),
-    'g2b': re.compile(r'g2b(\d+)$', re.IGNORECASE),
+    'b2g': re.compile(r'b2g(\d+)(?:sink)?$', re.IGNORECASE),
+    'g2b': re.compile(r'g2b(\d+)(?:sink)?$', re.IGNORECASE),
 }
 
 
@@ -87,7 +87,8 @@ def infer_function_for_flaw(line_no: int, function_lines: dict[str, list[int]]) 
 def flow_type_from_function(base_flow: str, function_name: str | None) -> str:
     if base_flow not in FLOW_NUM_SUFFIX or not function_name:
         return base_flow
-    match = FLOW_NUM_SUFFIX[base_flow].search(function_name)
+    simple_name = split_simple_name(function_name)
+    match = FLOW_NUM_SUFFIX[base_flow].search(simple_name)
     if not match:
         return base_flow
     return f'{base_flow}{match.group(1)}'

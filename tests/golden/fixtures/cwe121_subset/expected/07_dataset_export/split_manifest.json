@@ -1,16 +1,16 @@
 {
   "counts": {
     "pairs_total": 3,
-    "train_val": 2,
-    "test": 1
+    "test": 1,
+    "train_val": 2
   },
   "pair_ids": {
+    "test": [
+      "f8fb946c5286832a"
+    ],
     "train_val": [
       "1551f962c530a757",
       "f32c0e32369bf6cb"
-    ],
-    "test": [
-      "f8fb946c5286832a"
     ]
   }
 }

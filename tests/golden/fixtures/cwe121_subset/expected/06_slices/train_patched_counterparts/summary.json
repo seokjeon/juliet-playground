@@ -5,14 +5,14 @@
     "summary_json": "expected/06_slices/train_patched_counterparts/summary.json"
   },
   "stats": {
-    "total_slices": 6,
+    "counts": {
+      "generated": 6,
+      "json_files_total": 6,
+      "testcase_dirs_total": 3
+    },
+    "errors": 0,
     "generated": 6,
     "skipped": 0,
-    "errors": 0,
-    "counts": {
-      "testcase_dirs_total": 3,
-      "json_files_total": 6,
-      "generated": 6
-    }
+    "total_slices": 6
   }
 }

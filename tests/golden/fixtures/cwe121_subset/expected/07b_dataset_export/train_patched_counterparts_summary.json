@@ -1,51 +1,51 @@
 {
   "artifacts": {
-    "output_dir": "expected/07_dataset_export",
     "csv_path": "expected/07_dataset_export/train_patched_counterparts.csv",
     "normalized_slices_dir": "expected/07_dataset_export/train_patched_counterparts_slices",
+    "output_dir": "expected/07_dataset_export",
     "split_manifest_json": "expected/07_dataset_export/train_patched_counterparts_split_manifest.json",
     "summary_json": "expected/07_dataset_export/train_patched_counterparts_summary.json"
   },
   "stats": {
+    "counts": {
+      "pairs_filtered_out": 1,
+      "pairs_survived": 2,
+      "pairs_total": 3,
+      "rows_written": 4,
+      "test_pairs": 0,
+      "train_val_pairs": 2
+    },
     "dedup": {
-      "mode": "row",
-      "selection_order": "input_pair_order",
-      "row_hash_method": "md5(compact_whitespace(normalized_code))",
-      "pairs_before": 3,
-      "pairs_after": 2,
-      "pairs_dropped_duplicate": 1,
-      "pairs_dropped_collision": 0,
-      "rows_before": 6,
-      "rows_after": 4,
-      "rows_removed": 2,
-      "row_hashes_unique": 5,
+      "collision_hash_groups": 0,
+      "collision_row_occurrences": 0,
       "duplicate_hash_groups": 1,
       "duplicate_row_occurrences": 1,
-      "collision_hash_groups": 0,
-      "collision_row_occurrences": 0
+      "mode": "row",
+      "pairs_after": 2,
+      "pairs_before": 3,
+      "pairs_dropped_collision": 0,
+      "pairs_dropped_duplicate": 1,
+      "row_hash_method": "md5(compact_whitespace(normalized_code))",
+      "row_hashes_unique": 5,
+      "rows_after": 4,
+      "rows_before": 6,
+      "rows_removed": 2,
+      "selection_order": "input_pair_order"
     },
     "filtered_pair_reasons": {
       "dedup_duplicate_normalized_slice": 1
     },
-    "counts": {
-      "pairs_total": 3,
-      "pairs_survived": 2,
-      "pairs_filtered_out": 1,
-      "rows_written": 4,
-      "train_val_pairs": 2,
-      "test_pairs": 0
-    },
     "selection": {
       "counts": {
         "primary_train_val_pairs_total": 3,
-        "selected_pairs": 3,
         "selected_counterpart_flow_g2b": 1,
         "selected_counterpart_flow_g2b1": 1,
         "selected_counterpart_flow_g2b2": 1,
+        "selected_pairs": 3,
         "selected_pairs_with_extra_leftovers": 1
       },
-      "train_val_pair_ids_total": 3,
-      "selected_testcases": 3
+      "selected_testcases": 3,
+      "train_val_pair_ids_total": 3
     }
   }
 }

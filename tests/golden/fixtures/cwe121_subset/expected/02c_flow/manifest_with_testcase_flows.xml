@@ -17,14 +17,12 @@
       <comment_flaw line="36" code="if (data &gt;= 0)" function="badSink" file="CWE121_Stack_Based_Buffer_Overflow__CWE129_fgets_21.c" />
       <comment_flaw line="61" code="if (fgets(inputBuffer, CHAR_ARRAY_SIZE, stdin) != NULL)" function="CWE121_Stack_Based_Buffer_Overflow__CWE129_fgets_21_bad" file="CWE121_Stack_Based_Buffer_Overflow__CWE129_fgets_21.c" />
     </flow>
-    <flow type="b2g">
-      <comment_fix line="98" code="if (data &gt;= 0 &amp;&amp; data &lt; (10))" function="goodB2G1Sink" file="CWE121_Stack_Based_Buffer_Overflow__CWE129_fgets_21.c" />
-      <comment_fix line="146" code="if (data &gt;= 0 &amp;&amp; data &lt; (10))" function="goodB2G2Sink" file="CWE121_Stack_Based_Buffer_Overflow__CWE129_fgets_21.c" />
-    </flow>
     <flow type="b2g1">
+      <comment_fix line="98" code="if (data &gt;= 0 &amp;&amp; data &lt; (10))" function="goodB2G1Sink" file="CWE121_Stack_Based_Buffer_Overflow__CWE129_fgets_21.c" />
       <comment_flaw line="123" code="if (fgets(inputBuffer, CHAR_ARRAY_SIZE, stdin) != NULL)" function="goodB2G1" file="CWE121_Stack_Based_Buffer_Overflow__CWE129_fgets_21.c" />
     </flow>
     <flow type="b2g2">
+      <comment_fix line="146" code="if (data &gt;= 0 &amp;&amp; data &lt; (10))" function="goodB2G2Sink" file="CWE121_Stack_Based_Buffer_Overflow__CWE129_fgets_21.c" />
       <comment_flaw line="171" code="if (fgets(inputBuffer, CHAR_ARRAY_SIZE, stdin) != NULL)" function="goodB2G2" file="CWE121_Stack_Based_Buffer_Overflow__CWE129_fgets_21.c" />
     </flow>
     <flow type="g2b">

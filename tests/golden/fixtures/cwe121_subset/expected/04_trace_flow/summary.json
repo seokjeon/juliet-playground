@@ -3,15 +3,15 @@
     "trace_flow_match_strict_jsonl": "expected/04_trace_flow/trace_flow_match_strict.jsonl"
   },
   "stats": {
-    "traces_total": 205,
-    "traces_strict_match": 23,
     "matched_best_flow_counts": {
       "b2b": 24,
-      "g2b": 12,
-      "g2b2": 11,
-      "g2b1": 11,
+      "b2g1": 4,
       "b2g2": 2,
-      "b2g1": 4
-    }
+      "g2b": 12,
+      "g2b1": 11,
+      "g2b2": 11
+    },
+    "traces_strict_match": 17,
+    "traces_total": 205
   }
 }

@@ -5,14 +5,14 @@
     "summary_json": "expected/06_slices/summary.json"
   },
   "stats": {
-    "total_slices": 10,
+    "counts": {
+      "generated": 10,
+      "json_files_total": 10,
+      "testcase_dirs_total": 5
+    },
+    "errors": 0,
     "generated": 10,
     "skipped": 0,
-    "errors": 0,
-    "counts": {
-      "testcase_dirs_total": 5,
-      "json_files_total": 10,
-      "generated": 10
-    }
+    "total_slices": 10
   }
 }

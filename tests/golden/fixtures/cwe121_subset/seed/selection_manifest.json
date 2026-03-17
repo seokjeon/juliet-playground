@@ -1,6 +1,6 @@
 {
   "baseline_cwe": "CWE121",
-  "baseline_run": "artifacts/pipeline-runs/run-2026.03.13-13:56:23",
+  "baseline_run": "artifacts/pipeline-runs/run-2026.03.16-18:17:13",
   "expected_patched_pair_ids": [
     "4b356ae87ad86bf4",
     "24dd6402817e5ef0",

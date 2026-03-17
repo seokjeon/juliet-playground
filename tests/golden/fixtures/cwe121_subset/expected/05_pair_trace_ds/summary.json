@@ -1,19 +1,19 @@
 {
   "artifacts": {
-    "output_dir": "expected/05_pair_trace_ds",
-    "pairs_jsonl": "expected/05_pair_trace_ds/pairs.jsonl",
     "leftover_counterparts_jsonl": "expected/05_pair_trace_ds/leftover_counterparts.jsonl",
+    "output_dir": "expected/05_pair_trace_ds",
     "paired_signatures_dir": "expected/05_pair_trace_ds/paired_signatures",
+    "pairs_jsonl": "expected/05_pair_trace_ds/pairs.jsonl",
     "summary_json": "expected/05_pair_trace_ds/summary.json"
   },
   "stats": {
-    "records_total": 23,
-    "paired_testcases": 5,
     "leftover_counterparts": 5,
+    "paired_testcases": 5,
+    "records_total": 17,
     "selected_counterpart_flow_counts": {
       "g2b": 3,
-      "g2b2": 1,
-      "g2b1": 1
+      "g2b1": 1,
+      "g2b2": 1
     }
   }
 }
