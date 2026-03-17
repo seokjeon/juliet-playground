@@ -1,5 +1,5 @@
 original_name,resolved_names,resolution_status,candidate_count,selected_kind,selected_conditional
-SNPRINTF,_snprintf|snprintf,resolved_multi,4,object_like,true
+SNPRINTF,_snprintf|_snwprintf|snprintf|swprintf,resolved_multi,3732,object_like,true
 fgets,fgets,no_macro_match,0,,
 memset,memset,no_macro_match,0,,
 strcat,strcat,no_macro_match,0,,

@@ -5,13 +5,13 @@
     "summary_json": "expected/02a_taint/summary.json"
   },
   "stats": {
-    "total_code_entries": 32,
     "candidate_map_keys": 12,
-    "keys_with_calls": 6,
-    "unique_function_names": 7,
     "duplicate_key_skipped": 26,
     "flaw_records_processed": 6,
-    "pulse_source_procedures": 7,
-    "pulse_sink_procedures": 7
+    "keys_with_calls": 6,
+    "pulse_sink_procedures": 9,
+    "pulse_source_procedures": 9,
+    "total_code_entries": 32,
+    "unique_function_names": 9
   }
 }
