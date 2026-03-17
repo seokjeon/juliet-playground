@@ -64,3 +64,39 @@ python tools/compare-artifacts.py \
 - stage 단위 재실행이 필요하면 `tools/stage/*.py`의 importable 함수나
   `experiments/*/scripts/*.py` wrapper를 사용하세요.
 - Step 07b는 표준 pipeline run layout(`run_dir/05_pair_trace_ds`, `run_dir/06_slices`, `run_dir/07_dataset_export`)을 전제로 동작합니다.
+
+### Strict trace만 다시 만들기 (Infer 재실행 없이)
+
+- 기존 run을 **read-only**로 두고, `01_manifest` + 기존 `03_signatures/non_empty`를 재사용해
+  새 `02b_flow` / `04_trace_flow` 산출물을 만들 수 있습니다.
+- 기본 출력 디렉터리는 source run 옆의 `retrace-<source-run-name>/` 입니다.
+- v1 범위는 **02b + 04만 재생성**입니다.
+
+```bash
+python tools/retrace_strict_trace.py run-2026.03.17-15:11:12
+```
+
+예시 출력:
+
+```text
+artifacts/pipeline-runs/retrace-run-2026.03.17-15:11:12/
+├── 02b_flow/
+├── 04_trace_flow/
+└── retrace_summary.json
+```
+
+유용한 옵션:
+
+```bash
+# pipeline root를 명시적으로 지정
+python tools/retrace_strict_trace.py run-2026.03.17-15:11:12 \
+  --pipeline-root artifacts/pipeline-runs
+
+# 출력 디렉터리 이름을 바꾸기
+python tools/retrace_strict_trace.py run-2026.03.17-15:11:12 \
+  --output-name retrace-run-2026.03.17-15:11:12-fixed
+
+# 기존 retrace 출력이 있으면 덮어쓰기
+python tools/retrace_strict_trace.py run-2026.03.17-15:11:12 \
+  --overwrite
+```
