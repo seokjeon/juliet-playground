@@ -130,6 +130,8 @@ source .venv/bin/activate && python tools/run_pipeline.py full --all
 - Stage 02b flow XML의 함수명 필드는 `function` 하나로 통일됩니다.
 - 같은 `(file, line)` 에서 원래 manifest의 `<flaw>` 와 comment 유래 `<flaw>` 가 겹치면,
   `origin="manifest_flaw"` 인 원본 `flaw` 를 남기고 comment 유래 `flaw` 는 제거합니다.
+- 같은 `(file, line)` 에 원래 manifest 유래 `flaw` 가 여러 개 있을 때, file명의 CWE prefix와
+  `name` 의 CWE prefix가 모두 비교 가능하고 그중 일치하는 항목이 있으면 불일치 항목은 flow에서 제거합니다.
 - flow XML에서는 `origin` 속성으로 항목 출처를 구분할 수 있습니다.
 
 ## 결과 위치 (요약)

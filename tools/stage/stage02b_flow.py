@@ -123,6 +123,27 @@ def _normalize_flow_item(*, child: ET.Element, file_path: str, function_name: st
     return copied
 
 
+def _cwe_prefix_from_file_path(file_path: str) -> str | None:
+    file_name = Path(file_path).name.strip()
+    if not file_name:
+        return None
+    prefix = file_name.split('_', 1)[0].strip().upper()
+    return prefix or None
+
+
+def _cwe_prefix_from_flaw_name(name: str) -> str | None:
+    prefix = name.split(':', 1)[0].strip().replace('-', '').upper()
+    return prefix or None
+
+
+def _manifest_flaw_cwe_matches_file(item: ET.Element) -> bool | None:
+    file_prefix = _cwe_prefix_from_file_path(item.attrib.get('file', ''))
+    name_prefix = _cwe_prefix_from_flaw_name(item.attrib.get('name', ''))
+    if not file_prefix or not name_prefix:
+        return None
+    return file_prefix == name_prefix
+
+
 def _dedup_flow_items(items: list[ET.Element]) -> tuple[list[ET.Element], int]:
     grouped: dict[tuple[str, str, str], list[tuple[int, ET.Element]]] = defaultdict(list)
     for index, item in enumerate(items):
@@ -138,16 +159,34 @@ def _dedup_flow_items(items: list[ET.Element]) -> tuple[list[ET.Element], int]:
     removed_comment_flaw = 0
     for key, members in grouped.items():
         tag = key[0]
-        origins = {member.attrib.get('origin', '') for _, member in members}
+        filtered_members = members
+        if tag == 'flaw':
+            manifest_match_state = {
+                index: _manifest_flaw_cwe_matches_file(member)
+                for index, member in members
+                if member.attrib.get('origin') == MANIFEST_FLAW_ORIGIN
+            }
+            has_matching_manifest = any(state is True for state in manifest_match_state.values())
+            if has_matching_manifest:
+                filtered_members = [
+                    (index, member)
+                    for index, member in members
+                    if not (
+                        member.attrib.get('origin') == MANIFEST_FLAW_ORIGIN
+                        and manifest_match_state.get(index) is False
+                    )
+                ]
+
+        origins = {member.attrib.get('origin', '') for _, member in filtered_members}
         if tag == 'flaw' and MANIFEST_FLAW_ORIGIN in origins and COMMENT_FLAW_ORIGIN in origins:
-            for index, member in members:
+            for index, member in filtered_members:
                 if member.attrib.get('origin') == COMMENT_FLAW_ORIGIN:
                     removed_comment_flaw += 1
                     continue
                 keep_indices.add(index)
             continue
 
-        for index, _ in members:
+        for index, _ in filtered_members:
             keep_indices.add(index)
 
     deduped = [item for index, item in enumerate(items) if index in keep_indices]

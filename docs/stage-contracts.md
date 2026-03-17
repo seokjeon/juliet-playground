@@ -533,6 +533,8 @@ Stage 01 테스트는 아래 두 층으로 나누는 것이 좋습니다.
 - 원래 manifest의 `<flaw>` 에서 온 항목은 `origin="manifest_flaw"` 이고 `name` 속성을 유지합니다.
 - 같은 `(file, line)` 에서 `manifest_flaw` 와 `comment_flaw` 가 겹치면
   원래 있던 `manifest_flaw` 를 남기고 comment 쪽 `flaw` 는 제거합니다.
+- 같은 `(file, line)` 에 `manifest_flaw` 가 여러 개 있으면, file명의 CWE prefix와 `name` 의
+  CWE prefix가 모두 비교 가능하고 그중 일치하는 항목이 있을 때만 불일치 `manifest_flaw` 를 제거합니다.
 
 ### downstream이 실제로 쓰는 필드
 다음 단계(`04_trace_flow_filter`)는 flow XML에서 적어도 아래 정보를 사용합니다.
