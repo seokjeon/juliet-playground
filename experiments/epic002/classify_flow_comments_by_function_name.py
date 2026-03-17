@@ -462,7 +462,7 @@ def classify_manifest(manifest_xml: Path) -> tuple[dict[str, object], ET.Element
 def main() -> int:
     args = parse_args()
     manifest_xml = args.manifest_xml.resolve()
-    output_json = args.output_json.resolve()
+    output_xml = args.output_xml.resolve()
     exceptions_xml = args.exceptions_xml.resolve() if args.exceptions_xml is not None else None
     summary_json = args.summary_json.resolve() if args.summary_json is not None else None
 
@@ -470,12 +470,12 @@ def main() -> int:
         raise FileNotFoundError(f'Manifest XML not found: {manifest_xml}')
 
     payload, classified_root, exception_root = classify_manifest(manifest_xml)
-    payload['output_json'] = str(output_json)
+    payload['output_xml'] = str(output_xml)
     payload['exceptions_xml'] = str(exceptions_xml) if exceptions_xml is not None else None
 
-    output_json.parent.mkdir(parents=True, exist_ok=True)
+    output_xml.parent.mkdir(parents=True, exist_ok=True)
     indent_xml(classified_root)
-    ET.ElementTree(classified_root).write(output_json, encoding='utf-8', xml_declaration=True)
+    ET.ElementTree(classified_root).write(output_xml, encoding='utf-8', xml_declaration=True)
 
     if exceptions_xml is not None:
         exceptions_xml.parent.mkdir(parents=True, exist_ok=True)
@@ -484,7 +484,7 @@ def main() -> int:
 
     summary = {
         'manifest_xml': str(manifest_xml),
-        'output_json': str(output_json),
+        'output_xml': str(output_xml),
         'exceptions_xml': str(exceptions_xml) if exceptions_xml is not None else None,
         'entry_entry_pair_count': payload['entry_entry_pair_count'],
         'entry_entry_pair_with_scope_count': payload['entry_entry_pair_with_scope_count'],
