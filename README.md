@@ -200,6 +200,7 @@ python tools/run_pipeline.py stage07b \
 
 # 최신 pipeline run의 Real_Vul_data.csv 를 VP-Bench linevul 컨테이너로 넘겨
 # prepare -> train -> test 실행
+# vuln_patch/Real_Vul_data.csv 가 있으면 같은 best_model 로 추가 prepare -> test 실행
 python tools/run_linevul.py
 
 # 특정 run 대상 dry-run
@@ -220,6 +221,9 @@ python tools/compare-artifacts.py \
 - `tools/run_linevul.py` 는 Stage 07의 `Real_Vul_data.csv` 를 읽어
   VP-Bench의 `linevul` 컨테이너에서
   `baseline/RealVul/Experiments/LineVul/line_vul.py` 를 실행합니다.
+- 같은 run에 `07_dataset_export/vuln_patch/Real_Vul_data.csv` 가 있으면
+  primary dataset 학습이 끝난 뒤 같은 `best_model` 을 재사용해서
+  vuln_patch dataset 에 대해 `prepare -> test` 를 추가로 실행합니다.
 - 기본 대상 경로:
   - VP-Bench root: `/home/sojeon/Desktop/VP-Bench`
   - container: `linevul`
@@ -228,6 +232,9 @@ python tools/compare-artifacts.py \
     `downloads/RealVul/datasets/juliet-playground/<run-id>/`
   - linevul output:
     `baseline/RealVul/Experiments/LineVul/juliet-playground/<run-id>/`
+  - vuln_patch staging/output:
+    `downloads/RealVul/datasets/juliet-playground/<run-id>/vuln_patch/`
+    `baseline/RealVul/Experiments/LineVul/juliet-playground/<run-id>/vuln_patch/`
 - 이 스크립트는 원본 `linevul_main.py` 대신 VP-Bench 커스텀 `line_vul.py` 를 사용합니다.
   현재 Stage 07 CSV 는 `processed_func`, `vulnerable_line_numbers`, `dataset_type` 기준으로는
   바로 사용할 수 있지만, 원본 `linevul_main.py` 가 기대하는

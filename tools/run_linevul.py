@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import os
 import shutil
 import subprocess
 import sys
@@ -19,16 +20,19 @@ DEFAULT_VPBENCH_ROOT = Path('/home/sojeon/Desktop/VP-Bench')
 DEFAULT_CONTAINER_NAME = 'linevul'
 DEFAULT_TOKENIZER_NAME = 'microsoft/codebert-base'
 DEFAULT_MODEL_NAME = 'microsoft/codebert-base'
-DEFAULT_TRAIN_BATCH_SIZE = 64
+DEFAULT_TRAIN_BATCH_SIZE = 8
 DEFAULT_EVAL_BATCH_SIZE = 8
 DEFAULT_NUM_TRAIN_EPOCHS = 10
+PRIMARY_TARGET_NAME = 'primary'
+VULN_PATCH_TARGET_NAME = 'vuln_patch'
 REQUIRED_COLUMNS = {
     'processed_func',
     'vulnerable_line_numbers',
     'dataset_type',
     'target',
 }
-REQUIRED_DATASET_TYPES = {'train_val', 'test'}
+PRIMARY_REQUIRED_DATASET_TYPES = frozenset({'train_val', 'test'})
+TEST_ONLY_REQUIRED_DATASET_TYPES = frozenset({'test'})
 CONTAINER_DATASET_BASE = Path('/app/RealVul/Dataset')
 CONTAINER_EXPERIMENT_BASE = Path('/app/RealVul/Experiments/LineVul')
 CONTAINER_LINE_VUL_SCRIPT = CONTAINER_EXPERIMENT_BASE / 'line_vul.py'
@@ -53,6 +57,8 @@ class LineVulRunConfig:
 class LineVulPaths:
     run_dir: Path
     run_name: str
+    target_name: str
+    display_name: str
     source_csv: Path
     host_dataset_dir: Path
     host_output_dir: Path
@@ -69,6 +75,17 @@ class LineVulPaths:
     container_dataset_dir: Path
     container_output_dir: Path
     container_dataset_csv: Path
+
+
+@dataclass(frozen=True)
+class LineVulCommandStep:
+    paths: LineVulPaths
+    phase: str
+    command: list[str]
+
+    @property
+    def label(self) -> str:
+        return f'{self.paths.target_name}/{self.phase}'
 
 
 def parse_args() -> argparse.Namespace:
@@ -129,11 +146,25 @@ def resolve_run_dir(config: LineVulRunConfig) -> Path:
         raise ValueError(str(exc)) from exc
 
 
-def build_linevul_paths(config: LineVulRunConfig, run_dir: Path) -> LineVulPaths:
-    dataset_paths = build_dataset_export_paths(run_dir / '07_dataset_export')
-    source_csv = dataset_paths['csv_path']
+def build_linevul_paths(
+    config: LineVulRunConfig,
+    run_dir: Path,
+    *,
+    target_name: str,
+) -> LineVulPaths:
+    if target_name == PRIMARY_TARGET_NAME:
+        dataset_paths = build_dataset_export_paths(run_dir / '07_dataset_export')
+        source_csv = dataset_paths['csv_path']
+        relative_parts: tuple[str, ...] = ()
+    elif target_name == VULN_PATCH_TARGET_NAME:
+        source_csv = run_dir / '07_dataset_export' / 'vuln_patch' / 'Real_Vul_data.csv'
+        relative_parts = (VULN_PATCH_TARGET_NAME,)
+    else:
+        raise ValueError(f'Unsupported LineVul target: {target_name}')
+
     run_name = run_dir.name
-    host_dataset_dir = (
+    display_name = '/'.join((run_name, *relative_parts)) if relative_parts else run_name
+    base_host_dataset_dir = (
         config.vpbench_root
         / 'downloads'
         / 'RealVul'
@@ -141,7 +172,7 @@ def build_linevul_paths(config: LineVulRunConfig, run_dir: Path) -> LineVulPaths
         / JULIET_LINEVUL_NAMESPACE
         / run_name
     )
-    host_output_dir = (
+    base_host_output_dir = (
         config.vpbench_root
         / 'baseline'
         / 'RealVul'
@@ -150,11 +181,19 @@ def build_linevul_paths(config: LineVulRunConfig, run_dir: Path) -> LineVulPaths
         / JULIET_LINEVUL_NAMESPACE
         / run_name
     )
-    container_dataset_dir = CONTAINER_DATASET_BASE / JULIET_LINEVUL_NAMESPACE / run_name
-    container_output_dir = CONTAINER_EXPERIMENT_BASE / JULIET_LINEVUL_NAMESPACE / run_name
+    host_dataset_dir = base_host_dataset_dir.joinpath(*relative_parts)
+    host_output_dir = base_host_output_dir.joinpath(*relative_parts)
+    container_dataset_dir = (CONTAINER_DATASET_BASE / JULIET_LINEVUL_NAMESPACE / run_name).joinpath(
+        *relative_parts
+    )
+    container_output_dir = (
+        CONTAINER_EXPERIMENT_BASE / JULIET_LINEVUL_NAMESPACE / run_name
+    ).joinpath(*relative_parts)
     return LineVulPaths(
         run_dir=run_dir,
         run_name=run_name,
+        target_name=target_name,
+        display_name=display_name,
         source_csv=source_csv,
         host_dataset_dir=host_dataset_dir,
         host_output_dir=host_output_dir,
@@ -185,7 +224,20 @@ def validate_paths(paths: LineVulPaths) -> None:
         raise ValueError(f'VP-Bench line_vul.py not found: {paths.host_line_vul_script}')
 
 
-def validate_stage07_csv(path: Path) -> dict[str, int]:
+def discover_linevul_targets(config: LineVulRunConfig, run_dir: Path) -> list[LineVulPaths]:
+    primary_paths = build_linevul_paths(config, run_dir, target_name=PRIMARY_TARGET_NAME)
+    vuln_patch_paths = build_linevul_paths(config, run_dir, target_name=VULN_PATCH_TARGET_NAME)
+    targets = [primary_paths]
+    if vuln_patch_paths.source_csv.exists():
+        targets.append(vuln_patch_paths)
+    return targets
+
+
+def validate_stage07_csv(
+    path: Path,
+    *,
+    required_dataset_types: frozenset[str] = PRIMARY_REQUIRED_DATASET_TYPES,
+) -> dict[str, int]:
     with path.open(newline='', encoding='utf-8') as f:
         reader = csv.DictReader(f)
         fieldnames = set(reader.fieldnames or [])
@@ -206,33 +258,125 @@ def validate_stage07_csv(path: Path) -> dict[str, int]:
         raise ValueError(f'Stage 07 dataset CSV is empty: {path}')
 
     missing_dataset_types = sorted(
-        label for label in REQUIRED_DATASET_TYPES if dataset_type_counts.get(label, 0) == 0
+        label for label in required_dataset_types if dataset_type_counts.get(label, 0) == 0
     )
     if missing_dataset_types:
+        if required_dataset_types == PRIMARY_REQUIRED_DATASET_TYPES:
+            raise ValueError(
+                'Stage 07 dataset CSV must contain both train_val and test rows; '
+                f'missing: {", ".join(missing_dataset_types)}'
+            )
+        if required_dataset_types == TEST_ONLY_REQUIRED_DATASET_TYPES:
+            raise ValueError(
+                'Stage 07 dataset CSV must contain test rows; '
+                f'missing: {", ".join(missing_dataset_types)}'
+            )
         raise ValueError(
-            'Stage 07 dataset CSV must contain both train_val and test rows; '
-            f'missing: {", ".join(missing_dataset_types)}'
+            'Stage 07 dataset CSV missing required dataset_type rows: '
+            f'{", ".join(missing_dataset_types)}'
         )
     return dataset_type_counts
 
 
-def ensure_output_targets(paths: LineVulPaths, *, overwrite: bool) -> None:
-    existing = [path for path in (paths.host_dataset_dir, paths.host_output_dir) if path.exists()]
-    if existing and not overwrite:
-        joined = ', '.join(str(path) for path in existing)
+def _existing_output_targets(paths_list: Sequence[LineVulPaths]) -> list[Path]:
+    existing: list[Path] = []
+    for paths in paths_list:
+        for path in (paths.host_dataset_dir, paths.host_output_dir):
+            if path.exists() or path.is_symlink():
+                existing.append(path)
+    return list(dict.fromkeys(existing))
+
+
+def ensure_output_targets(paths_list: Sequence[LineVulPaths], *, overwrite: bool) -> None:
+    unique_existing = _existing_output_targets(paths_list)
+    if unique_existing and not overwrite:
+        joined = ', '.join(str(path) for path in unique_existing)
+        run_names = ', '.join(dict.fromkeys(paths.display_name for paths in paths_list))
         raise ValueError(
-            f'LineVul output already exists for run {paths.run_name}: {joined} '
+            f'LineVul output already exists for run {run_names}: {joined} '
             '(use --overwrite to replace it)'
         )
-    if overwrite:
-        for path in existing:
-            shutil.rmtree(path)
+
+
+def _remove_host_output_path(path: Path) -> None:
+    if path.is_symlink() or path.is_file():
+        path.unlink()
+    elif path.exists():
+        shutil.rmtree(path)
+
+
+def _remove_output_targets_via_container(container_name: str, paths: LineVulPaths) -> None:
+    result = subprocess.run(
+        [
+            'docker',
+            'exec',
+            container_name,
+            'rm',
+            '-rf',
+            str(paths.container_dataset_dir),
+            str(paths.container_output_dir),
+        ],
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    if result.returncode != 0:
+        message = result.stderr.strip() or result.stdout.strip() or 'unknown docker rm error'
+        raise RuntimeError(
+            'Failed to clean LineVul output via container '
+            f'{container_name} for {paths.display_name}: {message}'
+        )
+
+
+def cleanup_output_targets(paths_list: Sequence[LineVulPaths], *, container_name: str) -> None:
+    for paths in paths_list:
+        try:
+            for path in sorted(
+                (paths.host_dataset_dir, paths.host_output_dir),
+                key=lambda item: (len(item.parts), str(item)),
+                reverse=True,
+            ):
+                _remove_host_output_path(path)
+        except PermissionError:
+            _remove_output_targets_via_container(container_name, paths)
+            for path in sorted(
+                (paths.host_dataset_dir, paths.host_output_dir),
+                key=lambda item: (len(item.parts), str(item)),
+                reverse=True,
+            ):
+                if path.exists() or path.is_symlink():
+                    _remove_host_output_path(path)
 
 
 def stage_source_csv(paths: LineVulPaths) -> None:
     paths.host_dataset_dir.mkdir(parents=True, exist_ok=True)
     paths.host_output_dir.mkdir(parents=True, exist_ok=True)
     shutil.copy2(paths.source_csv, paths.host_dataset_csv)
+
+
+def stage_reused_best_model(source_paths: LineVulPaths, target_paths: LineVulPaths) -> None:
+    require_exists(source_paths.host_best_model_dir / 'config.json', 'best_model/config.json')
+    target_paths.host_output_dir.mkdir(parents=True, exist_ok=True)
+
+    if target_paths.host_best_model_dir.is_symlink() or target_paths.host_best_model_dir.is_file():
+        target_paths.host_best_model_dir.unlink()
+    elif target_paths.host_best_model_dir.exists():
+        shutil.rmtree(target_paths.host_best_model_dir)
+
+    try:
+        relative_target = Path(
+            os.path.relpath(
+                source_paths.host_best_model_dir,
+                start=target_paths.host_best_model_dir.parent,
+            )
+        )
+        target_paths.host_best_model_dir.symlink_to(
+            relative_target,
+            target_is_directory=True,
+        )
+    except OSError:
+        shutil.copytree(source_paths.host_best_model_dir, target_paths.host_best_model_dir)
 
 
 def build_line_vul_command(
@@ -327,62 +471,142 @@ def require_exists(path: Path, label: str) -> None:
         raise RuntimeError(f'Expected {label} not found: {path}')
 
 
-def print_planned_commands(commands: list[tuple[str, list[str]]], paths: LineVulPaths) -> None:
-    print(f'Pipeline run: {paths.run_dir}')
-    print(f'Stage 07 CSV: {paths.source_csv}')
-    print(f'Host dataset dir: {paths.host_dataset_dir}')
-    print(f'Host output dir: {paths.host_output_dir}')
-    print(f'Container dataset dir: {paths.container_dataset_dir}')
-    print(f'Container output dir: {paths.container_output_dir}')
-    for phase, command in commands:
-        print(f'[{phase}] {" ".join(command)}')
+def build_command_steps(
+    config: LineVulRunConfig,
+    paths_list: Sequence[LineVulPaths],
+) -> list[LineVulCommandStep]:
+    commands: list[LineVulCommandStep] = []
+    for paths in paths_list:
+        if paths.target_name == PRIMARY_TARGET_NAME:
+            phases = ('prepare', 'train', 'test')
+        elif paths.target_name == VULN_PATCH_TARGET_NAME:
+            phases = ('prepare', 'test')
+        else:
+            raise ValueError(f'Unsupported LineVul target: {paths.target_name}')
+
+        for phase in phases:
+            commands.append(
+                LineVulCommandStep(
+                    paths=paths,
+                    phase=phase,
+                    command=build_line_vul_command(config, paths, phase=phase),
+                )
+            )
+    return commands
 
 
-def print_completion_summary(paths: LineVulPaths) -> None:
+def print_planned_commands(
+    commands: Sequence[LineVulCommandStep], paths_list: Sequence[LineVulPaths]
+) -> None:
+    if not paths_list:
+        return
+    print(f'Pipeline run: {paths_list[0].run_dir}')
+    for paths in paths_list:
+        print(f'Target [{paths.target_name}] Stage 07 CSV: {paths.source_csv}')
+        print(f'Target [{paths.target_name}] Host dataset dir: {paths.host_dataset_dir}')
+        print(f'Target [{paths.target_name}] Host output dir: {paths.host_output_dir}')
+        print(f'Target [{paths.target_name}] Container dataset dir: {paths.container_dataset_dir}')
+        print(f'Target [{paths.target_name}] Container output dir: {paths.container_output_dir}')
+    for step in commands:
+        print(f'[{step.label}] {" ".join(step.command)}')
+
+
+def print_completion_summary(paths_list: Sequence[LineVulPaths]) -> None:
     print('LineVul run completed.')
-    print(f'  - staged_csv: {paths.host_dataset_csv}')
-    print(f'  - dataset_pickles: {paths.host_dataset_dir}')
-    print(f'  - best_model: {paths.host_best_model_dir}')
-    print(f'  - test_predictions: {paths.host_test_predictions_csv}')
-    print(f'  - logs: {paths.host_output_dir}')
+    for paths in paths_list:
+        print(f'  - [{paths.target_name}] staged_csv: {paths.host_dataset_csv}')
+        print(f'  - [{paths.target_name}] dataset_pickles: {paths.host_dataset_dir}')
+        print(f'  - [{paths.target_name}] best_model: {paths.host_best_model_dir}')
+        print(f'  - [{paths.target_name}] test_predictions: {paths.host_test_predictions_csv}')
+        print(f'  - [{paths.target_name}] logs: {paths.host_output_dir}')
 
 
 def run_linevul_from_pipeline(config: LineVulRunConfig) -> int:
     validate_config(config)
     run_dir = resolve_run_dir(config)
-    paths = build_linevul_paths(config, run_dir)
-    validate_paths(paths)
-    validate_stage07_csv(paths.source_csv)
-    ensure_output_targets(paths, overwrite=config.overwrite)
+    paths_list = discover_linevul_targets(config, run_dir)
+    primary_paths = paths_list[0]
+    vuln_patch_paths = next(
+        (paths for paths in paths_list if paths.target_name == VULN_PATCH_TARGET_NAME),
+        None,
+    )
 
-    commands = [
-        ('prepare', build_line_vul_command(config, paths, phase='prepare')),
-        ('train', build_line_vul_command(config, paths, phase='train')),
-        ('test', build_line_vul_command(config, paths, phase='test')),
-    ]
+    for paths in paths_list:
+        validate_paths(paths)
+        required_dataset_types = (
+            PRIMARY_REQUIRED_DATASET_TYPES
+            if paths.target_name == PRIMARY_TARGET_NAME
+            else TEST_ONLY_REQUIRED_DATASET_TYPES
+        )
+        validate_stage07_csv(paths.source_csv, required_dataset_types=required_dataset_types)
+
+    ensure_output_targets(paths_list, overwrite=config.overwrite)
+    commands = build_command_steps(config, paths_list)
 
     if config.dry_run:
-        print_planned_commands(commands, paths)
+        print_planned_commands(commands, paths_list)
         return 0
 
     check_container_running(config.container_name)
-    stage_source_csv(paths)
+    if config.overwrite:
+        cleanup_output_targets(paths_list, container_name=config.container_name)
+    for paths in paths_list:
+        stage_source_csv(paths)
 
-    print(f'Running LineVul prepare for {paths.run_name}...')
-    run_logged_command(commands[0][1], paths.host_prepare_log)
-    require_exists(paths.host_train_dataset_pkl, 'train_dataset.pkl')
-    require_exists(paths.host_val_dataset_pkl, 'val_dataset.pkl')
-    require_exists(paths.host_test_dataset_pkl, 'test_dataset.pkl')
+    primary_prepare_step = next(
+        step
+        for step in commands
+        if step.paths.target_name == PRIMARY_TARGET_NAME and step.phase == 'prepare'
+    )
+    print(f'Running LineVul prepare for {primary_prepare_step.paths.display_name}...')
+    run_logged_command(primary_prepare_step.command, primary_paths.host_prepare_log)
+    require_exists(primary_paths.host_train_dataset_pkl, 'train_dataset.pkl')
+    require_exists(primary_paths.host_val_dataset_pkl, 'val_dataset.pkl')
+    require_exists(primary_paths.host_test_dataset_pkl, 'test_dataset.pkl')
 
-    print(f'Running LineVul train for {paths.run_name}...')
-    run_logged_command(commands[1][1], paths.host_train_log)
-    require_exists(paths.host_best_model_dir / 'config.json', 'best_model/config.json')
+    primary_train_step = next(
+        step
+        for step in commands
+        if step.paths.target_name == PRIMARY_TARGET_NAME and step.phase == 'train'
+    )
+    print(f'Running LineVul train for {primary_train_step.paths.display_name}...')
+    run_logged_command(primary_train_step.command, primary_paths.host_train_log)
+    require_exists(primary_paths.host_best_model_dir / 'config.json', 'best_model/config.json')
 
-    print(f'Running LineVul test for {paths.run_name}...')
-    run_logged_command(commands[2][1], paths.host_test_log)
-    require_exists(paths.host_test_predictions_csv, 'test_pred_with_code.csv')
+    primary_test_step = next(
+        step
+        for step in commands
+        if step.paths.target_name == PRIMARY_TARGET_NAME and step.phase == 'test'
+    )
+    print(f'Running LineVul test for {primary_test_step.paths.display_name}...')
+    run_logged_command(primary_test_step.command, primary_paths.host_test_log)
+    require_exists(primary_paths.host_test_predictions_csv, 'test_pred_with_code.csv')
 
-    print_completion_summary(paths)
+    if vuln_patch_paths is not None:
+        stage_reused_best_model(primary_paths, vuln_patch_paths)
+
+        vuln_patch_prepare_step = next(
+            step
+            for step in commands
+            if step.paths.target_name == VULN_PATCH_TARGET_NAME and step.phase == 'prepare'
+        )
+        print(f'Running LineVul prepare for {vuln_patch_prepare_step.paths.display_name}...')
+        run_logged_command(vuln_patch_prepare_step.command, vuln_patch_paths.host_prepare_log)
+        require_exists(vuln_patch_paths.host_test_dataset_pkl, 'test_dataset.pkl')
+
+        vuln_patch_test_step = next(
+            step
+            for step in commands
+            if step.paths.target_name == VULN_PATCH_TARGET_NAME and step.phase == 'test'
+        )
+        print(f'Running LineVul test for {vuln_patch_test_step.paths.display_name}...')
+        run_logged_command(vuln_patch_test_step.command, vuln_patch_paths.host_test_log)
+        require_exists(
+            vuln_patch_paths.host_best_model_dir / 'config.json', 'best_model/config.json'
+        )
+        require_exists(vuln_patch_paths.host_test_predictions_csv, 'test_pred_with_code.csv')
+
+    print_completion_summary(paths_list)
     return 0
 
 
