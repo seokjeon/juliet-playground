@@ -147,6 +147,9 @@ def _build_full_run_paths(*, run_dir: Path, source_root: Path) -> dict[str, obje
         'trace_dir': trace_dir,
         'manifest_with_comments_xml': manifest_dir / 'manifest_with_comments.xml',
         'generated_taint_config': taint_dir / 'pulse-taint-config.json',
+        'source_sink_classified_with_code_xml': (
+            taint_dir / _stage02a_taint.FLOW_AWARE_ENRICHED_XML_NAME
+        ),
         'trace_strict_jsonl': trace_dir / 'trace_flow_match_strict.jsonl',
         'stage02b': _stage02b_flow.build_stage02b_output_paths(flow_dir),
         'stage02b_epic002': _stage02b_epic002.build_stage02b_epic002_output_paths(
@@ -218,6 +221,13 @@ def _select_taint_config(
     if generated_taint_config.exists():
         return generated_taint_config, 'generated'
     return committed_taint_config.resolve(), 'fallback_committed'
+
+
+def _select_stage04_flow_xml(paths: dict[str, object]) -> Path:
+    enriched_flow_xml = paths['source_sink_classified_with_code_xml']
+    if enriched_flow_xml.exists():
+        return enriched_flow_xml
+    return paths['stage02b']['manifest_with_testcase_flows_xml']
 
 
 def run_step01_manifest_comment_scan(
@@ -319,7 +329,7 @@ def run_step04_trace_flow(
     signature_non_empty_dir: Path,
 ) -> dict[str, object]:
     result = _stage04_trace_flow.filter_traces_by_flow(
-        flow_xml=paths['stage02b']['manifest_with_testcase_flows_xml'],
+        flow_xml=_select_stage04_flow_xml(paths),
         signatures_dir=signature_non_empty_dir,
         output_dir=paths['trace_dir'],
     )

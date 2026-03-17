@@ -15,6 +15,7 @@ from shared.source_parsing import PARSER_LANG_BY_SUFFIX, SOURCE_EXTS, node_first
 TARGET_COMMENT_TAGS = ('comment_flaw', 'comment_fix')
 TARGET_ALL_TAGS = (*TARGET_COMMENT_TAGS, 'flaw')
 DEFAULT_PULSE_TAINT_CONFIG_NAME = 'pulse-taint-config.from_juliet.json'
+FLOW_AWARE_ENRICHED_XML_NAME = 'source_sink_classified_with_code.xml'
 RAND_ALIAS_MAP = {'RAND32': 'rand', 'RAND64': 'rand'}
 
 DEFINE_FUNC_RE = re.compile(r'^\s*#\s*define\s+([A-Za-z_][A-Za-z0-9_]*)\s*\((.*?)\)\s*(.*)$')
@@ -64,6 +65,15 @@ class TaintInventoryCore:
     mode: str = 'legacy'
     source_function_name_counts: Counter[str] | None = None
     sink_function_name_counts: Counter[str] | None = None
+
+
+@dataclass(frozen=True)
+class FlowAwareCodeBackfillResult:
+    output_xml: Path
+    attempted: int
+    succeeded: int
+    failed: int
+    failed_examples: list[dict[str, int | str]]
 
 
 def _build_line_nodes(root_node) -> dict[int, list[object]]:
@@ -314,6 +324,96 @@ def _manifest_has_flow_roles(root: ET.Element) -> bool:
         for flow in root.iter('flow')
         for child in flow
         if child.tag in {'fix', 'flaw'}
+    )
+
+
+def _derive_code_for_flow_xml(*, ctx: FileContext | None, line_no: int) -> str:
+    if ctx is None or line_no <= 0:
+        return ''
+    derived = _derive_line_text_key(ctx, line_no)
+    if derived == 'WARNING_FLAW_CODE_NOT_FOUND':
+        return ''
+    return derived
+
+
+def _backfill_flow_aware_code_xml(
+    *,
+    input_xml: Path,
+    source_root: Path,
+    output_dir: Path,
+) -> FlowAwareCodeBackfillResult | None:
+    tree = ET.parse(input_xml)
+    root = tree.getroot()
+    if not _manifest_has_flow_roles(root):
+        return None
+
+    parsers = load_tree_sitter_parsers()
+    source_index = build_manifest_source_index(
+        manifest_xml=input_xml,
+        source_root=source_root,
+        suffixes=SOURCE_EXTS,
+    )
+    ctx_cache: dict[str, FileContext | None] = {}
+    attempted = 0
+    succeeded = 0
+    failed = 0
+    failed_examples: list[dict[str, int | str]] = []
+
+    for testcase in root.findall('testcase'):
+        for flow in testcase.findall('flow'):
+            for child in flow:
+                if child.tag not in {'fix', 'flaw'}:
+                    continue
+
+                role = child.attrib.get('role')
+                if role not in {'source', 'sink'}:
+                    continue
+
+                if (child.attrib.get('code') or '').strip():
+                    continue
+
+                attempted += 1
+                file_name = child.attrib.get('file', '')
+                line_no = int(child.attrib.get('line', '0') or 0)
+                ctx = _get_or_load_file_context(
+                    file_name=file_name,
+                    source_index=source_index,
+                    parsers=parsers,
+                    cache=ctx_cache,
+                )
+                derived_code = _derive_code_for_flow_xml(ctx=ctx, line_no=line_no)
+                child.attrib['code'] = derived_code
+
+                if derived_code:
+                    succeeded += 1
+                    continue
+
+                failed += 1
+                if len(failed_examples) < 10:
+                    failed_examples.append(
+                        {
+                            'file': file_name,
+                            'line': line_no,
+                            'tag': child.tag,
+                            'role': role,
+                            'function': child.attrib.get('function', ''),
+                        }
+                    )
+
+    output_xml = output_dir / FLOW_AWARE_ENRICHED_XML_NAME
+    output_xml.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        ET.indent(tree, space='  ')
+    except AttributeError:
+        pass
+    tree.write(output_xml, encoding='utf-8', xml_declaration=True)
+
+    return FlowAwareCodeBackfillResult(
+        output_xml=output_xml,
+        attempted=attempted,
+        succeeded=succeeded,
+        failed=failed,
+        failed_examples=failed_examples,
     )
 
 
@@ -626,7 +726,18 @@ def extract_unique_code_fields(
     output_dir: Path,
     pulse_taint_config_output: Path | None = None,
 ) -> dict[str, object]:
-    core = build_taint_inventory_core(input_xml=input_xml, source_root=source_root)
+    if not input_xml.exists():
+        raise FileNotFoundError(f'Input XML not found: {input_xml}')
+    if not source_root.exists():
+        raise FileNotFoundError(f'Source root not found: {source_root}')
+
+    flow_aware_backfill = _backfill_flow_aware_code_xml(
+        input_xml=input_xml,
+        source_root=source_root,
+        output_dir=output_dir,
+    )
+    selected_input_xml = flow_aware_backfill.output_xml if flow_aware_backfill else input_xml
+    core = build_taint_inventory_core(input_xml=selected_input_xml, source_root=source_root)
 
     output_dir.mkdir(parents=True, exist_ok=True)
     _write_macro_resolution_csv(output_dir, core.resolution_map)
@@ -645,6 +756,8 @@ def extract_unique_code_fields(
         ),
         'summary_json': str(output_dir / 'summary.json'),
     }
+    if flow_aware_backfill is not None:
+        artifacts['source_sink_classified_with_code_xml'] = str(flow_aware_backfill.output_xml)
     stats = {
         'total_code_entries': len(core.all_comment_codes),
         'candidate_map_keys': len(core.candidate_map),
@@ -654,8 +767,20 @@ def extract_unique_code_fields(
         'flaw_records_processed': core.flaw_records_processed,
         **pulse_stats,
     }
+    extra = None
     if core.mode == 'flow_aware':
         stats['unique_source_function_names'] = len(core.source_function_name_counts or Counter())
         stats['unique_sink_function_names'] = len(core.sink_function_name_counts or Counter())
-    write_stage_summary(output_dir / 'summary.json', artifacts=artifacts, stats=stats, echo=False)
+    if flow_aware_backfill is not None:
+        stats['code_backfill_attempted'] = flow_aware_backfill.attempted
+        stats['code_backfill_succeeded'] = flow_aware_backfill.succeeded
+        stats['code_backfill_failed'] = flow_aware_backfill.failed
+        extra = {'code_backfill_failed_examples': flow_aware_backfill.failed_examples}
+    write_stage_summary(
+        output_dir / 'summary.json',
+        artifacts=artifacts,
+        stats=stats,
+        extra=extra,
+        echo=False,
+    )
     return {'artifacts': artifacts, 'stats': stats}
