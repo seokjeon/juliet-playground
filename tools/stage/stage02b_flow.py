@@ -22,8 +22,8 @@ FAMILY_TO_FLOW = {
     'g2b_family': 'g2b',
 }
 FLOW_NUM_SUFFIX = {
-    'b2g': re.compile(r'b2g(\d+)(?:sink)?$', re.IGNORECASE),
-    'g2b': re.compile(r'g2b(\d+)(?:sink)?$', re.IGNORECASE),
+    'b2g': re.compile(r'b2g(\d+)(?:source|sink)?$', re.IGNORECASE),
+    'g2b': re.compile(r'g2b(\d+)(?:source|sink)?$', re.IGNORECASE),
 }
 
 

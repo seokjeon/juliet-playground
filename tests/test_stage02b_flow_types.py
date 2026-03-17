@@ -11,14 +11,25 @@ def test_flow_type_from_function_groups_numbered_sources_and_sinks():
 
     cases = [
         ('b2g', 'goodB2G1', 'b2g1'),
+        ('b2g', 'goodB2G1Source', 'b2g1'),
         ('b2g', 'goodB2G1Sink', 'b2g1'),
+        ('b2g', 'CWE121_Stack_Based_Buffer_Overflow__CWE129_fgets_21_goodB2G1Source', 'b2g1'),
         ('b2g', 'CWE121_Stack_Based_Buffer_Overflow__CWE129_fgets_21_goodB2G1Sink', 'b2g1'),
+        ('b2g', 'goodB2G2Source', 'b2g2'),
         ('b2g', 'goodB2G2Sink', 'b2g2'),
+        ('g2b', 'goodG2B1Source', 'g2b1'),
         ('g2b', 'goodG2B1Sink', 'g2b1'),
+        (
+            'g2b',
+            'CWE121_Stack_Based_Buffer_Overflow__src_char_declare_cat_43_goodG2B2Source',
+            'g2b2',
+        ),
         ('g2b', 'CWE121_Stack_Based_Buffer_Overflow__src_char_declare_cat_43_goodG2B2Sink', 'g2b2'),
         ('b2g', 'goodB2G', 'b2g'),
+        ('b2g', 'goodB2GSource', 'b2g'),
         ('b2g', 'goodB2GSink', 'b2g'),
         ('g2b', 'goodG2B', 'g2b'),
+        ('g2b', 'goodG2BSource', 'g2b'),
         ('b2b', 'badSink', 'b2b'),
     ]
 
