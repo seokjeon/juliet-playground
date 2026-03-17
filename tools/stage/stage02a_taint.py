@@ -156,11 +156,11 @@ def _derive_flaw_key(ctx: FileContext, line_no: int) -> str:
     return line_text if line_text else 'WARNING_FLAW_CODE_NOT_FOUND'
 
 
-def _collect_macro_definitions(source_paths: list[Path]) -> dict[str, list[MacroDefinition]]:
+def _collect_macro_definitions(source_root: Path) -> dict[str, list[MacroDefinition]]:
     macro_defs: dict[str, list[MacroDefinition]] = {}
     order = 0
-    for p in source_paths:
-        if p.suffix.lower() not in SOURCE_EXTS:
+    for p in source_root.rglob('*'):
+        if not p.is_file() or p.suffix.lower() not in SOURCE_EXTS:
             continue
         try:
             lines = p.read_text(encoding='utf-8', errors='ignore').splitlines()
@@ -497,7 +497,7 @@ def extract_unique_code_fields(
         for call in calls
         if str(call.get('name', '')).strip()
     }
-    macro_defs = _collect_macro_definitions(sorted(source_index.values(), key=str))
+    macro_defs = _collect_macro_definitions(source_root)
     resolution_map = _build_resolution_map(raw_function_names, macro_defs)
     candidate_map = _apply_resolution_to_candidate_map(candidate_map_raw, resolution_map)
 
