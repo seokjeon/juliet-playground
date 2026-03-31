@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import os
 import re
@@ -9,22 +10,37 @@ import shlex
 import shutil
 import subprocess
 import sys
-from dataclasses import dataclass
+import tarfile
+import urllib.request
+from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Sequence
+from typing import Any, Sequence
 
 from shared import bench_runner as _bench_runner
 from shared.artifact_layout import build_dataset_export_paths
 from shared.paths import RESULT_DIR
 
 JULIET_PDBERT_NAMESPACE = 'juliet-playground'
-DEFAULT_VPBENCH_ROOT = Path('/home/sojeon/Desktop/VP-Bench')
+EXTENDED_REALVUL_NAMESPACE = 'extended_realvul'
+DEFAULT_VPBENCH_ROOT = Path('../VP-Bench')
 DEFAULT_CONTAINER_NAME = 'pdbert'
+DEFAULT_RAW_MODEL_DIR = Path('../VP-Bench/downloads/PDBERT/data/models/pdbert-base')
 DEFAULT_METRIC_AVERAGE = 'binary'
 DEFAULT_ANALYZE_BATCH_SIZE = 32
 DEFAULT_CUDA_DEVICE = 0
 PRIMARY_TARGET_NAME = 'primary'
 VULN_PATCH_TARGET_NAME = 'vuln_patch'
+EXTENDED_REALVUL_TARGET_NAME = EXTENDED_REALVUL_NAMESPACE
+AFTER_FINE_TUNED_TARGET_NAME = 'after_fine_tuned'
+BEFORE_FINE_TUNED_TARGET_NAME = 'before_fine_tuned'
+EXTENDED_REALVUL_DATASET_NAME = 'all_projects_vul_patch_dataset.csv'
+EXTENDED_REALVUL_DATASET_URL = (
+    'https://github.com/seokjeon/VP-Bench/releases/download/'
+    'VP-Bench_Test_Dataset/all_projects_vul_patch_dataset.csv'
+)
+EXTENDED_REALVUL_MODEL_URL = (
+    'https://github.com/seokjeon/VP-Bench/releases/download/trained_model/pdbert.tar.gz'
+)
 REQUIRED_COLUMNS = _bench_runner.REQUIRED_COLUMNS
 PRIMARY_REQUIRED_DATASET_TYPES = _bench_runner.PRIMARY_REQUIRED_DATASET_TYPES
 TEST_ONLY_REQUIRED_DATASET_TYPES = _bench_runner.TEST_ONLY_REQUIRED_DATASET_TYPES
@@ -56,6 +72,7 @@ class PDBERTRunConfig:
     vpbench_root: Path
     container_name: str
     raw_model_dir: Path | None
+    extended_realvul: bool
     overwrite: bool
     dry_run: bool
 
@@ -146,7 +163,8 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument('--vpbench-root', type=Path, default=DEFAULT_VPBENCH_ROOT)
     parser.add_argument('--container-name', type=str, default=DEFAULT_CONTAINER_NAME)
-    parser.add_argument('--raw-model-dir', type=Path, default=None)
+    parser.add_argument('--raw-model-dir', type=Path, default=DEFAULT_RAW_MODEL_DIR)
+    parser.add_argument('--extended-realvul', action='store_true')
     parser.add_argument('--overwrite', action='store_true')
     parser.add_argument('--dry-run', action='store_true')
     return parser.parse_args()
@@ -159,16 +177,17 @@ def normalize_config(config: PDBERTRunConfig) -> PDBERTRunConfig:
         vpbench_root=config.vpbench_root.resolve(),
         container_name=config.container_name,
         raw_model_dir=config.raw_model_dir.resolve() if config.raw_model_dir is not None else None,
+        extended_realvul=config.extended_realvul,
         overwrite=config.overwrite,
         dry_run=config.dry_run,
     )
 
 
 def validate_config(config: PDBERTRunConfig) -> None:
-    if config.run_dir is None and not config.pipeline_root.exists():
-        raise ValueError(f'Pipeline root not found: {config.pipeline_root}')
     if not config.vpbench_root.exists():
         raise ValueError(f'VP-Bench root not found: {config.vpbench_root}')
+    if not config.extended_realvul and config.run_dir is None and not config.pipeline_root.exists():
+        raise ValueError(f'Pipeline root not found: {config.pipeline_root}')
     if config.raw_model_dir is not None and not config.raw_model_dir.exists():
         raise ValueError(f'Raw PDBERT model dir not found: {config.raw_model_dir}')
 
@@ -210,6 +229,32 @@ def _target_dataset_relative_parts(target_name: str) -> tuple[str, ...]:
     if target_name == VULN_PATCH_TARGET_NAME:
         return (VULN_PATCH_TARGET_NAME, 'realvul_test', 'Real_Vul')
     raise ValueError(f'Unsupported PDBERT target: {target_name}')
+
+
+def _is_extended_realvul_target(target_name: str) -> bool:
+    return target_name == EXTENDED_REALVUL_TARGET_NAME
+
+
+def _target_requires_training(target_name: str) -> bool:
+    return target_name == PRIMARY_TARGET_NAME
+
+
+def _target_supports_raw_eval(target_name: str) -> bool:
+    return target_name in {VULN_PATCH_TARGET_NAME, EXTENDED_REALVUL_TARGET_NAME}
+
+
+def _target_uses_reused_model(target_name: str) -> bool:
+    return target_name == VULN_PATCH_TARGET_NAME
+
+
+def _target_uses_downloaded_model(target_name: str) -> bool:
+    return _is_extended_realvul_target(target_name)
+
+
+def _required_dataset_types_for_target(target_name: str) -> tuple[str, ...]:
+    if _target_requires_training(target_name):
+        return PRIMARY_REQUIRED_DATASET_TYPES
+    return TEST_ONLY_REQUIRED_DATASET_TYPES
 
 
 def _feature_artifact_paths(output_dir: Path) -> tuple[Path, Path, Path]:
@@ -262,50 +307,108 @@ def build_pdbert_paths(
     *,
     target_name: str,
 ) -> PDBERTPaths:
-    if target_name == PRIMARY_TARGET_NAME:
+    if _is_extended_realvul_target(target_name):
+        source_csv = extended_realvul_source_csv(config)
+        run_name = EXTENDED_REALVUL_NAMESPACE
+        display_name = EXTENDED_REALVUL_NAMESPACE
+        task_name = f'vul_detect/{EXTENDED_REALVUL_NAMESPACE}'
+        host_dataset_dir = (
+            config.vpbench_root
+            / 'downloads'
+            / 'PDBERT'
+            / 'data'
+            / 'datasets'
+            / 'extrinsic'
+            / 'vul_detect'
+            / EXTENDED_REALVUL_NAMESPACE
+            / 'realvul_test'
+            / 'Real_Vul'
+        )
+        host_output_dir = _extended_realvul_model_root(config)
+        container_dataset_dir = (
+            CONTAINER_DATASET_BASE / EXTENDED_REALVUL_NAMESPACE / 'realvul_test' / 'Real_Vul'
+        )
+        container_output_dir = CONTAINER_MODEL_BASE / EXTENDED_REALVUL_NAMESPACE
+        run_dir = source_csv.parent
+    elif target_name == PRIMARY_TARGET_NAME:
         dataset_paths = build_dataset_export_paths(run_dir / '07_dataset_export')
         source_csv = dataset_paths['csv_path']
+        dataset_relative_parts = _target_dataset_relative_parts(target_name)
+        output_relative_parts = _target_output_relative_parts(target_name)
+        run_name = run_dir.name
+        display_name = run_name if target_name == PRIMARY_TARGET_NAME else f'{run_name}/{target_name}'
+        task_name = f'vul_detect/{JULIET_PDBERT_NAMESPACE}/{run_name}/{target_name}'
+
+        base_host_dataset_dir = (
+            config.vpbench_root
+            / 'downloads'
+            / 'PDBERT'
+            / 'data'
+            / 'datasets'
+            / 'extrinsic'
+            / 'vul_detect'
+            / JULIET_PDBERT_NAMESPACE
+            / run_name
+        )
+        base_host_output_dir = (
+            config.vpbench_root
+            / 'downloads'
+            / 'PDBERT'
+            / 'data'
+            / 'models'
+            / 'extrinsic'
+            / 'vul_detect'
+            / JULIET_PDBERT_NAMESPACE
+            / run_name
+        )
+        host_dataset_dir = base_host_dataset_dir.joinpath(*dataset_relative_parts)
+        host_output_dir = base_host_output_dir.joinpath(*output_relative_parts)
+        container_dataset_dir = (
+            CONTAINER_DATASET_BASE / JULIET_PDBERT_NAMESPACE / run_name
+        ).joinpath(*dataset_relative_parts)
+        container_output_dir = (
+            CONTAINER_MODEL_BASE / JULIET_PDBERT_NAMESPACE / run_name
+        ).joinpath(*output_relative_parts)
     elif target_name == VULN_PATCH_TARGET_NAME:
         source_csv = run_dir / '07_dataset_export' / 'vuln_patch' / 'Real_Vul_data.csv'
+        dataset_relative_parts = _target_dataset_relative_parts(target_name)
+        output_relative_parts = _target_output_relative_parts(target_name)
+        run_name = run_dir.name
+        display_name = f'{run_name}/{target_name}'
+        task_name = f'vul_detect/{JULIET_PDBERT_NAMESPACE}/{run_name}/{target_name}'
+
+        base_host_dataset_dir = (
+            config.vpbench_root
+            / 'downloads'
+            / 'PDBERT'
+            / 'data'
+            / 'datasets'
+            / 'extrinsic'
+            / 'vul_detect'
+            / JULIET_PDBERT_NAMESPACE
+            / run_name
+        )
+        base_host_output_dir = (
+            config.vpbench_root
+            / 'downloads'
+            / 'PDBERT'
+            / 'data'
+            / 'models'
+            / 'extrinsic'
+            / 'vul_detect'
+            / JULIET_PDBERT_NAMESPACE
+            / run_name
+        )
+        host_dataset_dir = base_host_dataset_dir.joinpath(*dataset_relative_parts)
+        host_output_dir = base_host_output_dir.joinpath(*output_relative_parts)
+        container_dataset_dir = (
+            CONTAINER_DATASET_BASE / JULIET_PDBERT_NAMESPACE / run_name
+        ).joinpath(*dataset_relative_parts)
+        container_output_dir = (
+            CONTAINER_MODEL_BASE / JULIET_PDBERT_NAMESPACE / run_name
+        ).joinpath(*output_relative_parts)
     else:
         raise ValueError(f'Unsupported PDBERT target: {target_name}')
-
-    dataset_relative_parts = _target_dataset_relative_parts(target_name)
-    output_relative_parts = _target_output_relative_parts(target_name)
-    run_name = run_dir.name
-    display_name = run_name if target_name == PRIMARY_TARGET_NAME else f'{run_name}/{target_name}'
-    task_name = f'vul_detect/{JULIET_PDBERT_NAMESPACE}/{run_name}/{target_name}'
-
-    base_host_dataset_dir = (
-        config.vpbench_root
-        / 'downloads'
-        / 'PDBERT'
-        / 'data'
-        / 'datasets'
-        / 'extrinsic'
-        / 'vul_detect'
-        / JULIET_PDBERT_NAMESPACE
-        / run_name
-    )
-    base_host_output_dir = (
-        config.vpbench_root
-        / 'downloads'
-        / 'PDBERT'
-        / 'data'
-        / 'models'
-        / 'extrinsic'
-        / 'vul_detect'
-        / JULIET_PDBERT_NAMESPACE
-        / run_name
-    )
-    host_dataset_dir = base_host_dataset_dir.joinpath(*dataset_relative_parts)
-    host_output_dir = base_host_output_dir.joinpath(*output_relative_parts)
-    container_dataset_dir = (CONTAINER_DATASET_BASE / JULIET_PDBERT_NAMESPACE / run_name).joinpath(
-        *dataset_relative_parts
-    )
-    container_output_dir = (CONTAINER_MODEL_BASE / JULIET_PDBERT_NAMESPACE / run_name).joinpath(
-        *output_relative_parts
-    )
 
     host_pdbert_root = config.vpbench_root / 'baseline' / 'PDBERT'
     host_configs_dir = host_pdbert_root / 'downstream' / 'configs' / 'vul_detect'
@@ -374,13 +477,48 @@ def build_pdbert_paths(
         container_runtime_test_config=container_runtime_dir / 'pdbert_test_runtime.jsonnet',
     )
 
+# extended_realvul 데이터셋 경로
+def extended_realvul_source_csv(config: PDBERTRunConfig) -> Path:
+    return (
+        config.vpbench_root
+        / 'downloads'
+        / 'PDBERT'
+        / 'data'
+        / 'datasets'
+        / 'extrinsic'
+        / 'vul_detect'
+        / EXTENDED_REALVUL_NAMESPACE
+        / EXTENDED_REALVUL_DATASET_NAME
+    )
+
+
+def download_extended_realvul_dataset(url: str, output_path: Path) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = output_path.with_name(f'{output_path.name}.tmp')
+    try:
+        with urllib.request.urlopen(url) as response, temp_path.open('wb') as f:
+            shutil.copyfileobj(response, f)
+        temp_path.replace(output_path)
+    finally:
+        if temp_path.exists():
+            temp_path.unlink()
+
+
+def ensure_extended_realvul_dataset(config: PDBERTRunConfig) -> Path:
+    dataset_csv = extended_realvul_source_csv(config)
+    if dataset_csv.exists():
+        return dataset_csv
+    print(f'Downloading Extended RealVul dataset CSV to {dataset_csv}...')
+    download_extended_realvul_dataset(EXTENDED_REALVUL_DATASET_URL, dataset_csv)
+    return dataset_csv
+
 
 def validate_paths(
     paths: PDBERTPaths,
     *,
     raw_model_source_type: str | None = None,
 ) -> None:
-    if not paths.run_dir.exists():
+    if not _is_extended_realvul_target(paths.target_name) and not paths.run_dir.exists():
         raise ValueError(f'Pipeline run dir not found: {paths.run_dir}')
     if not paths.source_csv.exists():
         raise ValueError(f'Stage 07 dataset CSV not found: {paths.source_csv}')
@@ -392,7 +530,7 @@ def validate_paths(
         'PDBERT test config template': paths.host_test_config_template,
     }
     if (
-        paths.target_name == VULN_PATCH_TARGET_NAME
+        _target_supports_raw_eval(paths.target_name)
         and raw_model_source_type == RAW_MODEL_SOURCE_PRETRAINED_BACKBONE
     ):
         required_paths['PDBERT prepare_raw_baseline.py'] = paths.host_raw_baseline_script
@@ -401,7 +539,170 @@ def validate_paths(
             raise ValueError(f'{label} not found: {path}')
 
 
+def download_extended_realvul_model(url: str, output_path: Path) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = output_path.with_name(f'{output_path.name}.tmp')
+    try:
+        with urllib.request.urlopen(url) as response, temp_path.open('wb') as f:
+            shutil.copyfileobj(response, f)
+        temp_path.replace(output_path)
+    finally:
+        if temp_path.exists():
+            temp_path.unlink()
+
+
+def load_archive_config_json(model_archive: Path) -> dict[str, Any]:
+    with tarfile.open(model_archive, 'r:*') as archive:
+        config_member = next(
+            (
+                member
+                for member in archive.getmembers()
+                if member.isfile() and Path(member.name).name == 'config.json'
+            ),
+            None,
+        )
+        if config_member is None:
+            raise RuntimeError(f'config.json not found in model archive: {model_archive}')
+        extracted = archive.extractfile(config_member)
+        if extracted is None:
+            raise RuntimeError(f'Failed to extract config.json from model archive: {model_archive}')
+        return json.loads(extracted.read().decode('utf-8'))
+
+
+def rewrite_model_config_for_eval(
+    config_dict: dict[str, Any],
+    *,
+    container_dataset_dir: Path,
+    container_output_dir: Path,
+) -> dict[str, Any]:
+    rewritten = json.loads(json.dumps(config_dict))
+    rewritten['train_data_path'] = str(container_dataset_dir / 'train.json')
+    rewritten['validation_data_path'] = str(container_dataset_dir / 'validate.json')
+
+    trainer = rewritten.get('trainer')
+    if isinstance(trainer, dict):
+        callbacks = trainer.get('callbacks')
+        if isinstance(callbacks, list):
+            for callback in callbacks:
+                if isinstance(callback, dict):
+                    serialization_dir = str(container_output_dir)
+                    if not serialization_dir.endswith('/'):
+                        serialization_dir += '/'
+                    callback['serialization_dir'] = serialization_dir
+
+    return rewritten
+
+
+def stage_downloaded_model_artifacts(
+    model_url: str,
+    model_dir: Path,
+    *,
+    container_dataset_dir: Path,
+    container_output_dir: Path,
+) -> None:
+    model_dir.mkdir(parents=True, exist_ok=True)
+    model_archive = model_dir / 'model.tar.gz'
+    model_config_json = model_dir / 'config.json'
+
+    download_extended_realvul_model(model_url, model_archive)
+    temp_archive_path = model_archive.with_name(f'{model_archive.name}.normalized')
+    with tarfile.open(model_archive, 'r:*') as archive:
+        inner_member = next(
+            (
+                member
+                for member in archive.getmembers()
+                if member.isfile() and member.name == 'archive/model.tar.gz'
+            ),
+            None,
+        )
+        if inner_member is not None:
+            extracted = archive.extractfile(inner_member)
+            if extracted is None:
+                raise RuntimeError(
+                    f'Failed to extract archive/model.tar.gz from model archive: {model_archive}'
+                )
+            with temp_archive_path.open('wb') as f:
+                shutil.copyfileobj(extracted, f)
+    if temp_archive_path.exists():
+        model_archive.unlink()
+        temp_archive_path.replace(model_archive)
+
+    config_dict = load_archive_config_json(model_archive)
+    rewritten_config = rewrite_model_config_for_eval(
+        config_dict,
+        container_dataset_dir=container_dataset_dir,
+        container_output_dir=container_output_dir,
+    )
+    model_config_json.write_text(
+        json.dumps(rewritten_config, ensure_ascii=False, indent=4) + '\n',
+        encoding='utf-8',
+    )
+
+
+def _load_pdbert_eval_only_module():
+    module_name = '_run_pdbert_eval_only_runtime'
+    current_module = sys.modules[__name__]
+    sys.modules['run_pdbert'] = current_module
+    existing_module = sys.modules.get(module_name)
+    if existing_module is not None:
+        existing_module._run_pdbert = current_module
+        return existing_module
+
+    module_path = Path(__file__).with_name('run_pdbert_eval_only.py')
+    spec = importlib.util.spec_from_file_location(module_name, module_path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f'Failed to load run_pdbert_eval_only module from {module_path}')
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _extended_realvul_model_root(config: PDBERTRunConfig) -> Path:
+    return (
+        config.vpbench_root
+        / 'downloads'
+        / 'PDBERT'
+        / 'data'
+        / 'models'
+        / 'extrinsic'
+        / 'vul_detect'
+        / EXTENDED_REALVUL_NAMESPACE
+    )
+
+
+def _extended_realvul_eval_only_config(
+    config: PDBERTRunConfig,
+    *,
+    model_dir: Path,
+    output_name: str,
+):
+    eval_only = _load_pdbert_eval_only_module()
+    return eval_only.normalize_config(
+        eval_only.PDBERTEvalOnlyConfig(
+            dataset_csv=extended_realvul_source_csv(config),
+            row_manifest=None,
+            model_dir=model_dir,
+            vpbench_root=config.vpbench_root,
+            container_name=config.container_name,
+            eval_name=EXTENDED_REALVUL_NAMESPACE,
+            storage_path_parts=(EXTENDED_REALVUL_NAMESPACE,),
+            output_name=output_name,
+            overwrite=config.overwrite,
+            dry_run=config.dry_run,
+        )
+    )
+
+
 def discover_pdbert_targets(config: PDBERTRunConfig, run_dir: Path) -> list[PDBERTPaths]:
+    if config.extended_realvul:
+        return [
+            build_pdbert_paths(
+                config,
+                run_dir,
+                target_name=EXTENDED_REALVUL_TARGET_NAME,
+            )
+        ]
     primary_paths = build_pdbert_paths(config, run_dir, target_name=PRIMARY_TARGET_NAME)
     vuln_patch_paths = build_pdbert_paths(config, run_dir, target_name=VULN_PATCH_TARGET_NAME)
     targets = [primary_paths]
@@ -526,13 +827,18 @@ def stage_raw_model_artifacts(raw_model_dir: Path, target_paths: PDBERTPaths) ->
     stage_model_artifacts(raw_model_dir, target_paths.host_raw_model_dir)
 
 
-def stage_pretrained_backbone_artifacts(raw_model_dir: Path, target_paths: PDBERTPaths) -> None:
+def stage_pretrained_backbone_artifacts_to_dir(raw_model_dir: Path, target_dir: Path) -> Path:
     require_pretrained_model_artifacts(raw_model_dir, label=str(raw_model_dir))
-    target_paths.host_raw_model_dir.mkdir(parents=True, exist_ok=True)
-    target_source_dir = _raw_pretrained_source_dir(target_paths)
+    target_dir.mkdir(parents=True, exist_ok=True)
+    target_source_dir = target_dir / RAW_PRETRAINED_SOURCE_DIRNAME
     target_source_dir.mkdir(parents=True, exist_ok=True)
     for source_path in sorted(raw_model_dir.iterdir(), key=lambda path: path.name):
         _copy_or_symlink_path(source_path, target_source_dir / source_path.name)
+    return target_source_dir
+
+
+def stage_pretrained_backbone_artifacts(raw_model_dir: Path, target_paths: PDBERTPaths) -> None:
+    stage_pretrained_backbone_artifacts_to_dir(raw_model_dir, target_paths.host_raw_model_dir)
 
 
 def training_loss_plot_path(paths: PDBERTPaths) -> Path:
@@ -751,22 +1057,37 @@ def copy_raw_baseline_script_to_container(paths: PDBERTPaths, container_name: st
         )
 
 
-def build_raw_baseline_command(
+def build_raw_baseline_command_for_locations(
     config: PDBERTRunConfig,
-    paths: PDBERTPaths,
+    *,
+    container_runtime_test_config: Path,
+    container_serialization_dir: Path,
+    container_pretrained_model_dir: Path,
 ) -> list[str]:
     command = [
         'python',
         str(CONTAINER_RAW_BASELINE_SCRIPT),
         '--config',
-        str(paths.container_runtime_test_config),
+        str(container_runtime_test_config),
         '--serialization-dir',
-        str(paths.container_raw_model_dir),
+        str(container_serialization_dir),
         '--pretrained-model-dir',
-        str(_raw_pretrained_source_dir(paths, container=True)),
+        str(container_pretrained_model_dir),
     ]
     inner_command = f'cd {shlex.quote(str(CONTAINER_DOWNSTREAM_ROOT))} && {shlex.join(command)}'
     return [*_docker_exec_base(config.container_name), 'bash', '-lc', inner_command]
+
+
+def build_raw_baseline_command(
+    config: PDBERTRunConfig,
+    paths: PDBERTPaths,
+) -> list[str]:
+    return build_raw_baseline_command_for_locations(
+        config,
+        container_runtime_test_config=paths.container_runtime_test_config,
+        container_serialization_dir=paths.container_raw_model_dir,
+        container_pretrained_model_dir=_raw_pretrained_source_dir(paths, container=True),
+    )
 
 
 def build_command_steps(
@@ -775,9 +1096,9 @@ def build_command_steps(
 ) -> list[PDBERTCommandStep]:
     commands: list[PDBERTCommandStep] = []
     for paths in paths_list:
-        if paths.target_name == PRIMARY_TARGET_NAME:
+        if _target_requires_training(paths.target_name):
             phases = ('prepare', 'train', 'test', 'analyze')
-        elif paths.target_name == VULN_PATCH_TARGET_NAME:
+        elif _target_supports_raw_eval(paths.target_name):
             phases = ['prepare', 'test', 'analyze']
             if config.raw_model_dir is not None:
                 phases.extend(('raw_test', 'raw_analyze'))
@@ -808,7 +1129,6 @@ def print_planned_commands(
 ) -> None:
     if not paths_list:
         return
-    print(f'Pipeline run: {paths_list[0].run_dir}')
     print(
         '[analyze/setup] '
         + ' '.join(build_analyze_setup_command(paths_list[0], container_name=config.container_name))
@@ -818,6 +1138,10 @@ def print_planned_commands(
         if config.raw_model_dir is not None
         else None
     )
+    if paths_list[0].target_name == EXTENDED_REALVUL_TARGET_NAME:
+        print(f'Extended RealVul dataset CSV: {paths_list[0].source_csv}')
+    else:
+        print(f'Pipeline run: {paths_list[0].run_dir}')
     if config.raw_model_dir is not None:
         print(f'Raw model source dir: {config.raw_model_dir}')
         print(f'Raw model source type: {raw_model_source_type}')
@@ -825,6 +1149,14 @@ def print_planned_commands(
         print(f'Target [{paths.target_name}] Stage 07 CSV: {paths.source_csv}')
         print(f'Target [{paths.target_name}] Host dataset dir: {paths.host_dataset_dir}')
         print(f'Target [{paths.target_name}] Host output dir: {paths.host_output_dir}')
+        if _target_uses_downloaded_model(paths.target_name):
+            print(
+                f'Target [{paths.target_name}] Fine-tuned model URL: {EXTENDED_REALVUL_MODEL_URL}'
+            )
+            print(
+                '[downloaded-model/setup] '
+                f'{EXTENDED_REALVUL_MODEL_URL} -> {paths.host_model_archive}'
+            )
         if paths.target_name == PRIMARY_TARGET_NAME:
             print(
                 f'Target [{paths.target_name}] Host training loss plot: '
@@ -835,7 +1167,7 @@ def print_planned_commands(
         print(f'Target [{paths.target_name}] Host test config: {paths.host_runtime_test_config}')
         print(f'Target [{paths.target_name}] Container dataset dir: {paths.container_dataset_dir}')
         print(f'Target [{paths.target_name}] Container output dir: {paths.container_output_dir}')
-        if paths.target_name == VULN_PATCH_TARGET_NAME and config.raw_model_dir is not None:
+        if _target_supports_raw_eval(paths.target_name) and config.raw_model_dir is not None:
             print(f'Target [{paths.target_name}] Host raw model dir: {paths.host_raw_model_dir}')
             print(
                 f'Target [{paths.target_name}] Host raw feature export: {paths.host_raw_feature_npz}'
@@ -861,6 +1193,11 @@ def print_planned_commands(
         print(f'[{step.label}] {" ".join(step.command)}')
 
 
+def combined_feature_artifact_paths(paths: PDBERTPaths) -> tuple[Path, Path]:
+    base_path = paths.host_output_dir / f'combined_{TEST_HIDDEN_STATE_BASENAME}'
+    return Path(f'{base_path}.jpeg'), Path(f'{base_path}-tsne-features.json')
+
+
 def print_completion_summary(
     paths_list: Sequence[PDBERTPaths],
     *,
@@ -877,7 +1214,7 @@ def print_completion_summary(
         print(f'  - [{paths.target_name}] analysis_json: {paths.host_analysis_json}')
         print(f'  - [{paths.target_name}] feature_npz: {paths.host_feature_npz}')
         print(f'  - [{paths.target_name}] tsne_image: {paths.host_feature_tsne_image}')
-        if paths.target_name == VULN_PATCH_TARGET_NAME:
+        if _target_supports_raw_eval(paths.target_name):
             print(f'  - [{paths.target_name}] raw_model_dir: {paths.host_raw_model_dir}')
             if raw_model_source_type is not None:
                 print(f'  - [{paths.target_name}] raw_model_source_type: {raw_model_source_type}')
@@ -885,14 +1222,216 @@ def print_completion_summary(
             print(f'  - [{paths.target_name}] raw_analysis_json: {paths.host_raw_analysis_json}')
             print(f'  - [{paths.target_name}] raw_feature_npz: {paths.host_raw_feature_npz}')
             print(f'  - [{paths.target_name}] raw_tsne_image: {paths.host_raw_feature_tsne_image}')
+        if _is_extended_realvul_target(paths.target_name):
+            combined_image, combined_cache = combined_feature_artifact_paths(paths)
+            print(f'  - [{paths.target_name}] combined_tsne_image: {combined_image}')
+            print(f'  - [{paths.target_name}] combined_tsne_cache: {combined_cache}')
         print(f'  - [{paths.target_name}] logs: {paths.host_prepare_log.parent}')
+
+
+def run_extended_realvul_eval(config: PDBERTRunConfig) -> int:
+    if not config.dry_run:
+        ensure_extended_realvul_dataset(config)
+    raw_model_dir = config.raw_model_dir or (
+        config.vpbench_root / 'downloads' / 'PDBERT' / 'data' / 'models' / 'pdbert-base'
+    )
+    return run_pdbert_from_pipeline(replace(config, raw_model_dir=raw_model_dir))
+
+
+def _find_command_step(
+    commands: Sequence[PDBERTCommandStep],
+    *,
+    target_name: str,
+    phase: str,
+) -> PDBERTCommandStep:
+    return next(
+        step
+        for step in commands
+        if step.paths.target_name == target_name and step.phase == phase
+    )
+
+
+def _require_prepare_outputs(paths: PDBERTPaths) -> None:
+    if _target_requires_training(paths.target_name):
+        require_exists(paths.host_train_json, 'train.json')
+        require_exists(paths.host_validate_json, 'validate.json')
+    require_exists(paths.host_test_json, 'test.json')
+
+
+def _require_main_model_outputs(paths: PDBERTPaths) -> None:
+    require_exists(paths.host_model_config_json, 'config.json')
+    require_exists(paths.host_model_archive, 'model.tar.gz')
+
+
+def _require_main_analysis_outputs(paths: PDBERTPaths) -> None:
+    require_exists(paths.host_eval_result_csv, 'eval_result.csv')
+    require_exists(paths.host_analysis_json, 'prediction_analysis.json')
+    require_exists(paths.host_feature_npz, 'test_last_hidden_state_vectors.npz')
+
+
+def _require_raw_model_outputs(paths: PDBERTPaths) -> None:
+    require_exists(paths.host_raw_model_config_json, 'raw_model_eval/config.json')
+    require_exists(paths.host_raw_model_archive, 'raw_model_eval/model.tar.gz')
+
+
+def _require_raw_analysis_outputs(paths: PDBERTPaths) -> None:
+    require_exists(paths.host_raw_eval_result_csv, 'raw_model_eval/eval_result.csv')
+    require_exists(paths.host_raw_analysis_json, 'raw_model_eval/prediction_analysis.json')
+    require_exists(paths.host_raw_feature_npz, 'raw_model_eval/test_last_hidden_state_vectors.npz')
+    if _is_extended_realvul_target(paths.target_name):
+        combined_image, combined_cache = combined_feature_artifact_paths(paths)
+        require_exists(combined_image, 'combined_test_last_hidden_state_vectors.jpeg')
+        require_exists(
+            combined_cache,
+            'combined_test_last_hidden_state_vectors-tsne-features.json',
+        )
+
+
+def _prepare_main_model_for_target(
+    config: PDBERTRunConfig,
+    paths: PDBERTPaths,
+    *,
+    primary_paths: PDBERTPaths | None,
+) -> None:
+    if _target_uses_reused_model(paths.target_name):
+        if primary_paths is None:
+            raise RuntimeError('Primary PDBERT outputs are required for reused-model targets.')
+        stage_reused_model_artifacts(primary_paths, paths)
+    elif _target_uses_downloaded_model(paths.target_name):
+        stage_downloaded_model_artifacts(
+            EXTENDED_REALVUL_MODEL_URL,
+            paths.host_output_dir,
+            container_dataset_dir=paths.container_dataset_dir,
+            container_output_dir=paths.container_output_dir,
+        )
+    else:
+        return
+    _require_main_model_outputs(paths)
+
+
+def _prepare_raw_model_for_target(
+    config: PDBERTRunConfig,
+    paths: PDBERTPaths,
+    *,
+    raw_model_source_type: str,
+) -> None:
+    if config.raw_model_dir is None:
+        raise RuntimeError('Raw PDBERT model dir is required for raw-model evaluation.')
+    if raw_model_source_type == RAW_MODEL_SOURCE_ARCHIVE:
+        stage_raw_model_artifacts(config.raw_model_dir, paths)
+    elif raw_model_source_type == RAW_MODEL_SOURCE_PRETRAINED_BACKBONE:
+        stage_pretrained_backbone_artifacts(config.raw_model_dir, paths)
+        copy_raw_baseline_script_to_container(paths, config.container_name)
+        print(
+            'Preparing PDBERT raw baseline from pretrained backbone for '
+            f'{paths.display_name}...'
+        )
+        run_logged_command(
+            build_raw_baseline_command(config, paths),
+            raw_model_setup_log_path(paths),
+        )
+    else:
+        raise RuntimeError(f'Unsupported raw model source type: {raw_model_source_type}')
+    _require_raw_model_outputs(paths)
+
+
+def _run_prepare_phase(
+    commands: Sequence[PDBERTCommandStep],
+    paths: PDBERTPaths,
+) -> None:
+    step = _find_command_step(commands, target_name=paths.target_name, phase='prepare')
+    print(f'Running PDBERT prepare for {paths.display_name}...')
+    run_logged_command(step.command, paths.host_prepare_log)
+    _require_prepare_outputs(paths)
+
+
+def _run_train_phase(
+    commands: Sequence[PDBERTCommandStep],
+    paths: PDBERTPaths,
+) -> None:
+    step = _find_command_step(commands, target_name=paths.target_name, phase='train')
+    print(f'Running PDBERT train for {paths.display_name}...')
+    run_logged_command(step.command, paths.host_train_log)
+    _require_main_model_outputs(paths)
+    plot_path = write_training_loss_plot(paths)
+    print(f'Wrote PDBERT training loss plot to {plot_path}')
+
+
+def _run_test_phase(
+    commands: Sequence[PDBERTCommandStep],
+    paths: PDBERTPaths,
+    *,
+    phase: str = 'test',
+) -> None:
+    step = _find_command_step(commands, target_name=paths.target_name, phase=phase)
+    label = 'raw-model test' if phase == 'raw_test' else 'test'
+    print(f'Running PDBERT {label} for {paths.display_name}...')
+    log_path = paths.host_raw_test_log if phase == 'raw_test' else paths.host_test_log
+    run_logged_command(step.command, log_path)
+    if phase == 'raw_test':
+        _require_raw_model_outputs(paths)
+    else:
+        _require_main_model_outputs(paths)
+
+
+def _run_analyze_phase(
+    config: PDBERTRunConfig,
+    commands: Sequence[PDBERTCommandStep],
+    paths: PDBERTPaths,
+    *,
+    phase: str = 'analyze',
+) -> None:
+    step = _find_command_step(commands, target_name=paths.target_name, phase=phase)
+    copy_analyze_script_to_container(paths, config.container_name)
+    label = 'raw-model analyze' if phase == 'raw_analyze' else 'analyze'
+    print(f'Running PDBERT {label} for {paths.display_name}...')
+    run_logged_command(
+        step.command,
+        paths.host_raw_analyze_log if phase == 'raw_analyze' else paths.host_analyze_log,
+    )
+    if phase == 'raw_analyze':
+        _require_raw_analysis_outputs(paths)
+    else:
+        _require_main_analysis_outputs(paths)
+
+
+def _run_target_pipeline(
+    config: PDBERTRunConfig,
+    commands: Sequence[PDBERTCommandStep],
+    paths: PDBERTPaths,
+    *,
+    primary_paths: PDBERTPaths | None,
+    raw_model_source_type: str | None,
+) -> None:
+    if not _target_requires_training(paths.target_name):
+        _prepare_main_model_for_target(config, paths, primary_paths=primary_paths)
+
+    _run_prepare_phase(commands, paths)
+
+    if _target_requires_training(paths.target_name):
+        _run_train_phase(commands, paths)
+
+    _run_test_phase(commands, paths)
+    _run_analyze_phase(config, commands, paths)
+
+    if _target_supports_raw_eval(paths.target_name) and raw_model_source_type is not None:
+        _prepare_raw_model_for_target(
+            config,
+            paths,
+            raw_model_source_type=raw_model_source_type,
+        )
+        _run_test_phase(commands, paths, phase='raw_test')
+        _run_analyze_phase(config, commands, paths, phase='raw_analyze')
 
 
 def run_pdbert_from_pipeline(config: PDBERTRunConfig) -> int:
     validate_config(config)
-    run_dir = resolve_run_dir(config)
+    run_dir = config.vpbench_root if config.extended_realvul else resolve_run_dir(config)
     paths_list = discover_pdbert_targets(config, run_dir)
-    primary_paths = paths_list[0]
+    primary_paths = next(
+        (paths for paths in paths_list if paths.target_name == PRIMARY_TARGET_NAME),
+        None,
+    )
     vuln_patch_paths = next(
         (paths for paths in paths_list if paths.target_name == VULN_PATCH_TARGET_NAME),
         None,
@@ -908,11 +1447,7 @@ def run_pdbert_from_pipeline(config: PDBERTRunConfig) -> int:
 
     for paths in paths_list:
         validate_paths(paths, raw_model_source_type=raw_model_source_type)
-        required_dataset_types = (
-            PRIMARY_REQUIRED_DATASET_TYPES
-            if paths.target_name == PRIMARY_TARGET_NAME
-            else TEST_ONLY_REQUIRED_DATASET_TYPES
-        )
+        required_dataset_types = _required_dataset_types_for_target(paths.target_name)
         validate_stage07_csv(paths.source_csv, required_dataset_types=required_dataset_types)
 
     ensure_output_targets(paths_list, overwrite=config.overwrite)
@@ -929,136 +1464,13 @@ def run_pdbert_from_pipeline(config: PDBERTRunConfig) -> int:
         stage_source_csv(paths)
         stage_runtime_configs(paths)
 
-    primary_prepare_step = next(
-        step
-        for step in commands
-        if step.paths.target_name == PRIMARY_TARGET_NAME and step.phase == 'prepare'
-    )
-    print(f'Running PDBERT prepare for {primary_prepare_step.paths.display_name}...')
-    run_logged_command(primary_prepare_step.command, primary_paths.host_prepare_log)
-    require_exists(primary_paths.host_train_json, 'train.json')
-    require_exists(primary_paths.host_validate_json, 'validate.json')
-    require_exists(primary_paths.host_test_json, 'test.json')
-
-    primary_train_step = next(
-        step
-        for step in commands
-        if step.paths.target_name == PRIMARY_TARGET_NAME and step.phase == 'train'
-    )
-    print(f'Running PDBERT train for {primary_train_step.paths.display_name}...')
-    run_logged_command(primary_train_step.command, primary_paths.host_train_log)
-    require_exists(primary_paths.host_model_config_json, 'config.json')
-    require_exists(primary_paths.host_model_archive, 'model.tar.gz')
-    plot_path = write_training_loss_plot(primary_paths)
-    print(f'Wrote PDBERT training loss plot to {plot_path}')
-
-    primary_test_step = next(
-        step
-        for step in commands
-        if step.paths.target_name == PRIMARY_TARGET_NAME and step.phase == 'test'
-    )
-    print(f'Running PDBERT test for {primary_test_step.paths.display_name}...')
-    run_logged_command(primary_test_step.command, primary_paths.host_test_log)
-    require_exists(primary_paths.host_model_config_json, 'config.json')
-    require_exists(primary_paths.host_model_archive, 'model.tar.gz')
-
-    primary_analyze_step = next(
-        step
-        for step in commands
-        if step.paths.target_name == PRIMARY_TARGET_NAME and step.phase == 'analyze'
-    )
-    copy_analyze_script_to_container(primary_paths, config.container_name)
-    print(f'Running PDBERT analyze for {primary_analyze_step.paths.display_name}...')
-    run_logged_command(primary_analyze_step.command, primary_paths.host_analyze_log)
-    require_exists(primary_paths.host_eval_result_csv, 'eval_result.csv')
-    require_exists(primary_paths.host_analysis_json, 'prediction_analysis.json')
-    require_exists(primary_paths.host_feature_npz, 'test_last_hidden_state_vectors.npz')
-
-    if vuln_patch_paths is not None:
-        stage_reused_model_artifacts(primary_paths, vuln_patch_paths)
-        require_exists(vuln_patch_paths.host_model_config_json, 'config.json')
-        require_exists(vuln_patch_paths.host_model_archive, 'model.tar.gz')
-
-        vuln_patch_prepare_step = next(
-            step
-            for step in commands
-            if step.paths.target_name == VULN_PATCH_TARGET_NAME and step.phase == 'prepare'
-        )
-        print(f'Running PDBERT prepare for {vuln_patch_prepare_step.paths.display_name}...')
-        run_logged_command(vuln_patch_prepare_step.command, vuln_patch_paths.host_prepare_log)
-        require_exists(vuln_patch_paths.host_test_json, 'test.json')
-
-        vuln_patch_test_step = next(
-            step
-            for step in commands
-            if step.paths.target_name == VULN_PATCH_TARGET_NAME and step.phase == 'test'
-        )
-        print(f'Running PDBERT test for {vuln_patch_test_step.paths.display_name}...')
-        run_logged_command(vuln_patch_test_step.command, vuln_patch_paths.host_test_log)
-        require_exists(vuln_patch_paths.host_model_config_json, 'config.json')
-        require_exists(vuln_patch_paths.host_model_archive, 'model.tar.gz')
-
-        vuln_patch_analyze_step = next(
-            step
-            for step in commands
-            if step.paths.target_name == VULN_PATCH_TARGET_NAME and step.phase == 'analyze'
-        )
-        copy_analyze_script_to_container(vuln_patch_paths, config.container_name)
-        print(f'Running PDBERT analyze for {vuln_patch_analyze_step.paths.display_name}...')
-        run_logged_command(vuln_patch_analyze_step.command, vuln_patch_paths.host_analyze_log)
-        require_exists(vuln_patch_paths.host_eval_result_csv, 'eval_result.csv')
-        require_exists(vuln_patch_paths.host_analysis_json, 'prediction_analysis.json')
-        require_exists(vuln_patch_paths.host_feature_npz, 'test_last_hidden_state_vectors.npz')
-
-        if raw_model_source_type == RAW_MODEL_SOURCE_ARCHIVE:
-            stage_raw_model_artifacts(config.raw_model_dir, vuln_patch_paths)
-        elif raw_model_source_type == RAW_MODEL_SOURCE_PRETRAINED_BACKBONE:
-            stage_pretrained_backbone_artifacts(config.raw_model_dir, vuln_patch_paths)
-            copy_raw_baseline_script_to_container(vuln_patch_paths, config.container_name)
-            print(
-                'Preparing PDBERT raw baseline from pretrained backbone for '
-                f'{vuln_patch_paths.display_name}...'
-            )
-            run_logged_command(
-                build_raw_baseline_command(config, vuln_patch_paths),
-                raw_model_setup_log_path(vuln_patch_paths),
-            )
-        else:
-            raise RuntimeError(f'Unsupported raw model source type: {raw_model_source_type}')
-        require_exists(vuln_patch_paths.host_raw_model_config_json, 'raw_model_eval/config.json')
-        require_exists(vuln_patch_paths.host_raw_model_archive, 'raw_model_eval/model.tar.gz')
-
-        vuln_patch_raw_test_step = next(
-            step
-            for step in commands
-            if step.paths.target_name == VULN_PATCH_TARGET_NAME and step.phase == 'raw_test'
-        )
-        print(f'Running PDBERT raw-model test for {vuln_patch_raw_test_step.paths.display_name}...')
-        run_logged_command(vuln_patch_raw_test_step.command, vuln_patch_paths.host_raw_test_log)
-        require_exists(vuln_patch_paths.host_raw_model_config_json, 'raw_model_eval/config.json')
-        require_exists(vuln_patch_paths.host_raw_model_archive, 'raw_model_eval/model.tar.gz')
-
-        vuln_patch_raw_analyze_step = next(
-            step
-            for step in commands
-            if step.paths.target_name == VULN_PATCH_TARGET_NAME and step.phase == 'raw_analyze'
-        )
-        copy_analyze_script_to_container(vuln_patch_paths, config.container_name)
-        print(
-            f'Running PDBERT raw-model analyze for {vuln_patch_raw_analyze_step.paths.display_name}...'
-        )
-        run_logged_command(
-            vuln_patch_raw_analyze_step.command,
-            vuln_patch_paths.host_raw_analyze_log,
-        )
-        require_exists(vuln_patch_paths.host_raw_eval_result_csv, 'raw_model_eval/eval_result.csv')
-        require_exists(
-            vuln_patch_paths.host_raw_analysis_json,
-            'raw_model_eval/prediction_analysis.json',
-        )
-        require_exists(
-            vuln_patch_paths.host_raw_feature_npz,
-            'raw_model_eval/test_last_hidden_state_vectors.npz',
+    for paths in paths_list:
+        _run_target_pipeline(
+            config,
+            commands,
+            paths,
+            primary_paths=primary_paths,
+            raw_model_source_type=raw_model_source_type,
         )
 
     print_completion_summary(paths_list, raw_model_source_type=raw_model_source_type)
@@ -1074,11 +1486,14 @@ def main() -> int:
             vpbench_root=args.vpbench_root,
             container_name=args.container_name,
             raw_model_dir=args.raw_model_dir,
+            extended_realvul=args.extended_realvul,
             overwrite=args.overwrite,
             dry_run=args.dry_run,
         )
     )
     try:
+        if config.extended_realvul:
+            return run_extended_realvul_eval(config)
         return run_pdbert_from_pipeline(config)
     except ValueError as exc:
         print(str(exc), file=sys.stderr)

@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import json
 import os
+import tarfile
 from pathlib import Path
 
 from tests.helpers import REPO_ROOT, load_module_from_path, run_module_main, write_text
@@ -136,6 +137,54 @@ def _write_training_loss_log(path: Path, entries: list[tuple[float, float]]) -> 
     write_text(path, ''.join(rows))
 
 
+def _write_extended_realvul_csv(path: Path) -> None:
+    fieldnames = [
+        'file_name',
+        'unique_id',
+        'target',
+        'vulnerable_line_numbers',
+        'project',
+        'dataset_type',
+        'processed_func',
+    ]
+    rows = [
+        {
+            'file_name': '20',
+            'unique_id': '20',
+            'target': '1',
+            'vulnerable_line_numbers': '2',
+            'project': 'RealVul',
+            'dataset_type': 'test',
+            'processed_func': 'int ext_bad(void) {\n    return 1;\n}\n',
+        },
+        {
+            'file_name': '21',
+            'unique_id': '21',
+            'target': '0',
+            'vulnerable_line_numbers': '',
+            'project': 'RealVul',
+            'dataset_type': 'test',
+            'processed_func': 'int ext_good(void) {\n    return 0;\n}\n',
+        },
+    ]
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open('w', newline='', encoding='utf-8') as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def _make_linevul_model_archive(path: Path) -> Path:
+    model_dir = path.parent / 'linevul_release' / 'nested-model'
+    write_text(model_dir / 'config.json', '{}\n')
+    write_text(model_dir / 'pytorch_model.bin', 'weights\n')
+    write_text(model_dir / 'training_args.bin', 'args\n')
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with tarfile.open(path, 'w:gz') as archive:
+        archive.add(model_dir.parent, arcname='linevul_release')
+    return path
+
+
 def test_run_linevul_uses_latest_run_in_dry_run_mode(tmp_path, capsys):
     module = load_module_from_path('test_run_linevul_dry_run', REPO_ROOT / 'tools/run_linevul.py')
 
@@ -204,6 +253,151 @@ def test_run_linevul_dry_run_includes_optional_vuln_patch_eval(tmp_path, capsys)
     assert '[vuln_patch/test]' in captured.out
     assert '[vuln_patch/raw_test]' in captured.out
     assert 'vuln_patch' in captured.out
+
+
+def test_stage_downloaded_model_archive_extracts_nested_model_dir(tmp_path):
+    module = load_module_from_path(
+        'test_run_linevul_stage_downloaded_model_archive',
+        REPO_ROOT / 'tools/run_linevul.py',
+    )
+
+    archive_path = _make_linevul_model_archive(tmp_path / 'downloads' / 'linevul_best_model.tar.gz')
+    target_dir = tmp_path / 'output' / 'after_fine_tuned_model'
+
+    module.stage_downloaded_model_archive(archive_path, target_dir)
+
+    assert target_dir.joinpath('config.json').exists()
+    assert target_dir.joinpath('pytorch_model.bin').exists()
+    assert target_dir.joinpath('training_args.bin').exists()
+
+
+def test_run_linevul_extended_realvul_dry_run_prints_download_and_eval_steps(tmp_path, capsys):
+    module = load_module_from_path(
+        'test_run_linevul_extended_realvul_dry_run',
+        REPO_ROOT / 'tools/run_linevul.py',
+    )
+
+    vpbench_root = _make_vpbench_root(tmp_path / 'VP-Bench')
+
+    result = run_module_main(
+        module,
+        [
+            '--extended-realvul',
+            '--vpbench-root',
+            str(vpbench_root),
+            '--dry-run',
+        ],
+    )
+
+    assert result == 0
+    captured = capsys.readouterr()
+    assert 'Extended RealVul dataset URL' in captured.out
+    assert module.EXTENDED_REALVUL_DATASET_URL in captured.out
+    assert module.EXTENDED_REALVUL_MODEL_URL in captured.out
+    assert '[extended_realvul/extended_eval]' in captured.out
+    assert '--extended-realvul' in captured.out
+    assert '--baseline_model_name' in captured.out
+
+
+def test_run_linevul_extended_realvul_downloads_assets_and_runs_single_command(
+    tmp_path, monkeypatch
+):
+    module = load_module_from_path(
+        'test_run_linevul_extended_realvul_execute',
+        REPO_ROOT / 'tools/run_linevul.py',
+    )
+
+    vpbench_root = _make_vpbench_root(tmp_path / 'VP-Bench')
+    archive_source = _make_linevul_model_archive(tmp_path / 'fixtures' / 'linevul_best_model.tar.gz')
+    config = module.normalize_config(
+        module.LineVulRunConfig(
+            run_dir=None,
+            pipeline_root=tmp_path / 'pipeline-runs',
+            vpbench_root=vpbench_root,
+            container_name='linevul',
+            tokenizer_name=module.DEFAULT_TOKENIZER_NAME,
+            model_name=module.DEFAULT_MODEL_NAME,
+            train_batch_size=module.DEFAULT_TRAIN_BATCH_SIZE,
+            eval_batch_size=module.DEFAULT_EVAL_BATCH_SIZE,
+            num_train_epochs=module.DEFAULT_NUM_TRAIN_EPOCHS,
+            extended_realvul=True,
+            overwrite=False,
+            dry_run=False,
+        )
+    )
+
+    paths = module.build_linevul_paths(
+        config,
+        vpbench_root,
+        target_name=module.EXTENDED_REALVUL_TARGET_NAME,
+    )
+
+    download_calls: list[tuple[str, Path]] = []
+    commands: list[tuple[list[str], Path]] = []
+
+    def fake_download_file(url: str, output_path: Path) -> None:
+        download_calls.append((url, output_path))
+        if url == module.EXTENDED_REALVUL_DATASET_URL:
+            _write_extended_realvul_csv(output_path)
+        elif url == module.EXTENDED_REALVUL_MODEL_URL:
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_bytes(archive_source.read_bytes())
+        else:
+            raise AssertionError(f'unexpected download url: {url}')
+
+    def fake_run_logged_command(command, log_path):
+        commands.append((list(command), log_path))
+        write_text(log_path, '$ ' + ' '.join(command) + '\n')
+        write_text(paths.host_test_predictions_csv, 'label,pred\n1,1\n')
+        fine_npz = paths.host_output_dir / '20260401-000000-000000_test_last_hidden_state_vectors.npz'
+        fine_image, fine_cache = module._artifact_image_and_cache(fine_npz)
+        write_text(fine_npz, 'fine npz\n')
+        write_text(fine_image, 'fine image\n')
+        write_text(fine_cache, '{}\n')
+        write_text(paths.host_raw_test_predictions_csv, 'label,pred\n1,0\n')
+        raw_npz = (
+            paths.host_raw_test_output_dir / '20260401-000001-000000_test_last_hidden_state_vectors.npz'
+        )
+        raw_image, raw_cache = module._artifact_image_and_cache(raw_npz)
+        write_text(raw_npz, 'raw npz\n')
+        write_text(raw_image, 'raw image\n')
+        write_text(raw_cache, '{}\n')
+        combined_image, combined_cache = module.combined_feature_artifact_paths(paths)
+        write_text(combined_image, 'combined image\n')
+        write_text(combined_cache, '{}\n')
+
+    monkeypatch.setattr(module, 'download_file', fake_download_file)
+    monkeypatch.setattr(module, 'check_container_running', lambda _container_name: None)
+    monkeypatch.setattr(module, 'run_logged_command', fake_run_logged_command)
+
+    result = run_module_main(
+        module,
+        [
+            '--extended-realvul',
+            '--vpbench-root',
+            str(vpbench_root),
+        ],
+    )
+
+    assert result == 0
+    assert download_calls == [
+        (module.EXTENDED_REALVUL_DATASET_URL, module.extended_realvul_source_csv(config)),
+        (module.EXTENDED_REALVUL_MODEL_URL, paths.host_fine_tuned_model_archive),
+    ]
+    assert len(commands) == 1
+    command, log_path = commands[0]
+    assert log_path == paths.host_extended_eval_log
+    assert '--extended-realvul' in command
+    assert '--baseline_model_name' in command
+    assert str(paths.container_fine_tuned_model_dir) in command
+    assert paths.host_dataset_csv.exists()
+    assert paths.host_fine_tuned_model_dir.joinpath('config.json').exists()
+    assert paths.host_fine_tuned_model_dir.joinpath('pytorch_model.bin').exists()
+    assert paths.host_test_predictions_csv.exists()
+    assert paths.host_raw_test_predictions_csv.exists()
+    combined_image, combined_cache = module.combined_feature_artifact_paths(paths)
+    assert combined_image.exists()
+    assert combined_cache.exists()
 
 
 def test_run_linevul_stages_csv_and_runs_prepare_train_test(tmp_path, monkeypatch):
@@ -408,6 +602,7 @@ def test_load_epoch_training_losses_ignores_non_matching_lines_and_overwrites_du
             train_batch_size=module.DEFAULT_TRAIN_BATCH_SIZE,
             eval_batch_size=module.DEFAULT_EVAL_BATCH_SIZE,
             num_train_epochs=module.DEFAULT_NUM_TRAIN_EPOCHS,
+            extended_realvul=False,
             overwrite=False,
             dry_run=False,
         )
@@ -505,6 +700,7 @@ def test_cleanup_output_targets_falls_back_to_container_rm_on_permission_error(
             train_batch_size=module.DEFAULT_TRAIN_BATCH_SIZE,
             eval_batch_size=module.DEFAULT_EVAL_BATCH_SIZE,
             num_train_epochs=module.DEFAULT_NUM_TRAIN_EPOCHS,
+            extended_realvul=False,
             overwrite=True,
             dry_run=False,
         )

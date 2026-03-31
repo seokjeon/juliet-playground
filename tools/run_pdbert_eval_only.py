@@ -26,6 +26,8 @@ class PDBERTEvalOnlyConfig:
     eval_name: str
     overwrite: bool
     dry_run: bool
+    storage_path_parts: tuple[str, ...] = ()
+    output_name: str = 'testonly'
 
 
 @dataclass(frozen=True)
@@ -49,6 +51,7 @@ class PDBERTEvalOnlyPaths:
     host_prepare_script: Path
     host_train_eval_script: Path
     host_analyze_script: Path
+    host_raw_baseline_script: Path
     host_test_config_template: Path
     host_joined_predictions_csv: Path
     container_dataset_dir: Path
@@ -87,6 +90,8 @@ def normalize_config(config: PDBERTEvalOnlyConfig) -> PDBERTEvalOnlyConfig:
         vpbench_root=config.vpbench_root.resolve(),
         container_name=config.container_name,
         eval_name=config.eval_name,
+        storage_path_parts=tuple(config.storage_path_parts),
+        output_name=config.output_name,
         overwrite=config.overwrite,
         dry_run=config.dry_run,
     )
@@ -104,42 +109,32 @@ def validate_config(config: PDBERTEvalOnlyConfig) -> None:
 
 
 def build_eval_only_paths(config: PDBERTEvalOnlyConfig) -> PDBERTEvalOnlyPaths:
-    dataset_relative_parts = ('testonly', 'realvul_test', 'Real_Vul')
-    output_relative_parts = ('testonly',)
-    display_name = config.eval_name
-    task_name = f'vul_detect/{EXTERNAL_PDBERT_NAMESPACE}/{config.eval_name}/testonly'
+    storage_path_parts = (
+        tuple(config.storage_path_parts)
+        if config.storage_path_parts
+        else (EXTERNAL_PDBERT_NAMESPACE, config.eval_name)
+    )
+    dataset_relative_parts = (config.output_name, 'realvul_test', 'Real_Vul')
+    output_relative_parts = (config.output_name,)
+    display_name = config.output_name if config.storage_path_parts else config.eval_name
+    task_name = 'vul_detect/' + '/'.join((*storage_path_parts, config.output_name))
 
-    base_host_dataset_dir = (
-        config.vpbench_root
-        / 'downloads'
-        / 'PDBERT'
-        / 'data'
-        / 'datasets'
-        / 'extrinsic'
-        / 'vul_detect'
-        / EXTERNAL_PDBERT_NAMESPACE
-        / config.eval_name
-    )
-    base_host_output_dir = (
-        config.vpbench_root
-        / 'downloads'
-        / 'PDBERT'
-        / 'data'
-        / 'models'
-        / 'extrinsic'
-        / 'vul_detect'
-        / EXTERNAL_PDBERT_NAMESPACE
-        / config.eval_name
-    )
+    base_host_dataset_dir = config.vpbench_root / 'downloads' / 'PDBERT' / 'data' / 'datasets' / 'extrinsic' / 'vul_detect'
+    base_host_output_dir = config.vpbench_root / 'downloads' / 'PDBERT' / 'data' / 'models' / 'extrinsic' / 'vul_detect'
+    for path_part in storage_path_parts:
+        base_host_dataset_dir /= path_part
+        base_host_output_dir /= path_part
 
     host_dataset_dir = base_host_dataset_dir.joinpath(*dataset_relative_parts)
     host_output_dir = base_host_output_dir.joinpath(*output_relative_parts)
-    container_dataset_dir = (
-        _run_pdbert.CONTAINER_DATASET_BASE / EXTERNAL_PDBERT_NAMESPACE / config.eval_name
-    ).joinpath(*dataset_relative_parts)
-    container_output_dir = (
-        _run_pdbert.CONTAINER_MODEL_BASE / EXTERNAL_PDBERT_NAMESPACE / config.eval_name
-    ).joinpath(*output_relative_parts)
+    container_dataset_dir = _run_pdbert.CONTAINER_DATASET_BASE.joinpath(
+        *storage_path_parts,
+        *dataset_relative_parts,
+    )
+    container_output_dir = _run_pdbert.CONTAINER_MODEL_BASE.joinpath(
+        *storage_path_parts,
+        *output_relative_parts,
+    )
 
     host_pdbert_root = config.vpbench_root / 'baseline' / 'PDBERT'
     host_configs_dir = host_pdbert_root / 'downstream' / 'configs' / 'vul_detect'
@@ -150,7 +145,7 @@ def build_eval_only_paths(config: PDBERTEvalOnlyConfig) -> PDBERTEvalOnlyPaths:
     )
 
     return PDBERTEvalOnlyPaths(
-        target_name=EVAL_ONLY_TARGET_NAME,
+        target_name=config.output_name if config.storage_path_parts else EVAL_ONLY_TARGET_NAME,
         display_name=display_name,
         task_name=task_name,
         source_csv=config.dataset_csv,
@@ -169,6 +164,7 @@ def build_eval_only_paths(config: PDBERTEvalOnlyConfig) -> PDBERTEvalOnlyPaths:
         host_prepare_script=host_pdbert_root / 'prepare_dataset.py',
         host_train_eval_script=host_pdbert_root / 'downstream' / 'train_eval_from_config.py',
         host_analyze_script=host_experiment_dir / 'analyze_prediction.py',
+        host_raw_baseline_script=host_experiment_dir / 'prepare_raw_baseline.py',
         host_test_config_template=host_configs_dir / 'pdbert_vpbench.jsonnet',
         host_joined_predictions_csv=host_output_dir / 'predictions_joined.csv',
         container_dataset_dir=container_dataset_dir,

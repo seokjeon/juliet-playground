@@ -258,6 +258,12 @@ python tools/run_linevul.py \
   --run-dir artifacts/pipeline-runs/run-2026.03.17-11:28:48 \
   --dry-run
 
+# Extended RealVul 테스트셋과 fine-tuned LineVul 모델을 다운로드해
+# fine-tuned test -> raw baseline test -> combined t-SNE 까지 실행
+python tools/run_linevul.py \
+  --overwrite \
+  --extended-realvul
+
 # 최신 pipeline run의 Real_Vul_data.csv 를 VP-Bench pdbert 컨테이너로 넘겨
 # primary dataset 에 대해 prepare -> train -> test -> analyze 실행
 # vuln_patch/Real_Vul_data.csv 가 있으면 --raw-model-dir 가 필요하고,
@@ -309,6 +315,9 @@ python tools/compare-artifacts.py \
   현재 Stage 07 CSV 는 `processed_func`, `vulnerable_line_numbers`, `dataset_type` 기준으로는
   바로 사용할 수 있지만, 원본 `linevul_main.py` 가 기대하는
   `flaw_line`, `flaw_line_index` 컬럼은 포함하지 않습니다.
+- `--extended-realvul` 을 사용하면 pipeline run 입력 대신
+  VP-Bench release의 Extended RealVul 테스트 CSV와 LineVul fine-tuned 모델을 내려받아
+  fine-tuned test, raw baseline test, combined t-SNE 생성만 수행합니다.
 
 ## PDBERT 연동 메모
 

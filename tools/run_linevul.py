@@ -7,6 +7,8 @@ import os
 import shutil
 import subprocess
 import sys
+import tarfile
+import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Sequence
@@ -16,6 +18,7 @@ from shared.artifact_layout import build_dataset_export_paths
 from shared.paths import RESULT_DIR
 
 JULIET_LINEVUL_NAMESPACE = 'juliet-playground'
+EXTENDED_REALVUL_NAMESPACE = 'extended_realvul'
 DEFAULT_VPBENCH_ROOT = Path('/home/mjbin/lab/VP-Bench')
 DEFAULT_CONTAINER_NAME = 'linevul'
 DEFAULT_TOKENIZER_NAME = 'microsoft/codebert-base'
@@ -25,15 +28,30 @@ DEFAULT_EVAL_BATCH_SIZE = 8
 DEFAULT_NUM_TRAIN_EPOCHS = 10
 PRIMARY_TARGET_NAME = 'primary'
 VULN_PATCH_TARGET_NAME = 'vuln_patch'
+EXTENDED_REALVUL_TARGET_NAME = EXTENDED_REALVUL_NAMESPACE
 TRAINING_LOSS_LOG_NAME = 'training_loss.log'
 TRAINING_LOSS_PLOT_NAME = 'train_loss_by_epoch.png'
 TRAIN_EPOCH_LOSS_PREFIX = 'TRAIN_EPOCH_LOSS '
+EXTENDED_REALVUL_LOG_NAME = 'extended_realvul.log'
+EXTENDED_REALVUL_DATASET_NAME = 'all_projects_vul_patch_dataset_test.csv'
+EXTENDED_REALVUL_MODEL_ARCHIVE_NAME = 'linevul_best_model.tar.gz'
+EXTENDED_REALVUL_MODEL_DIRNAME = 'after_fine_tuned_model'
+EXTENDED_REALVUL_DATASET_URL = (
+    'https://github.com/seokjeon/VP-Bench/releases/download/'
+    'VP-Bench_Test_Dataset/all_projects_vul_patch_dataset_test.csv'
+)
+EXTENDED_REALVUL_MODEL_URL = (
+    'https://github.com/seokjeon/VP-Bench/releases/download/trained_model/linevul_best_model.tar.gz'
+)
+REQUIRED_MODEL_ARTIFACT_NAMES = ('config.json', 'pytorch_model.bin')
+COMBINED_TEST_TSNE_BASENAME = 'combined_test_last_hidden_state_vectors'
 REQUIRED_COLUMNS = _bench_runner.REQUIRED_COLUMNS
 PRIMARY_REQUIRED_DATASET_TYPES = _bench_runner.PRIMARY_REQUIRED_DATASET_TYPES
 TEST_ONLY_REQUIRED_DATASET_TYPES = _bench_runner.TEST_ONLY_REQUIRED_DATASET_TYPES
 CONTAINER_DATASET_BASE = Path('/app/RealVul/Dataset')
 CONTAINER_EXPERIMENT_BASE = Path('/app/RealVul/Experiments/LineVul')
 CONTAINER_LINE_VUL_SCRIPT = CONTAINER_EXPERIMENT_BASE / 'line_vul.py'
+CONTAINER_BASELINE_MODEL_DIR = CONTAINER_EXPERIMENT_BASE / 'best_model'
 
 
 @dataclass(frozen=True)
@@ -47,6 +65,7 @@ class LineVulRunConfig:
     train_batch_size: int
     eval_batch_size: int
     num_train_epochs: int
+    extended_realvul: bool
     overwrite: bool
     dry_run: bool
 
@@ -65,12 +84,15 @@ class LineVulPaths:
     host_train_log: Path
     host_test_log: Path
     host_raw_test_log: Path
+    host_extended_eval_log: Path
     host_train_dataset_pkl: Path
     host_val_dataset_pkl: Path
     host_test_dataset_pkl: Path
     host_training_loss_log: Path
     host_training_loss_plot: Path
     host_best_model_dir: Path
+    host_fine_tuned_model_archive: Path
+    host_fine_tuned_model_dir: Path
     host_test_predictions_csv: Path
     host_raw_test_output_dir: Path
     host_raw_test_predictions_csv: Path
@@ -79,6 +101,8 @@ class LineVulPaths:
     container_output_dir: Path
     container_raw_test_output_dir: Path
     container_dataset_csv: Path
+    container_fine_tuned_model_dir: Path
+    container_baseline_model_dir: Path
 
 
 @dataclass(frozen=True)
@@ -109,6 +133,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument('--train-batch-size', type=int, default=DEFAULT_TRAIN_BATCH_SIZE)
     parser.add_argument('--eval-batch-size', type=int, default=DEFAULT_EVAL_BATCH_SIZE)
     parser.add_argument('--num-train-epochs', type=int, default=DEFAULT_NUM_TRAIN_EPOCHS)
+    parser.add_argument('--extended-realvul', action='store_true')
     parser.add_argument('--overwrite', action='store_true')
     parser.add_argument('--dry-run', action='store_true')
     return parser.parse_args()
@@ -125,18 +150,23 @@ def normalize_config(config: LineVulRunConfig) -> LineVulRunConfig:
         train_batch_size=config.train_batch_size,
         eval_batch_size=config.eval_batch_size,
         num_train_epochs=config.num_train_epochs,
+        extended_realvul=config.extended_realvul,
         overwrite=config.overwrite,
         dry_run=config.dry_run,
     )
 
 
 def validate_config(config: LineVulRunConfig) -> None:
+    if not config.vpbench_root.exists():
+        raise ValueError(f'VP-Bench root not found: {config.vpbench_root}')
     if config.train_batch_size <= 0:
         raise ValueError(f'train_batch_size must be > 0: {config.train_batch_size}')
     if config.eval_batch_size <= 0:
         raise ValueError(f'eval_batch_size must be > 0: {config.eval_batch_size}')
     if config.num_train_epochs <= 0:
         raise ValueError(f'num_train_epochs must be > 0: {config.num_train_epochs}')
+    if config.extended_realvul and config.run_dir is not None:
+        raise ValueError('--run-dir is not used with --extended-realvul')
 
 
 def resolve_run_dir(config: LineVulRunConfig) -> Path:
@@ -155,6 +185,153 @@ run_logged_command = _bench_runner.run_logged_command
 require_exists = _bench_runner.require_exists
 
 
+def extended_realvul_download_root(config: LineVulRunConfig) -> Path:
+    return config.vpbench_root / 'downloads' / 'LineVul' / EXTENDED_REALVUL_NAMESPACE
+
+
+def extended_realvul_source_csv(config: LineVulRunConfig) -> Path:
+    return extended_realvul_download_root(config) / EXTENDED_REALVUL_DATASET_NAME
+
+
+def extended_realvul_model_archive_path(config: LineVulRunConfig) -> Path:
+    return extended_realvul_download_root(config) / EXTENDED_REALVUL_MODEL_ARCHIVE_NAME
+
+
+def _artifact_image_and_cache(npz_path: Path) -> tuple[Path, Path]:
+    base_path = npz_path.with_suffix('')
+    return Path(f'{base_path}.jpeg'), Path(f'{base_path}-tsne-features.json')
+
+
+def combined_feature_artifact_paths(paths: LineVulPaths) -> tuple[Path, Path]:
+    base_path = paths.host_output_dir / COMBINED_TEST_TSNE_BASENAME
+    return Path(f'{base_path}.jpeg'), Path(f'{base_path}-tsne-features.json')
+
+
+def find_latest_hidden_state_output(output_dir: Path, *, split_name: str = 'test') -> Path | None:
+    candidates = sorted(
+        output_dir.glob(f'*_{split_name}_last_hidden_state_vectors.npz'),
+        key=lambda path: path.name,
+    )
+    if not candidates:
+        return None
+    return candidates[-1]
+
+
+def download_file(url: str, output_path: Path) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = output_path.with_name(f'{output_path.name}.tmp')
+    try:
+        with urllib.request.urlopen(url) as response, temp_path.open('wb') as f:
+            shutil.copyfileobj(response, f)
+        temp_path.replace(output_path)
+    finally:
+        if temp_path.exists():
+            temp_path.unlink()
+
+
+def ensure_extended_realvul_dataset(config: LineVulRunConfig) -> Path:
+    dataset_csv = extended_realvul_source_csv(config)
+    if dataset_csv.exists():
+        return dataset_csv
+    print(f'Downloading Extended RealVul LineVul dataset to {dataset_csv}...')
+    download_file(EXTENDED_REALVUL_DATASET_URL, dataset_csv)
+    return dataset_csv
+
+
+def require_model_artifacts(model_dir: Path, *, label: str) -> None:
+    for artifact_name in REQUIRED_MODEL_ARTIFACT_NAMES:
+        require_exists(model_dir / artifact_name, f'{label}/{artifact_name}')
+
+
+def _find_model_dir(root_dir: Path) -> Path:
+    candidates: list[Path] = []
+    for path in [root_dir, *sorted(root_dir.rglob('*'))]:
+        if not path.is_dir():
+            continue
+        if all((path / artifact_name).exists() for artifact_name in REQUIRED_MODEL_ARTIFACT_NAMES):
+            candidates.append(path)
+    if not candidates:
+        raise RuntimeError(f'No extracted LineVul model dir found under {root_dir}')
+    shortest_path = min(candidates, key=lambda path: (len(path.parts), str(path)))
+    return shortest_path
+
+
+def _copy_directory_contents(source_dir: Path, target_dir: Path) -> None:
+    target_dir.mkdir(parents=True, exist_ok=True)
+    for source_path in sorted(source_dir.iterdir(), key=lambda path: path.name):
+        destination = target_dir / source_path.name
+        if destination.exists() or destination.is_symlink():
+            if destination.is_dir() and not destination.is_symlink():
+                shutil.rmtree(destination)
+            else:
+                destination.unlink()
+        if source_path.is_dir():
+            shutil.copytree(source_path, destination)
+        else:
+            shutil.copy2(source_path, destination)
+
+
+def stage_downloaded_model_archive(model_archive: Path, target_dir: Path) -> None:
+    temp_extract_dir = target_dir.parent / f'.{target_dir.name}.extracting'
+    if temp_extract_dir.exists():
+        shutil.rmtree(temp_extract_dir)
+    temp_extract_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        with tarfile.open(model_archive, 'r:*') as archive:
+            archive.extractall(temp_extract_dir)
+        extracted_model_dir = _find_model_dir(temp_extract_dir)
+        if target_dir.exists():
+            shutil.rmtree(target_dir)
+        _copy_directory_contents(extracted_model_dir, target_dir)
+    finally:
+        if temp_extract_dir.exists():
+            shutil.rmtree(temp_extract_dir)
+
+
+def ensure_extended_realvul_model(config: LineVulRunConfig, paths: LineVulPaths) -> Path:
+    if paths.host_fine_tuned_model_dir.exists():
+        require_model_artifacts(
+            paths.host_fine_tuned_model_dir,
+            label=str(paths.host_fine_tuned_model_dir),
+        )
+        return paths.host_fine_tuned_model_dir
+
+    archive_path = paths.host_fine_tuned_model_archive
+    if not archive_path.exists():
+        print(f'Downloading Extended RealVul LineVul model to {archive_path}...')
+        download_file(EXTENDED_REALVUL_MODEL_URL, archive_path)
+    stage_downloaded_model_archive(archive_path, paths.host_fine_tuned_model_dir)
+    require_model_artifacts(paths.host_fine_tuned_model_dir, label=str(paths.host_fine_tuned_model_dir))
+    return paths.host_fine_tuned_model_dir
+
+
+def require_extended_realvul_outputs(paths: LineVulPaths) -> None:
+    require_exists(paths.host_test_predictions_csv, 'test_pred_with_code.csv')
+    require_exists(paths.host_raw_test_predictions_csv, 'raw_model_eval/test_pred_with_code.csv')
+
+    fine_npz = find_latest_hidden_state_output(paths.host_output_dir)
+    if fine_npz is None:
+        raise RuntimeError(
+            f'Expected fine-tuned test hidden-state export not found: {paths.host_output_dir}'
+        )
+    raw_npz = find_latest_hidden_state_output(paths.host_raw_test_output_dir)
+    if raw_npz is None:
+        raise RuntimeError(
+            'Expected raw-model test hidden-state export not found: '
+            f'{paths.host_raw_test_output_dir}'
+        )
+
+    for npz_path in (fine_npz, raw_npz):
+        require_exists(npz_path, str(npz_path))
+        image_path, cache_path = _artifact_image_and_cache(npz_path)
+        require_exists(image_path, image_path.name)
+        require_exists(cache_path, cache_path.name)
+
+    combined_image, combined_cache = combined_feature_artifact_paths(paths)
+    require_exists(combined_image, combined_image.name)
+    require_exists(combined_cache, combined_cache.name)
+
+
 def build_linevul_paths(
     config: LineVulRunConfig,
     run_dir: Path,
@@ -165,39 +342,59 @@ def build_linevul_paths(
         dataset_paths = build_dataset_export_paths(run_dir / '07_dataset_export')
         source_csv = dataset_paths['csv_path']
         relative_parts: tuple[str, ...] = ()
+        run_name = run_dir.name
     elif target_name == VULN_PATCH_TARGET_NAME:
         source_csv = run_dir / '07_dataset_export' / 'vuln_patch' / 'Real_Vul_data.csv'
         relative_parts = (VULN_PATCH_TARGET_NAME,)
+        run_name = run_dir.name
+    elif target_name == EXTENDED_REALVUL_TARGET_NAME:
+        source_csv = extended_realvul_source_csv(config)
+        relative_parts = ()
+        run_name = EXTENDED_REALVUL_NAMESPACE
     else:
         raise ValueError(f'Unsupported LineVul target: {target_name}')
 
-    run_name = run_dir.name
     display_name = '/'.join((run_name, *relative_parts)) if relative_parts else run_name
-    base_host_dataset_dir = (
-        config.vpbench_root
-        / 'downloads'
-        / 'RealVul'
-        / 'datasets'
-        / JULIET_LINEVUL_NAMESPACE
-        / run_name
-    )
-    base_host_output_dir = (
-        config.vpbench_root
-        / 'baseline'
-        / 'RealVul'
-        / 'Experiments'
-        / 'LineVul'
-        / JULIET_LINEVUL_NAMESPACE
-        / run_name
-    )
-    host_dataset_dir = base_host_dataset_dir.joinpath(*relative_parts)
-    host_output_dir = base_host_output_dir.joinpath(*relative_parts)
-    container_dataset_dir = (CONTAINER_DATASET_BASE / JULIET_LINEVUL_NAMESPACE / run_name).joinpath(
-        *relative_parts
-    )
-    container_output_dir = (
-        CONTAINER_EXPERIMENT_BASE / JULIET_LINEVUL_NAMESPACE / run_name
-    ).joinpath(*relative_parts)
+    if target_name == EXTENDED_REALVUL_TARGET_NAME:
+        host_dataset_dir = (
+            config.vpbench_root / 'downloads' / 'RealVul' / 'datasets' / EXTENDED_REALVUL_NAMESPACE
+        )
+        host_output_dir = (
+            config.vpbench_root
+            / 'baseline'
+            / 'RealVul'
+            / 'Experiments'
+            / 'LineVul'
+            / EXTENDED_REALVUL_NAMESPACE
+        )
+        container_dataset_dir = CONTAINER_DATASET_BASE / EXTENDED_REALVUL_NAMESPACE
+        container_output_dir = CONTAINER_EXPERIMENT_BASE / EXTENDED_REALVUL_NAMESPACE
+    else:
+        base_host_dataset_dir = (
+            config.vpbench_root
+            / 'downloads'
+            / 'RealVul'
+            / 'datasets'
+            / JULIET_LINEVUL_NAMESPACE
+            / run_name
+        )
+        base_host_output_dir = (
+            config.vpbench_root
+            / 'baseline'
+            / 'RealVul'
+            / 'Experiments'
+            / 'LineVul'
+            / JULIET_LINEVUL_NAMESPACE
+            / run_name
+        )
+        host_dataset_dir = base_host_dataset_dir.joinpath(*relative_parts)
+        host_output_dir = base_host_output_dir.joinpath(*relative_parts)
+        container_dataset_dir = (CONTAINER_DATASET_BASE / JULIET_LINEVUL_NAMESPACE / run_name).joinpath(
+            *relative_parts
+        )
+        container_output_dir = (
+            CONTAINER_EXPERIMENT_BASE / JULIET_LINEVUL_NAMESPACE / run_name
+        ).joinpath(*relative_parts)
     return LineVulPaths(
         run_dir=run_dir,
         run_name=run_name,
@@ -211,12 +408,15 @@ def build_linevul_paths(
         host_train_log=host_output_dir / 'train.log',
         host_test_log=host_output_dir / 'test.log',
         host_raw_test_log=host_output_dir / 'raw_model_test.log',
+        host_extended_eval_log=host_output_dir / EXTENDED_REALVUL_LOG_NAME,
         host_train_dataset_pkl=host_dataset_dir / 'train_dataset.pkl',
         host_val_dataset_pkl=host_dataset_dir / 'val_dataset.pkl',
         host_test_dataset_pkl=host_dataset_dir / 'test_dataset.pkl',
         host_training_loss_log=host_output_dir / TRAINING_LOSS_LOG_NAME,
         host_training_loss_plot=host_output_dir / TRAINING_LOSS_PLOT_NAME,
         host_best_model_dir=host_output_dir / 'best_model',
+        host_fine_tuned_model_archive=extended_realvul_model_archive_path(config),
+        host_fine_tuned_model_dir=host_output_dir / EXTENDED_REALVUL_MODEL_DIRNAME,
         host_test_predictions_csv=host_output_dir / 'test_pred_with_code.csv',
         host_raw_test_output_dir=host_output_dir / 'raw_model_eval',
         host_raw_test_predictions_csv=(host_output_dir / 'raw_model_eval' / 'test_pred_with_code.csv'),
@@ -227,19 +427,33 @@ def build_linevul_paths(
         container_output_dir=container_output_dir,
         container_raw_test_output_dir=container_output_dir / 'raw_model_eval',
         container_dataset_csv=container_dataset_dir / 'Real_Vul_data.csv',
+        container_fine_tuned_model_dir=container_output_dir / EXTENDED_REALVUL_MODEL_DIRNAME,
+        container_baseline_model_dir=CONTAINER_BASELINE_MODEL_DIR,
     )
 
 
-def validate_paths(paths: LineVulPaths) -> None:
-    if not paths.run_dir.exists():
+def validate_paths(
+    paths: LineVulPaths,
+    *,
+    allow_missing_source: bool = False,
+) -> None:
+    if paths.target_name != EXTENDED_REALVUL_TARGET_NAME and not paths.run_dir.exists():
         raise ValueError(f'Pipeline run dir not found: {paths.run_dir}')
-    if not paths.source_csv.exists():
+    if not allow_missing_source and not paths.source_csv.exists():
         raise ValueError(f'Stage 07 dataset CSV not found: {paths.source_csv}')
     if not paths.host_line_vul_script.exists():
         raise ValueError(f'VP-Bench line_vul.py not found: {paths.host_line_vul_script}')
 
 
 def discover_linevul_targets(config: LineVulRunConfig, run_dir: Path) -> list[LineVulPaths]:
+    if config.extended_realvul:
+        return [
+            build_linevul_paths(
+                config,
+                run_dir,
+                target_name=EXTENDED_REALVUL_TARGET_NAME,
+            )
+        ]
     primary_paths = build_linevul_paths(config, run_dir, target_name=PRIMARY_TARGET_NAME)
     vuln_patch_paths = build_linevul_paths(config, run_dir, target_name=VULN_PATCH_TARGET_NAME)
     targets = [primary_paths]
@@ -387,8 +601,22 @@ def build_line_vul_command(
         train_batch_size = config.eval_batch_size
         eval_batch_size = config.eval_batch_size
         output_dir = paths.container_raw_test_output_dir
+        model_name = config.model_name
+    elif phase == 'extended_eval':
+        phase_flags = [
+            '--extended-realvul',
+            '--baseline_model_name',
+            str(paths.container_baseline_model_dir),
+        ]
+        train_batch_size = config.eval_batch_size
+        eval_batch_size = config.eval_batch_size
+        output_dir = paths.container_output_dir
+        model_name = str(paths.container_fine_tuned_model_dir)
     else:
         raise ValueError(f'Unsupported LineVul phase: {phase}')
+
+    if phase != 'extended_eval':
+        model_name = config.model_name
 
     return [
         'docker',
@@ -405,7 +633,7 @@ def build_line_vul_command(
         '--tokenizer_name',
         config.tokenizer_name,
         '--model_name',
-        config.model_name,
+        model_name,
         '--per_device_train_batch_size',
         str(train_batch_size),
         '--per_device_eval_batch_size',
@@ -422,7 +650,9 @@ def build_command_steps(
 ) -> list[LineVulCommandStep]:
     commands: list[LineVulCommandStep] = []
     for paths in paths_list:
-        if paths.target_name == PRIMARY_TARGET_NAME:
+        if paths.target_name == EXTENDED_REALVUL_TARGET_NAME:
+            phases = ('extended_eval',)
+        elif paths.target_name == PRIMARY_TARGET_NAME:
             phases = ('prepare', 'train', 'test')
         elif paths.target_name == VULN_PATCH_TARGET_NAME:
             phases = ('prepare', 'test', 'raw_test')
@@ -441,11 +671,21 @@ def build_command_steps(
 
 
 def print_planned_commands(
-    commands: Sequence[LineVulCommandStep], paths_list: Sequence[LineVulPaths]
+    config: LineVulRunConfig,
+    commands: Sequence[LineVulCommandStep],
+    paths_list: Sequence[LineVulPaths],
 ) -> None:
     if not paths_list:
         return
-    print(f'Pipeline run: {paths_list[0].run_dir}')
+    if config.extended_realvul:
+        print(f'Extended RealVul dataset URL: {EXTENDED_REALVUL_DATASET_URL}')
+        print(f'Extended RealVul dataset CSV: {paths_list[0].source_csv}')
+        print(f'Extended RealVul model URL: {EXTENDED_REALVUL_MODEL_URL}')
+        print(f'Extended RealVul model archive: {paths_list[0].host_fine_tuned_model_archive}')
+        print(f'Extended RealVul fine-tuned model dir: {paths_list[0].host_fine_tuned_model_dir}')
+        print(f'Extended RealVul baseline model dir: {paths_list[0].container_baseline_model_dir}')
+    else:
+        print(f'Pipeline run: {paths_list[0].run_dir}')
     for paths in paths_list:
         print(f'Target [{paths.target_name}] Stage 07 CSV: {paths.source_csv}')
         print(f'Target [{paths.target_name}] Host dataset dir: {paths.host_dataset_dir}')
@@ -461,6 +701,15 @@ def print_planned_commands(
             )
         print(f'Target [{paths.target_name}] Container dataset dir: {paths.container_dataset_dir}')
         print(f'Target [{paths.target_name}] Container output dir: {paths.container_output_dir}')
+        if paths.target_name == EXTENDED_REALVUL_TARGET_NAME:
+            print(
+                f'Target [{paths.target_name}] Container fine-tuned model dir: '
+                f'{paths.container_fine_tuned_model_dir}'
+            )
+            print(
+                f'Target [{paths.target_name}] Container baseline model dir: '
+                f'{paths.container_baseline_model_dir}'
+            )
     for step in commands:
         print(f'[{step.label}] {" ".join(step.command)}')
 
@@ -473,11 +722,60 @@ def print_completion_summary(paths_list: Sequence[LineVulPaths]) -> None:
         if paths.target_name == PRIMARY_TARGET_NAME:
             print(f'  - [{paths.target_name}] training_loss_log: {paths.host_training_loss_log}')
             print(f'  - [{paths.target_name}] training_loss_plot: {paths.host_training_loss_plot}')
-        print(f'  - [{paths.target_name}] best_model: {paths.host_best_model_dir}')
+        if paths.target_name != EXTENDED_REALVUL_TARGET_NAME:
+            print(f'  - [{paths.target_name}] best_model: {paths.host_best_model_dir}')
         print(f'  - [{paths.target_name}] test_predictions: {paths.host_test_predictions_csv}')
         if paths.target_name == VULN_PATCH_TARGET_NAME:
             print(f'  - [{paths.target_name}] raw_model_test_predictions: {paths.host_raw_test_predictions_csv}')
+        if paths.target_name == EXTENDED_REALVUL_TARGET_NAME:
+            fine_npz = find_latest_hidden_state_output(paths.host_output_dir)
+            raw_npz = find_latest_hidden_state_output(paths.host_raw_test_output_dir)
+            combined_image, combined_cache = combined_feature_artifact_paths(paths)
+            if fine_npz is not None:
+                fine_image, _ = _artifact_image_and_cache(fine_npz)
+                print(f'  - [{paths.target_name}] fine_tuned_model: {paths.host_fine_tuned_model_dir}')
+                print(f'  - [{paths.target_name}] fine_feature_npz: {fine_npz}')
+                print(f'  - [{paths.target_name}] fine_tsne_image: {fine_image}')
+            if raw_npz is not None:
+                raw_image, _ = _artifact_image_and_cache(raw_npz)
+                print(f'  - [{paths.target_name}] raw_model_test_predictions: {paths.host_raw_test_predictions_csv}')
+                print(f'  - [{paths.target_name}] raw_feature_npz: {raw_npz}')
+                print(f'  - [{paths.target_name}] raw_tsne_image: {raw_image}')
+            print(f'  - [{paths.target_name}] combined_tsne_image: {combined_image}')
+            print(f'  - [{paths.target_name}] combined_tsne_cache: {combined_cache}')
         print(f'  - [{paths.target_name}] logs: {paths.host_output_dir}')
+
+
+def run_extended_realvul_eval(config: LineVulRunConfig) -> int:
+    validate_config(config)
+    paths = build_linevul_paths(
+        config,
+        config.vpbench_root,
+        target_name=EXTENDED_REALVUL_TARGET_NAME,
+    )
+    validate_paths(paths, allow_missing_source=True)
+    commands = build_command_steps(config, [paths])
+
+    if config.dry_run:
+        print_planned_commands(config, commands, [paths])
+        return 0
+
+    ensure_extended_realvul_dataset(config)
+    validate_stage07_csv(paths.source_csv, required_dataset_types=TEST_ONLY_REQUIRED_DATASET_TYPES)
+    ensure_output_targets([paths], overwrite=config.overwrite)
+
+    check_container_running(config.container_name)
+    if config.overwrite:
+        cleanup_output_targets([paths], container_name=config.container_name)
+    stage_source_csv(paths)
+    ensure_extended_realvul_model(config, paths)
+
+    step = commands[0]
+    print(f'Running LineVul extended_realvul evaluation for {paths.display_name}...')
+    run_logged_command(step.command, paths.host_extended_eval_log)
+    require_extended_realvul_outputs(paths)
+    print_completion_summary([paths])
+    return 0
 
 
 def run_linevul_from_pipeline(config: LineVulRunConfig) -> int:
@@ -503,7 +801,7 @@ def run_linevul_from_pipeline(config: LineVulRunConfig) -> int:
     commands = build_command_steps(config, paths_list)
 
     if config.dry_run:
-        print_planned_commands(commands, paths_list)
+        print_planned_commands(config, commands, paths_list)
         return 0
 
     check_container_running(config.container_name)
@@ -597,11 +895,14 @@ def main() -> int:
             train_batch_size=args.train_batch_size,
             eval_batch_size=args.eval_batch_size,
             num_train_epochs=args.num_train_epochs,
+            extended_realvul=args.extended_realvul,
             overwrite=args.overwrite,
             dry_run=args.dry_run,
         )
     )
     try:
+        if config.extended_realvul:
+            return run_extended_realvul_eval(config)
         return run_linevul_from_pipeline(config)
     except ValueError as exc:
         print(str(exc), file=sys.stderr)
