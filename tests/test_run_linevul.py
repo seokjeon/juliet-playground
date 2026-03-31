@@ -308,9 +308,7 @@ def test_run_linevul_extended_realvul_downloads_assets_and_runs_single_command(
     )
 
     vpbench_root = _make_vpbench_root(tmp_path / 'VP-Bench')
-    archive_source = _make_linevul_model_archive(
-        tmp_path / 'fixtures' / 'linevul_best_model.tar.gz'
-    )
+    archive_source = _make_linevul_model_archive(tmp_path / 'fixtures' / 'linevul_best_model.tar.gz')
     config = module.normalize_config(
         module.LineVulRunConfig(
             run_dir=None,

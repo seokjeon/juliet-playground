@@ -479,6 +479,41 @@ def build_pdbert_paths(
         container_runtime_test_config=container_runtime_dir / 'pdbert_test_runtime.jsonnet',
     )
 
+# extended_realvul 데이터셋 경로
+def extended_realvul_source_csv(config: PDBERTRunConfig) -> Path:
+    return (
+        config.vpbench_root
+        / 'downloads'
+        / 'PDBERT'
+        / 'data'
+        / 'datasets'
+        / 'extrinsic'
+        / 'vul_detect'
+        / EXTENDED_REALVUL_NAMESPACE
+        / EXTENDED_REALVUL_DATASET_NAME
+    )
+
+
+def download_extended_realvul_dataset(url: str, output_path: Path) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = output_path.with_name(f'{output_path.name}.tmp')
+    try:
+        with urllib.request.urlopen(url) as response, temp_path.open('wb') as f:
+            shutil.copyfileobj(response, f)
+        temp_path.replace(output_path)
+    finally:
+        if temp_path.exists():
+            temp_path.unlink()
+
+
+def ensure_extended_realvul_dataset(config: PDBERTRunConfig) -> Path:
+    dataset_csv = extended_realvul_source_csv(config)
+    if dataset_csv.exists():
+        return dataset_csv
+    print(f'Downloading Extended RealVul dataset CSV to {dataset_csv}...')
+    download_extended_realvul_dataset(EXTENDED_REALVUL_DATASET_URL, dataset_csv)
+    return dataset_csv
+
 
 # extended_realvul 데이터셋 경로
 def extended_realvul_source_csv(config: PDBERTRunConfig) -> Path:
