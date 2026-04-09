@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 from shared.artifact_layout import build_dataset_export_paths, build_slice_stage_paths
+from shared.fs import prepare_output_dir
 from shared.paths import EXTERNAL_RUNS_DIR, PULSE_TAINT_CONFIG
 from stage import stage03_external_infer as _stage03_external_infer
 from stage import stage05b_manual_line_filter as _stage05b_manual_line_filter
@@ -34,6 +35,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument('--run-id', type=str, default=None)
     parser.add_argument('--project-name', type=str, default=None)
+    parser.add_argument('--overwrite', action='store_true')
     return parser.parse_args()
 
 
@@ -74,7 +76,7 @@ def run_external_trace_pipeline(args: argparse.Namespace) -> int:
 
     run_id = args.run_id or f'run-{_now_ts()}'
     run_dir = (args.output_root.resolve() / run_id).resolve()
-    run_dir.mkdir(parents=True, exist_ok=True)
+    prepare_output_dir(run_dir, args.overwrite)
     paths = _build_paths(run_dir)
 
     stage03 = _stage03_external_infer.run_external_infer_and_signature(
@@ -125,7 +127,7 @@ def main() -> int:
     args = parse_args()
     try:
         return run_external_trace_pipeline(args)
-    except ValueError as exc:
+    except (ValueError, FileExistsError) as exc:
         print(str(exc), file=sys.stderr)
         return 2
     except Exception as exc:

@@ -15,6 +15,13 @@ This repository runs Infer on the Juliet C/C++ test suite and maintains the pipe
 - `experiments/`: stage-specific scripts, inputs, and notes for the EPIC001 pipeline.
 - `config/`: committed configuration, including `pulse-taint-config.json`.
 - `artifacts/`: generated outputs only. Juliet sources live under `juliet-test-suite-v1.3/C/`.
+  - `artifacts/pipeline-runs/`: Juliet pipeline run outputs.
+  - `artifacts/external-runs/`: external-project fast-path outputs from `tools/run_external_trace_pipeline.py`.
+    Canonical data handoff files usually live under `07_dataset_export/Real_Vul_data.csv` and
+    `07_dataset_export/trace_row_manifest.jsonl`.
+    The CLI contract is `<output-root>/<run-id>/`, but in practice this repo often groups runs as
+    `artifacts/external-runs/<CVE-or-project>/<run-id>/`; `artifacts/external-runs/archive/` is a
+    repository convention for historical runs.
 
 ## Tool Layout Rules
 - Put **CLI entrypoints / wrappers / standalone utilities** in `tools/`.

@@ -107,6 +107,48 @@ artifacts/pipeline-runs/run-YYYY.MM.DD-HH:MM:SS/
         └── summary.json
 ```
 
+## external fast path run 산출물
+
+`python tools/run_external_trace_pipeline.py ...` 는 기본적으로
+`artifacts/external-runs/<run-id>/` 아래에 아래 구조를 만듭니다.
+
+```text
+artifacts/external-runs/<run-id>/
+├── 03_infer-results/
+│   └── infer-YYYY.MM.DD-HH:MM:SS/
+├── 03_signatures/
+│   └── infer-YYYY.MM.DD-HH:MM:SS/
+│       └── signature-YYYY.MM.DD-HH:MM:SS/
+│           ├── non_empty/
+│           └── flow_matched/
+├── 03_infer_summary.json
+├── 05b_manual_line_filter/
+│   ├── dropped_traces.jsonl
+│   ├── normalized_manual_lines.jsonl
+│   ├── summary.json
+│   └── traces.jsonl
+├── 06_trace_slices/
+│   ├── slice/*.c|*.cpp
+│   └── summary.json
+└── 07_dataset_export/
+    ├── normalized_slices/*.c|*.cpp
+    ├── Real_Vul_data.csv
+    ├── summary.json
+    └── trace_row_manifest.jsonl
+```
+
+운영 중에는 `--output-root artifacts/external-runs/<CVE-or-project>` 처럼 상위 디렉터리를
+한 번 더 주어 `artifacts/external-runs/<CVE-or-project>/<run-id>/` 형태로 저장하는 경우가 많습니다.
+또한 `artifacts/external-runs/archive/` 는 과거 실험 run을 옮겨 둔 관례용 디렉터리입니다.
+
+external fast path에서 후속 소비용 대표 파일은 아래 둘입니다.
+
+- `07_dataset_export/Real_Vul_data.csv`
+  - external project용 test-only dataset CSV
+- `07_dataset_export/trace_row_manifest.jsonl`
+  - dataset row와 trace/source line 매핑
+  - 예: `tools/run_pdbert_eval_only.py --dataset-csv ... --row-manifest ...`
+
 ## 핵심 summary 파일
 
 - `02a_taint/summary.json`

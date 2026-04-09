@@ -22,6 +22,11 @@ paired trace → slice → dataset export까지 이어지는 실험 저장소입
   [`experiments/epic001c_testcase_flow_partition/README.md`](experiments/epic001c_testcase_flow_partition/README.md)
 - Step 04 실험 메모 (`trace flow filter`):
   [`experiments/epic001d_trace_flow_filter/README.md`](experiments/epic001d_trace_flow_filter/README.md)
+- 외부 CVE pulse-taint 실험 메모:
+  [`CVE-2015-8617 php-src`](experiments/cve_2015_8617_php_src_pulse_taint/README.md),
+  [`CVE-2017-12588 rsyslog`](experiments/cve_2017_12588_rsyslog_pulse_taint/README.md),
+  [`CVE-2017-15924 shadowsocks-libev`](experiments/cve_2017_15924_shadowsocks_pulse_taint/README.md),
+  [`CVE-2019-13638 GNU patch`](experiments/cve_2019_13638_patch_pulse_taint/README.md)
 
 현재 구현 기준으로는 Stage 03 / 05 / 06 / 07 / 07b 동작을 `docs/stage-contracts.md`와
 `tools/stage/` 코드에서 확인하는 것이 가장 정확합니다.
@@ -133,6 +138,17 @@ python tools/run_external_trace_pipeline.py \
   - `--run-id`: 기본값 `run-YYYY.MM.DD-HH:MM:SS`
   - `--project-name`: 기본적으로 `source-root` 이름을 사용합니다.
     `source-root` 이름이 `raw_code` 이면 부모 디렉터리 이름을 사용합니다.
+  - `--overwrite`: 같은 `run-id` 출력 디렉터리가 이미 있으면 해당 run 디렉터리 전체를
+    삭제하고 처음부터 다시 실행합니다.
+
+- 출력 경로 규칙
+  - 도구 계약상 external fast path run 디렉터리는 기본적으로
+    `artifacts/external-runs/<run-id>/` 입니다.
+  - 다만 실제 운영에서는 `--output-root artifacts/external-runs/<CVE-or-project>` 처럼
+    상위 디렉터리를 한 번 더 지정해서
+    `artifacts/external-runs/<CVE-or-project>/<run-id>/` 형태로 묶어 두는 경우가 많습니다.
+  - `artifacts/external-runs/archive/` 는 과거 실험 run을 옮겨 둔 관례용 디렉터리이며,
+    CLI가 강제하는 레이아웃은 아닙니다.
 
 `build_targets.csv` 형식:
 
@@ -154,6 +170,9 @@ case1,/abs/path/to/project/src/foo.c,"1187,609,486",1,confirmed vulnerable line
   `artifacts/external-runs/<run-id>/07_dataset_export/Real_Vul_data.csv`,
   `artifacts/external-runs/<run-id>/07_dataset_export/trace_row_manifest.jsonl`
   입니다.
+- 외부 run에서 후속 데이터 읽기 기준 파일은 보통 아래 둘입니다.
+  - `07_dataset_export/Real_Vul_data.csv`: test-only dataset CSV
+  - `07_dataset_export/trace_row_manifest.jsonl`: dataset row ↔ trace/source line 매핑
 
 ## 파이프라인 개요
 
@@ -205,6 +224,20 @@ artifacts/
 │   └── infer-YYYY.MM.DD-HH:MM:SS/
 │       ├── CWE.../infer-out/
 │       └── analysis/{result.csv,no_issue_files.txt}
+├── external-runs/
+│   ├── <run-id>/                         # CLI 기본 계약
+│   ├── <CVE-or-project>/<run-id>/        # 현재 자주 쓰는 운영 관례
+│   │   ├── 03_infer-results/
+│   │   ├── 03_signatures/
+│   │   ├── 03_infer_summary.json
+│   │   ├── 05b_manual_line_filter/
+│   │   ├── 06_trace_slices/
+│   │   └── 07_dataset_export/
+│   │       ├── Real_Vul_data.csv
+│   │       ├── normalized_slices/
+│   │       ├── summary.json
+│   │       └── trace_row_manifest.jsonl
+│   └── archive/                          # 운영상 보관용 관례
 ├── signatures/
 │   └── infer-YYYY.MM.DD-HH:MM:SS/
 │       └── signature-YYYY.MM.DD-HH:MM:SS/
