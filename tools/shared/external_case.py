@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-import os
 import re
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
-
-from shared.paths import EXTERNAL_RUNS_DIR
 
 TRACK_NAMES = frozenset({'vulnerable', 'patched'})
 REMOTE_URL_RE = re.compile(r'^\s*url\s*=\s*(?P<url>\S+)\s*$')
@@ -23,14 +21,19 @@ class CaseRunPaths:
     trace_output_dir: Path
     selected_runs_dir: Path
     runs_dir: Path
-    base_run_dir: Path
+    inputs_dir: Path
     run_dir: Path
     build_targets_csv: Path
     manual_line_truth_csv: Path
     pulse_taint_config: Path
-    outputs_link: Path
-    artifact_output_root: Path
-    artifact_run_dir: Path
+    outputs_dir: Path
+
+
+@dataclass(frozen=True)
+class CaseRunInputPaths:
+    build_targets_csv: Path
+    manual_line_truth_csv: Path
+    pulse_taint_config: Path
 
 
 def resolve_case_run_paths(
@@ -38,7 +41,6 @@ def resolve_case_run_paths(
     *,
     track: str,
     run_id: str,
-    artifact_root: Path | None = None,
 ) -> CaseRunPaths:
     normalized_case_dir = case_dir.resolve()
     if not normalized_case_dir.exists():
@@ -46,7 +48,6 @@ def resolve_case_run_paths(
     if track not in TRACK_NAMES:
         raise ValueError(f'Unsupported track: {track}')
 
-    resolved_artifact_root = (artifact_root or Path(EXTERNAL_RUNS_DIR)).resolve()
     track_dir = normalized_case_dir / track
     runs_dir = track_dir / 'runs'
     run_dir = runs_dir / run_id
@@ -62,14 +63,49 @@ def resolve_case_run_paths(
         trace_output_dir=track_dir / 'trace_output',
         selected_runs_dir=track_dir / 'trace_output' / 'selected_runs',
         runs_dir=runs_dir,
-        base_run_dir=runs_dir / 'base-run',
+        inputs_dir=runs_dir / 'inputs',
         run_dir=run_dir,
         build_targets_csv=run_dir / 'build_targets.csv',
         manual_line_truth_csv=run_dir / 'manual_line_truth.csv',
         pulse_taint_config=run_dir / 'pulse-taint-config.json',
-        outputs_link=run_dir / 'outputs',
-        artifact_output_root=resolved_artifact_root / normalized_case_dir.name / track,
-        artifact_run_dir=resolved_artifact_root / normalized_case_dir.name / track / run_id,
+        outputs_dir=run_dir / 'outputs',
+    )
+
+
+def validate_case_layout(paths: CaseRunPaths) -> None:
+    required = {
+        'track directory': paths.track_dir,
+        'repo directory': paths.repo_dir,
+        'runs directory': paths.runs_dir,
+        'inputs directory': paths.inputs_dir,
+    }
+    for label, path in required.items():
+        if not path.exists():
+            raise ValueError(f'Missing {label}: {path}')
+
+
+def prepare_case_run_inputs(
+    paths: CaseRunPaths,
+) -> CaseRunInputPaths:
+    validate_case_layout(paths)
+    paths.run_dir.mkdir(parents=True, exist_ok=True)
+
+    return CaseRunInputPaths(
+        build_targets_csv=_copy_case_input_path(
+            label='build_targets.csv',
+            source_path=paths.inputs_dir / 'build_targets.csv',
+            destination_path=paths.build_targets_csv,
+        ),
+        manual_line_truth_csv=_copy_case_input_path(
+            label='manual_line_truth.csv',
+            source_path=paths.inputs_dir / 'manual_line_truth.csv',
+            destination_path=paths.manual_line_truth_csv,
+        ),
+        pulse_taint_config=_copy_case_input_path(
+            label='pulse-taint-config.json',
+            source_path=paths.inputs_dir / 'pulse-taint-config.json',
+            destination_path=paths.pulse_taint_config,
+        ),
     )
 
 
@@ -89,21 +125,28 @@ def infer_project_name_from_repo(repo_dir: Path) -> str:
     return source_root.parent.name or source_root.name
 
 
-def ensure_relative_symlink(link_path: Path, target_path: Path) -> None:
-    normalized_link = link_path
-    normalized_target = target_path.resolve()
-    relative_target = Path(os.path.relpath(normalized_target, start=normalized_link.parent))
+def _copy_case_input_path(
+    *,
+    label: str,
+    source_path: Path,
+    destination_path: Path,
+) -> Path:
+    resolved_source = source_path.resolve()
+    _require_existing_input_path(label, resolved_source)
+    destination_path.parent.mkdir(parents=True, exist_ok=True)
+    if destination_path.exists() or destination_path.is_symlink():
+        if destination_path.is_dir():
+            raise FileExistsError(f'Expected file for {label}: {destination_path}')
+        destination_path.unlink()
+    shutil.copy2(resolved_source, destination_path)
+    return destination_path
 
-    if normalized_link.is_symlink():
-        if normalized_link.resolve() == normalized_target:
-            return
-        normalized_link.unlink()
-    elif normalized_link.exists():
-        raise FileExistsError(f'Cannot replace non-symlink path: {normalized_link}')
-    else:
-        normalized_link.parent.mkdir(parents=True, exist_ok=True)
 
-    normalized_link.symlink_to(relative_target, target_is_directory=normalized_target.is_dir())
+def _require_existing_input_path(label: str, path: Path) -> None:
+    if not path.exists():
+        raise ValueError(f'Missing {label}: {path}')
+    if path.is_dir():
+        raise FileExistsError(f'Expected file for {label}: {path}')
 
 
 def _read_git_origin_url(repo_dir: Path) -> str | None:

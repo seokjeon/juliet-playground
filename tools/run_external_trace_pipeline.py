@@ -35,6 +35,12 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument('--run-id', type=str, default=None)
     parser.add_argument('--project-name', type=str, default=None)
+    parser.add_argument(
+        '--infer-jobs',
+        type=int,
+        default=1,
+        help='Number of parallel jobs to pass to `infer run -j`.',
+    )
     parser.add_argument('--overwrite', action='store_true')
     return parser.parse_args()
 
@@ -73,9 +79,11 @@ def run_external_trace_pipeline(args: argparse.Namespace) -> int:
     manual_line_truth = args.manual_line_truth.resolve()
     pulse_taint_config = args.pulse_taint_config.resolve()
     project_name = args.project_name or _default_project_name(source_root)
+    if args.infer_jobs < 1:
+        raise ValueError(f'--infer-jobs must be >= 1 (got {args.infer_jobs})')
 
     run_id = args.run_id or f'run-{_now_ts()}'
-    run_dir = (args.output_root.resolve() / run_id).resolve()
+    run_dir = args.output_root.resolve() / run_id
     prepare_output_dir(run_dir, args.overwrite)
     paths = _build_paths(run_dir)
 
@@ -85,6 +93,7 @@ def run_external_trace_pipeline(args: argparse.Namespace) -> int:
         infer_results_root=paths['infer_results_root'],
         signatures_root=paths['signatures_root'],
         summary_json=paths['infer_summary_json'],
+        infer_jobs=args.infer_jobs,
     )
     signature_non_empty_dir = Path(stage03['artifacts']['signature_non_empty_dir'])
 

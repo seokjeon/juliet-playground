@@ -34,12 +34,15 @@ def build_infer_command(
     infer_args: list[str],
     pulse_taint_config: Path,
     results_dir: Path,
+    infer_jobs: int = 1,
 ) -> list[str]:
+    if infer_jobs < 1:
+        raise ValueError(f'infer_jobs must be >= 1 (got {infer_jobs})')
     return [
         INFER_BIN,
         'run',
         '-j',
-        '1',
+        str(infer_jobs),
         '--keep-going',
         '--results-dir',
         str(results_dir),
@@ -151,6 +154,7 @@ def run_external_infer_and_signature(
     infer_results_root: Path,
     signatures_root: Path,
     summary_json: Path | None = None,
+    infer_jobs: int = 1,
 ) -> dict[str, Any]:
     pulse_taint_config = pulse_taint_config.resolve()
     if not pulse_taint_config.exists():
@@ -239,6 +243,7 @@ def run_external_infer_and_signature(
                 infer_args=infer_args,
                 pulse_taint_config=pulse_taint_config,
                 results_dir=testcase_dir / 'infer-out',
+                infer_jobs=infer_jobs,
             )
             result = subprocess.run(
                 command,

@@ -67,9 +67,9 @@ def test_load_build_targets_csv_resolves_relative_workdir_from_real_csv_path(tmp
     repo_dir = case_dir / 'repo'
     repo_dir.mkdir(parents=True, exist_ok=True)
 
-    base_run_dir = case_dir / 'runs' / 'base-run'
-    base_run_dir.mkdir(parents=True, exist_ok=True)
-    base_csv = base_run_dir / 'build_targets.csv'
+    inputs_dir = case_dir / 'runs' / 'inputs'
+    inputs_dir.mkdir(parents=True, exist_ok=True)
+    base_csv = inputs_dir / 'build_targets.csv'
     with base_csv.open('w', encoding='utf-8', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(['testcase_key', 'workdir', 'build_command'])
@@ -77,7 +77,7 @@ def test_load_build_targets_csv_resolves_relative_workdir_from_real_csv_path(tmp
 
     run_dir = case_dir / 'runs' / 'run-001'
     run_dir.mkdir(parents=True, exist_ok=True)
-    (run_dir / 'build_targets.csv').symlink_to('../base-run/build_targets.csv')
+    (run_dir / 'build_targets.csv').symlink_to('../inputs/build_targets.csv')
 
     targets = module.load_build_targets_csv(run_dir / 'build_targets.csv')
 

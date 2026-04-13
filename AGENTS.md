@@ -17,7 +17,7 @@ This repository runs Infer on the Juliet C/C++ test suite and maintains the pipe
 - `juliet-test-suite-v1.3/`: Juliet input corpus. Actual source analysis typically starts under `juliet-test-suite-v1.3/C/`.
 - `external/`: external-project input workspace. Common pattern: `external/<project>/inputs/{raw_code,build_targets.csv,manual_line_truth.csv}`.
 - `cases/`: case-managed external vulnerability workspace. Common pattern:
-  `cases/<project>__<CVE>/<track>/{repo,WORKLOG.md,trace_output,runs/base-run,runs/run-###}` where
+  `cases/<project>__<CVE>/<track>/{repo,WORKLOG.md,trace_output,runs/inputs,runs/run-###}` where
   `track` is typically `vulnerable` or `patched`.
 - `experiments/`: experiment notes, helper scripts, and analysis outputs. Includes EPIC001-derived dirs plus `epic002/`, `epic003/`, selected `CVE-*` dirs, and `!never_read!archive/` for historical notes.
 - `config/`: committed configuration. Use `config/pulse-taint-config.json` for the common default, `config/CVE-*/` for project/experiment-specific variants, and `config/legacy/` for older archived configs.

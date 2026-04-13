@@ -40,6 +40,24 @@ python tools/compare-artifacts.py \
   artifacts/pipeline-runs/run-after/07_dataset_export
 ```
 
+### 3) case-managed external run bootstrap + 실행
+
+```bash
+python tools/run_case.py \
+  --case cases/demo-project__CVE-2099-0001 \
+  --track vulnerable \
+  --run run-001 \
+  --infer-jobs 8
+```
+
+- `runs/run-001/`가 없으면 자동 생성합니다.
+- canonical 입력은 `runs/inputs/` 아래에 둡니다.
+- `--infer-jobs`는 `infer run -j N`의 N을 제어하며 기본값은 `1`입니다.
+- 이 옵션은 Infer 내부 병렬도만 바꾸고, `build_targets.csv` 안의 build command 병렬도는
+  그대로 둡니다.
+- 실행 시마다 `runs/inputs/`의 입력 3개를 `runs/run-001/`로 copy한 뒤 그 복사본으로 실행합니다.
+- 실제 산출물과 partial output은 항상 `runs/run-001/outputs/` 아래에 직접 저장됩니다.
+
 ## 운영 메모
 
 ### Case-managed final trace 운영 규칙

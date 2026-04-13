@@ -43,3 +43,18 @@ def test_remove_target_handles_file_and_directory(tmp_path):
 
     assert not file_target.exists()
     assert not dir_target.exists()
+
+
+def test_prepare_output_dir_replaces_directory_symlink_when_overwrite_enabled(tmp_path):
+    module = load_module_from_path('test_fs_utils_output_symlink', REPO_ROOT / 'tools/shared/fs.py')
+
+    target_dir = tmp_path / 'target'
+    write_text(target_dir / 'child.txt', 'world')
+    output_link = tmp_path / 'output'
+    output_link.symlink_to(target_dir, target_is_directory=True)
+
+    module.prepare_output_dir(output_link, overwrite=True)
+
+    assert output_link.exists()
+    assert output_link.is_dir()
+    assert not output_link.is_symlink()
