@@ -3,7 +3,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+TOOLS_ROOT = REPO_ROOT / 'tools'
+if str(TOOLS_ROOT) not in sys.path:
+    sys.path.insert(0, str(TOOLS_ROOT))
 
 from stage import stage02b_flow as _stage02b_flow
 
