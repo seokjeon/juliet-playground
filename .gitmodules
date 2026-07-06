@@ -61,3 +61,6 @@
 [submodule "cases/radare2__CVE-2019-16718/patched/repo"]
 	path = cases/radare2__CVE-2019-16718/patched/repo
 	url = https://github.com/radareorg/radare2
+[submodule "juliet-java-test-suite"]
+	path = juliet-java-test-suite
+	url = https://github.com/UnitTestBot/juliet-java-test-suite

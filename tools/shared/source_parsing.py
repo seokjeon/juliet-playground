@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-SOURCE_EXTS = {'.c', '.cpp', '.h'}
-PARSER_LANG_BY_SUFFIX = {'.c': 'c', '.cpp': 'cpp'}
+SOURCE_EXTS = {'.c', '.cpp', '.h', '.java'}
+PARSER_LANG_BY_SUFFIX = {'.c': 'c', '.cpp': 'cpp', '.java': 'java'}
 IDENTIFIER_NODE_TYPES = {'identifier', 'field_identifier', 'qualified_identifier'}
 
 

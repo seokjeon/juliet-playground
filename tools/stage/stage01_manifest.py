@@ -29,10 +29,49 @@ def inc(stats: dict, key: str, n: int = 1) -> None:
 
 
 FLAW_RE = re.compile(
-    r'^\s*/\*+\s*(?!.*\bINCIDENTAL\s+FLAW\b).*\b(?:POTENTIAL\s+)?FLAW\b',
+    r'^\s*(?:/\*+|//)\s*(?!.*\bINCIDENTAL\s+FLAW\b).*\b(?:POTENTIAL\s+)?FLAW\b',
     re.IGNORECASE,
 )
-FIX_RE = re.compile(r'^\s*/\*+\s*FIX\b', re.IGNORECASE)
+FIX_RE = re.compile(r'^\s*(?:/\*+|//)\s*FIX\b', re.IGNORECASE)
+JAVA_METHOD_NODE_TYPES = {'method_declaration', 'constructor_declaration'}
+JAVA_TYPE_NODE_TYPES = {
+    'annotation_type_declaration',
+    'class_declaration',
+    'enum_declaration',
+    'interface_declaration',
+    'record_declaration',
+}
+COMMENT_NODE_TYPES = {'comment', 'block_comment', 'line_comment'}
+
+
+def _node_text(node, source_bytes: bytes) -> str:
+    return source_bytes[node.start_byte : node.end_byte].decode('utf-8', errors='ignore').strip()
+
+
+def _named_child_text(node, source_bytes: bytes) -> str | None:
+    name_node = node.child_by_field_name('name')
+    if name_node is None:
+        return None
+    return _node_text(name_node, source_bytes) or None
+
+
+def _java_method_name(node, source_bytes: bytes) -> str | None:
+    method_name = _named_child_text(node, source_bytes)
+    if not method_name:
+        return None
+
+    scope_names: list[str] = []
+    parent = getattr(node, 'parent', None)
+    while parent is not None:
+        if parent.type in JAVA_TYPE_NODE_TYPES:
+            type_name = _named_child_text(parent, source_bytes)
+            if type_name:
+                scope_names.append(type_name)
+        parent = getattr(parent, 'parent', None)
+
+    if not scope_names:
+        return method_name
+    return f'{"::".join(reversed(scope_names))}::{method_name}'
 
 
 def _match_comments_to_functions(
@@ -87,7 +126,11 @@ def _parse_file(
                 name = extract_function_name_from_declarator(decl, source_bytes)
                 if name:
                     function_spans.append((node.start_point[0] + 1, node.end_point[0] + 1, name))
-        elif node.type == 'comment':
+        elif node.type in JAVA_METHOD_NODE_TYPES:
+            name = _java_method_name(node, source_bytes)
+            if name:
+                function_spans.append((node.start_point[0] + 1, node.end_point[0] + 1, name))
+        elif node.type in COMMENT_NODE_TYPES:
             comment_text = source_bytes[node.start_byte : node.end_byte].decode(
                 'utf-8', errors='ignore'
             )

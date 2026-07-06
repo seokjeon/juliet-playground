@@ -74,9 +74,12 @@ def load_tree_sitter_parsers() -> dict[str, object]:
         return {}
 
     parsers: dict[str, object] = {}
-    for language_name in ('c', 'cpp'):
+    for language_name in ('c', 'cpp', 'java'):
         parser = Parser()
-        lang = get_language(language_name)
+        try:
+            lang = get_language(language_name)
+        except Exception:
+            continue
         if hasattr(parser, 'set_language'):
             parser.set_language(lang)
         else:

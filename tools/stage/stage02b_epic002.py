@@ -84,9 +84,10 @@ def is_destructor(function_name: str | None) -> bool:
 
 def classify_function_role(function_name: str | None) -> str:
     tail = function_tail(function_name)
-    if 'Source' in tail:
+    tail_lower = tail.lower()
+    if 'source' in tail_lower:
         return 'source'
-    if tail == 'action' or 'VaSink' in tail or 'vasink' in tail or 'Sink' in tail:
+    if tail_lower == 'action' or 'sink' in tail_lower:
         return 'sink'
     if is_entry_tail(tail):
         return 'entry'
